@@ -81,59 +81,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemCount: onboardingData.length,
                 itemBuilder: (context, index) {
                   final slide = onboardingData[index];
-                  return Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Image wrapper
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(24.r),
-                          child: CachedNetworkImage(
-                            imageUrl: slide['imageUrl']!,
-                            height: 280.h,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              height: 280.h,
-                              color: Colors.grey.shade100,
-                              child: const Center(
-                                child: CircularProgressIndicator(color: primaryBrandColor),
+                  return Center(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Image wrapper
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(24.r),
+                            child: CachedNetworkImage(
+                              imageUrl: slide['imageUrl']!,
+                              height: 200.h,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                height: 200.h,
+                                color: Colors.grey.shade100,
+                                child: const Center(
+                                  child: CircularProgressIndicator(color: primaryBrandColor),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                height: 200.h,
+                                color: Colors.grey.shade100,
+                                child: const Icon(Icons.eco, size: 80, color: primaryBrandColor),
                               ),
                             ),
-                            errorWidget: (context, url, error) => Container(
-                              height: 280.h,
-                              color: Colors.grey.shade100,
-                              child: const Icon(Icons.eco, size: 80, color: primaryBrandColor),
+                          ),
+                          SizedBox(height: 24.h),
+
+                          // Title
+                          Text(
+                            slide['title']!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 24.sp,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF151E13),
                             ),
                           ),
-                        ),
-                        SizedBox(height: 32.h),
+                          SizedBox(height: 12.h),
 
-                        // Title
-                        Text(
-                          slide['title']!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 24.sp,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF151E13),
-                          ),
-                        ),
-                        SizedBox(height: 12.h),
-
-                        // Description text
-                        Text(
-                          slide['description']!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
+                          // Description text
+                          Text(
+                            slide['description']!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
                             fontSize: 14.sp,
                             color: const Color(0xFF6D7A73),
                             height: 1.5,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },
