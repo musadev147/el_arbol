@@ -33,11 +33,21 @@ class SocialLoginButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              iconPath,
-              height: 24,
-              width: 24,
-            ),
+            iconPath.startsWith('http')
+                ? Image.network(
+                    iconPath,
+                    height: 24,
+                    width: 24,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.g_mobiledata, size: 24),
+                  )
+                : Image.asset(
+                    iconPath,
+                    height: 24,
+                    width: 24,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.g_mobiledata, size: 24),
+                  ),
             const SizedBox(width: 10),
             Text(
               title,

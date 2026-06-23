@@ -6,7 +6,7 @@ class AssetsIcons {
   static String showPasswordIcon = 'assets/icons/showPasswordIcon.png';
   static String hidePasswordIcon = 'assets/icons/hidePasswordIcon.png';
   static String lockIcon = 'assets/icons/lockIcon.png';
-  static String googleIcon = 'assets/icons/googleIcon.png';
+  static String googleIcon = 'https://img.icons8.com/color/48/google-logo.png';
   static String appleIcon = 'assets/icons/appleIcon.png';
   static String userIcon = 'assets/icons/userIcon.png';
   static String notification = 'assets/icons/notification.png';
