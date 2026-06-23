@@ -129,9 +129,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             slide['description']!,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                            fontSize: 14.sp,
-                            color: const Color(0xFF6D7A73),
-                            height: 1.5,
+                              fontSize: 14.sp,
+                              color: const Color(0xFF6D7A73),
+                              height: 1.5,
+                            ),
                           ),
                         ],
                       ),
