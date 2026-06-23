@@ -153,11 +153,14 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
                 SizedBox(height: 6.h),
-                CustomTextFormField(
+                 CustomTextFormField(
                   controller: _emailController,
                   hintText: 'jane@example.com',
                   keyboardType: TextInputType.emailAddress,
                   borderRadius: 8.r,
+                  fillColor: const Color(0xFFECF7E4),
+                  borderColor: const Color(0xFF00694C).withOpacity(0.2),
+                  focusBorderColor: const Color(0xFF00694C),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
@@ -198,11 +201,14 @@ class _SignInScreenState extends State<SignInScreen> {
                   ],
                 ),
                 SizedBox(height: 6.h),
-                CustomTextFormField(
+                 CustomTextFormField(
                   controller: _passwordController,
                   hintText: '••••••••',
                   isPassword: true,
                   borderRadius: 8.r,
+                  fillColor: const Color(0xFFECF7E4),
+                  borderColor: const Color(0xFF00694C).withOpacity(0.2),
+                  focusBorderColor: const Color(0xFF00694C),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';

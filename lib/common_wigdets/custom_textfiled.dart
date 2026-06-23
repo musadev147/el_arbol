@@ -31,6 +31,9 @@ class CustomTextFormField extends StatefulWidget {
   final VoidCallback? onTap;
   final bool? enableBorderSide;
   final bool? isPassword;
+  final Color? fillColor;
+  final Color? borderColor;
+  final Color? focusBorderColor;
 
   CustomTextFormField({
     super.key,
@@ -57,6 +60,9 @@ class CustomTextFormField extends StatefulWidget {
     this.onTap,
     this.enableBorderSide = true,
     this.isPassword = false,
+    this.fillColor,
+    this.borderColor,
+    this.focusBorderColor,
   });
 
   @override
@@ -106,13 +112,13 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
         maxLines: widget.maxLine ?? 1,
         style: (TextFontStyle.textStyle20PoppinsW400 ?? const TextStyle())
             .copyWith(
-          color: AppColors.allPrimaryColor,
+          color: const Color(0xFF151E13),
           fontSize: 16.sp,
         ),
-        cursorColor: AppColors.allPrimaryColor,
+        cursorColor: widget.focusBorderColor ?? AppColors.allPrimaryColor,
         decoration: InputDecoration(
   filled: true,
-  fillColor: Colors.white,
+  fillColor: widget.fillColor ?? Colors.white,
   labelText: widget.labelText,
   hintText: widget.hintText,
   hintStyle: TextFontStyle.textStyle121C1C28Poppins400.copyWith(
@@ -131,7 +137,7 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
       ? IconButton(
           icon: Icon(
             _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-            color: _isFocused ? AppColors.allPrimaryColor : Colors.grey,
+            color: _isFocused ? (widget.focusBorderColor ?? AppColors.allPrimaryColor) : Colors.grey,
           ),
           onPressed: () {
             setState(() {
@@ -146,7 +152,7 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
                 padding: const EdgeInsets.only(right: 16),
                 child: Icon(
                   widget.suffixIcon,
-                  color: _isFocused ? AppColors.allPrimaryColor : Colors.orange,
+                  color: _isFocused ? (widget.focusBorderColor ?? AppColors.allPrimaryColor) : Colors.orange,
                 ),
               ),
             )
@@ -154,15 +160,15 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
 
   border: OutlineInputBorder(
     borderRadius: BorderRadius.circular(widget.borderRadius ?? 12),
-    borderSide: const BorderSide(width: 1, color: Colors.grey),
+    borderSide: BorderSide(width: 1, color: widget.borderColor ?? Colors.grey),
   ),
   enabledBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(widget.borderRadius ?? 12),
-    borderSide: const BorderSide(width: 1, color: Colors.grey),
+    borderSide: BorderSide(width: 1, color: widget.borderColor ?? Colors.grey),
   ),
   focusedBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(widget.borderRadius ?? 12),
-    borderSide: const BorderSide(width: 1, color: AppColors.allPrimaryColor),
+    borderSide: BorderSide(width: 1.5, color: widget.focusBorderColor ?? AppColors.allPrimaryColor),
   ),
   errorBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(widget.borderRadius ?? 12),
@@ -170,7 +176,7 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
   ),
   focusedErrorBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(widget.borderRadius ?? 12),
-    borderSide: const BorderSide(width: 1, color: Colors.red),
+    borderSide: const BorderSide(width: 1.5, color: Colors.red),
   ),
 
   errorStyle: const TextStyle(
