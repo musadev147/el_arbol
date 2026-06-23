@@ -247,7 +247,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
                     width: 26.w,
                     height: 26.h,
                     color: isSelected
-                        ? AppColors.c3B82F6
+                        ? const Color(0xFF00694C)
                         : AppColors.c87878A,
                   ),
                   if (isSelected)
@@ -256,7 +256,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
                       style: TextStyle(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.c3B82F6,
+                        color: const Color(0xFF00694C),
                       ),
                     ),
                 ],
