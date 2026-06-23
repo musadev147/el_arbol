@@ -1,5 +1,6 @@
 import 'package:auto_animated/auto_animated.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -90,7 +91,12 @@ class UtillScreenMobile extends StatelessWidget {
           theme: ThemeData(
             appBarTheme: const AppBarTheme(
               elevation: 0,
-              backgroundColor: AppColors.white,
+              backgroundColor: Colors.transparent,
+              systemOverlayStyle: SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark, // For Android
+                statusBarBrightness: Brightness.light,    // For iOS
+              ),
             ),
             primarySwatch: CustomTheme.kToDark,
             scaffoldBackgroundColor: AppColors.white,
