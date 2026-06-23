@@ -93,8 +93,9 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Promos Banner Slider
@@ -197,6 +198,7 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

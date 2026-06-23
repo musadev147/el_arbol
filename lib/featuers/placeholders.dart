@@ -12,11 +12,13 @@ class PlaceholderScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Center(
-        child: Text(
-          '$title Screen\n(Coming Soon)',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 18, color: Colors.grey),
+      body: SafeArea(
+        child: Center(
+          child: Text(
+            '$title Screen\n(Coming Soon)',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 18, color: Colors.grey),
+          ),
         ),
       ),
     );

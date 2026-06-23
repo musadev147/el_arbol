@@ -11,8 +11,10 @@ class TenantWallet extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: const Center(
-        child: Text('Your Wallet is empty.'),
+      body: const SafeArea(
+        child: Center(
+          child: Text('Your Wallet is empty.'),
+        ),
       ),
     );
   }

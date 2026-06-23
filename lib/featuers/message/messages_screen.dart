@@ -11,8 +11,10 @@ class MessagesScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: const Center(
-        child: Text('No messages yet.'),
+      body: const SafeArea(
+        child: Center(
+          child: Text('No messages yet.'),
+        ),
       ),
     );
   }

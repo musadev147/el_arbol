@@ -12,8 +12,10 @@ class ProfileScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Center(
-        child: Text('Profile details. Points: $points'),
+      body: SafeArea(
+        child: Center(
+          child: Text('Profile details. Points: $points'),
+        ),
       ),
     );
   }
