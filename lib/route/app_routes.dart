@@ -4,6 +4,7 @@ abstract class Routes {
   static const SPLASH = '/splash';
   static const ONBOARDING = '/onboarding';
   static const LOGIN = '/login';
+  static const ROLE_SELECTION = '/role_selection';
   static const NAV = '/nav';
   static const HOME = '/home';
   static const WALLET = '/wallet';

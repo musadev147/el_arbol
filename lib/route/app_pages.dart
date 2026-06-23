@@ -4,6 +4,7 @@ import '../featuers/onboarding/onboarding_screen.dart';
 import '../common_wigdets/custom_navigation.dart';
 import '../featuers/home/presentation/home_screen.dart';
 import '../featuers/auth/login/presentation/login_screen.dart';
+import '../featuers/auth/role_selection_screen.dart';
 import '../featuers/auth/forget_password/presentation/forget_password_screen.dart';
 import '../featuers/auth/otp/presentation/otp_screen.dart';
 import '../featuers/message/messages_screen.dart';
@@ -25,14 +26,17 @@ class AppPages {
 
     GetPage(
       name: Routes.ONBOARDING,
-      page: () => OnboardingScreen(
-        selectedRole: Get.arguments,
-      ),
+      page: () => const OnboardingScreen(),
     ),
 
     GetPage(
       name: Routes.LOGIN,
-      page: () => SignInScreen(role: Get.arguments),
+      page: () => SignInScreen(role: Get.arguments is String ? Get.arguments as String : (Get.arguments as UserRole?)?.value),
+    ),
+
+    GetPage(
+      name: Routes.ROLE_SELECTION,
+      page: () => const RoleSelectionScreen(),
     ),
 
     GetPage(

@@ -29,83 +29,65 @@ class _CustomNavigationState extends State<CustomNavigation> {
 
 
   late final Map<UserRole, List<String>> roleIcons = {
-    UserRole.tenant: [
+    UserRole.wholesale: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
       AssetsIcons.propertyIcons,
       AssetsIcons.usernavIcons,
     ],
-    UserRole.landlord: [
+    UserRole.shopPortal: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
       AssetsIcons.propertyIcons,
       AssetsIcons.usernavIcons,
     ],
-    UserRole.agent: [
+    UserRole.employeeSelfService: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
       AssetsIcons.propertyIcons,
-      AssetsIcons.usernavIcons,
-    ],
-    UserRole.workman: [
-      AssetsIcons.homeIcons,
-      AssetsIcons.messagenavIcons,
-      AssetsIcons.pendingIcons,
       AssetsIcons.usernavIcons,
     ],
   };
 
   late final Map<UserRole, List<String>> roleLabels = {
-    UserRole.tenant: [
-      "Home",
+    UserRole.wholesale: [
+      "Market",
       "Messages",
-      "Wallet",
+      "Orders",
       "Profile",
     ],
-    UserRole.landlord: [
-      "Home",
-      "Messages",
-      "Wallet",
+    UserRole.shopPortal: [
+      "Inventory",
+      "Orders",
+      "Terminal",
       "Profile",
     ],
-    UserRole.agent: [
-      "Home",
+    UserRole.employeeSelfService: [
+      "Dashboard",
       "Messages",
-      "Wallet",
-      "Profile",
-    ],
-    UserRole.workman: [
-      "Home",
-      "Messages",
-      "My Jobs",
+      "Payslips",
       "Profile",
     ],
   };
 
   late final Map<UserRole, List<Widget>> roleScreens = {
-    UserRole.tenant: [
+    UserRole.wholesale: [
       HomeScreen(),
       MessagesScreen(),
       TenantWallet(),
       ProfileScreen(points: 500),
     ],
-    UserRole.landlord: [
-      LandlordHomeScreen(),
-      MessagesLandlordScreen(),
-      WalletScreen(),
-      LandlordProfileScreen(),
-    ],
-    UserRole.agent: [
-      AgentHomeScreen(),
-      MessagesLandlordScreen(),
+    UserRole.shopPortal: [
+      HomeScreen(),
+      MessagesScreen(),
       TenantWallet(),
-      AgentProfileScreen(),
+      ProfileScreen(points: 0),
     ],
-    UserRole.workman: [
-      WorkmanHomeScreen(),
-      MessagesLandlordScreen(),
-      WorkmanJobsPendingScreen(),
-      WorkmenProfileScreen(),
+    UserRole.employeeSelfService: [
+      HomeScreen(),
+      MessagesScreen(),
+      TenantWallet(),
+      ProfileScreen(points: 0),
     ],
   };
 
@@ -117,7 +99,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    final role = widget.role ?? UserRole.tenant;
+    final role = widget.role ?? UserRole.wholesale;
 
     final icons = roleIcons[role]!;
     final labels = roleLabels[role]!;

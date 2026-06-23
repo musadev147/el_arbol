@@ -1,8 +1,7 @@
 enum UserRole {
-  tenant,
-  landlord,
-  agent,
-  workman;
+  wholesale,
+  shopPortal,
+  employeeSelfService;
 
   String get value => name;
 
@@ -11,14 +10,16 @@ enum UserRole {
       throw Exception("Invalid user role: (empty)");
     }
     switch (role.toLowerCase()) {
-      case 'tenant':
-        return UserRole.tenant;
-      case 'landlord':
-        return UserRole.landlord;
-      case 'agent':
-        return UserRole.agent;
-      case 'workman':
-        return UserRole.workman;
+      case 'wholesale':
+      case 'wholesales':
+        return UserRole.wholesale;
+      case 'shopportal':
+      case 'shop portal':
+        return UserRole.shopPortal;
+      case 'employeeselfservice':
+      case 'employee self-service':
+      case 'employee':
+        return UserRole.employeeSelfService;
       default:
         throw Exception("Invalid user role: $role");
     }

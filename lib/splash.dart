@@ -13,9 +13,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Navigate to Login after a short delay
+    // Navigate to Onboarding after a short delay
     Future.delayed(const Duration(seconds: 2), () {
-      Get.offAllNamed(Routes.LOGIN);
+      Get.offAllNamed(Routes.ONBOARDING);
     });
   }
 
