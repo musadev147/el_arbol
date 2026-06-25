@@ -26,9 +26,7 @@ void main() async {
   diSetup();
   initiInternetChecker();
   DioSingleton.instance.create();
-
   configLoading();
-
   runApp(MyApp());
 }
 
