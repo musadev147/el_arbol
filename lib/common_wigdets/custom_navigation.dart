@@ -4,11 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../constants/app_assets/assets_icons.dart';
 import '../constants/app_colors.dart';
-import '../featuers/home/presentation/home_screen.dart';
-import '../featuers/message/messages_screen.dart';
-import '../featuers/wallet/tenant_wallet_screen.dart';
-import '../featuers/profile/profile.dart';
-import '../featuers/placeholders.dart';
+import '../featuers/customers/home/presentation/home_screen.dart';
+import '../featuers/customers/message/messages_screen.dart';
+import '../featuers/customers/profile/profile.dart';
+import '../featuers/customers/wallet/tenant_wallet_screen.dart';
 
 class CustomNavigation extends StatefulWidget {
   final UserRole? role;
@@ -75,19 +74,19 @@ class _CustomNavigationState extends State<CustomNavigation> {
       HomeScreen(),
       MessagesScreen(),
       TenantWallet(),
-      ProfileScreen(points: 500),
+      ProfileScreen(),
     ],
     UserRole.shopPortal: [
       HomeScreen(),
       MessagesScreen(),
       TenantWallet(),
-      ProfileScreen(points: 0),
+      ProfileScreen(),
     ],
     UserRole.employeeSelfService: [
       HomeScreen(),
       MessagesScreen(),
       TenantWallet(),
-      ProfileScreen(points: 0),
+      ProfileScreen(),
     ],
   };
 

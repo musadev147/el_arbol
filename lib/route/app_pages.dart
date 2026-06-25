@@ -1,15 +1,14 @@
 import 'package:get/get.dart';
-
-import '../featuers/onboarding/onboarding_screen.dart';
 import '../common_wigdets/custom_navigation.dart';
-import '../featuers/home/presentation/home_screen.dart';
 import '../featuers/auth/login/presentation/login_screen.dart';
-import '../featuers/auth/role_selection_screen.dart';
+import '../featuers/customers/home/presentation/home_screen.dart';
+import '../featuers/customers/message/messages_screen.dart';
+import '../featuers/customers/profile/profile.dart';
+import '../featuers/customers/wallet/tenant_wallet_screen.dart';
+import '../featuers/role_selection_screen.dart';
 import '../featuers/auth/forget_password/presentation/forget_password_screen.dart';
 import '../featuers/auth/otp/presentation/otp_screen.dart';
-import '../featuers/message/messages_screen.dart';
-import '../featuers/wallet/tenant_wallet_screen.dart';
-import '../featuers/profile/profile.dart';
+import '../onboarding/onboarding_screen.dart';
 import '../splash.dart';
 import '../common_wigdets/user_role.dart';
 
@@ -27,6 +26,7 @@ class AppPages {
     GetPage(
       name: Routes.ONBOARDING,
       page: () => const OnboardingScreen(),
+
     ),
 
     GetPage(
