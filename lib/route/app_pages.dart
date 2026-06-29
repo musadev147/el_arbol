@@ -65,7 +65,7 @@ class AppPages {
 
     GetPage(
       name: Routes.PROFILE,
-      page: () => const ProfileScreen(points: 100),
+      page: () => const ProfileScreen(),
     ),
 
     GetPage(

@@ -5,9 +5,18 @@ import 'package:get/get.dart';
 import '../constants/app_assets/assets_icons.dart';
 import '../constants/app_colors.dart';
 import '../featuers/customers/home/presentation/home_screen.dart';
+import '../featuers/customers/home/presentation/shop_map_screen.dart';
+import '../featuers/customers/home/presentation/leftover_pack_screen.dart';
+import '../featuers/customers/home/presentation/customer_orders_screen.dart';
+import '../featuers/customers/home/presentation/customer_profile_screen.dart';
 import '../featuers/customers/message/messages_screen.dart';
 import '../featuers/customers/profile/profile.dart';
 import '../featuers/customers/wallet/tenant_wallet_screen.dart';
+
+import '../featuers/shope_protal_staff/presentation/shop_portal_dashboard.dart';
+import '../featuers/employee_self_service/presentation/employee_dashboard_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_catalog_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_orders_screen.dart';
 
 class CustomNavigation extends StatefulWidget {
   final UserRole? role;
@@ -28,6 +37,13 @@ class _CustomNavigationState extends State<CustomNavigation> {
 
 
   late final Map<UserRole, List<String>> roleIcons = {
+    UserRole.customer: [
+      AssetsIcons.homeIcons,
+      AssetsIcons.locationIcons,
+      AssetsIcons.offerIcons,
+      AssetsIcons.propertyIcons,
+      AssetsIcons.usernavIcons,
+    ],
     UserRole.wholesale: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
@@ -49,6 +65,13 @@ class _CustomNavigationState extends State<CustomNavigation> {
   };
 
   late final Map<UserRole, List<String>> roleLabels = {
+    UserRole.customer: [
+      "Shop",
+      "Stores",
+      "Surplus",
+      "Orders",
+      "Profile",
+    ],
     UserRole.wholesale: [
       "Market",
       "Messages",
@@ -56,7 +79,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
       "Profile",
     ],
     UserRole.shopPortal: [
-      "Inventory",
+      "Dashboard",
       "Orders",
       "Terminal",
       "Profile",
@@ -70,23 +93,30 @@ class _CustomNavigationState extends State<CustomNavigation> {
   };
 
   late final Map<UserRole, List<Widget>> roleScreens = {
+    UserRole.customer: [
+      const HomeScreen(),
+      const ShopMapScreen(),
+      const LeftoverPackScreen(),
+      const CustomerOrdersScreen(),
+      const CustomerProfileScreen(),
+    ],
     UserRole.wholesale: [
-      HomeScreen(),
+      const WholesaleCatalogScreen(),
       MessagesScreen(),
-      TenantWallet(),
-      ProfileScreen(),
+      const WholesaleOrdersScreen(),
+      const ProfileScreen(role: UserRole.wholesale),
     ],
     UserRole.shopPortal: [
-      HomeScreen(),
+      const ShopPortalDashboardScreen(),
       MessagesScreen(),
       TenantWallet(),
-      ProfileScreen(),
+      const ProfileScreen(role: UserRole.shopPortal),
     ],
     UserRole.employeeSelfService: [
-      HomeScreen(),
+      const EmployeeDashboardScreen(),
       MessagesScreen(),
       TenantWallet(),
-      ProfileScreen(),
+      const ProfileScreen(role: UserRole.employeeSelfService),
     ],
   };
 
