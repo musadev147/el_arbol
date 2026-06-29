@@ -12,7 +12,7 @@ class RoleSelectionScreen extends StatefulWidget {
 }
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
-  UserRole _selectedRole = UserRole.wholesale;
+  UserRole _selectedRole = UserRole.customer;
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +70,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               Expanded(
                 child: ListView(
                   children: [
+                    _buildRoleCard(
+                      UserRole.customer,
+                      'Customer App',
+                      'Fresh organic products, local shop finder, home delivery & leftover packs.',
+                      Icons.shopping_bag,
+                      primaryBrandColor,
+                    ),
+                    SizedBox(height: 16.h),
                     _buildRoleCard(
                       UserRole.wholesale,
                       'Wholesales',

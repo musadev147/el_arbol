@@ -1,4 +1,5 @@
 enum UserRole {
+  customer,
   wholesale,
   shopPortal,
   employeeSelfService;
@@ -10,6 +11,8 @@ enum UserRole {
       throw Exception("Invalid user role: (empty)");
     }
     switch (role.toLowerCase()) {
+      case 'customer':
+        return UserRole.customer;
       case 'wholesale':
       case 'wholesales':
         return UserRole.wholesale;

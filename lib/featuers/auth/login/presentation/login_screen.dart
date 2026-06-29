@@ -10,6 +10,7 @@ import '../../../../constants/text_font_style.dart';
 import '../../../../constants/app_assets/assets_icons.dart';
 import '../../../../provider/singnup_provider.dart';
 import '../../../../route/app_pages.dart';
+import '../../../wholesale_b2b/presentation/wholesale_registration_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   final String? role;
@@ -22,11 +23,13 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _shopIdController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _emailController.dispose();
+    _shopIdController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -35,6 +38,9 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     // Target brand color from website: #00694C
     const Color primaryBrandColor = Color(0xFF00694C);
+    final isShopPortal = widget.role == 'shopPortal' || widget.role == 'shop Portal';
+    final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee';
+    final isSpecialPortal = isShopPortal || isEmployee;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8), // matching web body bg
@@ -73,7 +79,11 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       SizedBox(height: 8.h),
                       Text(
-                        'Artisan produce, delivered with care.',
+                        isShopPortal
+                            ? 'Store Staff Portal — Daily Operations'
+                            : isEmployee
+                                ? 'Employee Self-Service Portal'
+                                : 'Artisan produce, delivered with care.',
                         style: TextFontStyle.textStyle12Poppins400494953.copyWith(
                           fontSize: 14.sp,
                           color: const Color(0xFF6D7A73),
@@ -86,7 +96,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
                 // Welcome back text
                 Text(
-                  'Log In',
+                  isSpecialPortal ? 'Staff Log In' : 'Log In',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 24.sp,
@@ -96,7 +106,11 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  'Welcome back! Please enter your details.',
+                  isShopPortal
+                      ? 'Please enter your Employee ID and Shop ID.'
+                      : isEmployee
+                          ? 'Please enter your Member ID.'
+                          : 'Welcome back! Please enter your details.',
                   style: TextFontStyle.textStyle12Poppins400494953.copyWith(
                     fontSize: 14.sp,
                     color: const Color(0xFF6D7A73),
@@ -104,48 +118,54 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                // Social Log In Button
-                SocialLoginButton(
-                  title: 'Continue with Google',
-                  iconPath: AssetsIcons.googleIcon,
-                  onPressed: () {
-                    // Handle social login
-                  },
-                ),
-                SizedBox(height: 24.h),
+                if (!isSpecialPortal) ...[
+                  // Social Log In Button
+                  SocialLoginButton(
+                    title: 'Continue with Google',
+                    iconPath: AssetsIcons.googleIcon,
+                    onPressed: () {
+                      // Handle social login
+                    },
+                  ),
+                  SizedBox(height: 24.h),
 
-                // Divider
-                Row(
-                  children: [
-                    Expanded(
-                      child: Divider(
-                        color: Colors.grey.shade300,
-                        thickness: 1,
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Text(
-                        'or',
-                        style: TextStyle(
-                          color: const Color(0xFF6D7A73),
-                          fontSize: 14.sp,
+                  // Divider
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.grey.shade300,
+                          thickness: 1,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Divider(
-                        color: Colors.grey.shade300,
-                        thickness: 1,
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Text(
+                          'or',
+                          style: TextStyle(
+                            color: const Color(0xFF6D7A73),
+                            fontSize: 14.sp,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 24.h),
+                      Expanded(
+                        child: Divider(
+                          color: Colors.grey.shade300,
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24.h),
+                ],
 
-                // Email Field
+                // Email / Employee ID / Member ID Field
                 Text(
-                  'Email Address',
+                  isShopPortal
+                      ? 'Employee ID'
+                      : isEmployee
+                          ? 'Member ID'
+                          : 'Email Address',
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
@@ -153,25 +173,62 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
                 SizedBox(height: 6.h),
-                 CustomTextFormField(
+                CustomTextFormField(
                   controller: _emailController,
-                  hintText: 'jane@example.com',
-                  keyboardType: TextInputType.emailAddress,
+                  hintText: isShopPortal
+                      ? 'EMP12345'
+                      : isEmployee
+                          ? 'MEM-8902'
+                          : 'jane@example.com',
+                  keyboardType: isSpecialPortal ? TextInputType.text : TextInputType.emailAddress,
                   borderRadius: 8.r,
                   fillColor: const Color(0xFFECF7E4),
                   borderColor: const Color(0xFF00694C).withOpacity(0.2),
                   focusBorderColor: const Color(0xFF00694C),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
+                      return isShopPortal
+                          ? 'Please enter your Employee ID'
+                          : isEmployee
+                              ? 'Please enter your Member ID'
+                              : 'Please enter your email';
                     }
-                    if (!GetUtils.isEmail(value)) {
+                    if (!isSpecialPortal && !GetUtils.isEmail(value)) {
                       return 'Please enter a valid email';
                     }
                     return null;
                   },
                 ),
                 SizedBox(height: 16.h),
+
+                // Shop ID Field (Only for Shop Portal)
+                if (isShopPortal) ...[
+                  Text(
+                    'Shop ID',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF151E13),
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(
+                    controller: _shopIdController,
+                    hintText: 'SHOP-09',
+                    keyboardType: TextInputType.text,
+                    borderRadius: 8.r,
+                    fillColor: const Color(0xFFECF7E4),
+                    borderColor: const Color(0xFF00694C).withOpacity(0.2),
+                    focusBorderColor: const Color(0xFF00694C),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter Shop ID';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16.h),
+                ],
 
                 // Password Field
                 Row(
@@ -185,23 +242,24 @@ class _SignInScreenState extends State<SignInScreen> {
                         color: const Color(0xFF151E13),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Get.toNamed(Routes.FORGET_PASSWORD);
-                      },
-                      child: Text(
-                        'Forgot password?',
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: primaryBrandColor,
+                    if (!isShopPortal)
+                      GestureDetector(
+                        onTap: () {
+                          Get.toNamed(Routes.FORGET_PASSWORD);
+                        },
+                        child: Text(
+                          'Forgot password?',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: primaryBrandColor,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 SizedBox(height: 6.h),
-                 CustomTextFormField(
+                CustomTextFormField(
                   controller: _passwordController,
                   hintText: '••••••••',
                   isPassword: true,
@@ -240,11 +298,17 @@ class _SignInScreenState extends State<SignInScreen> {
                 Center(
                   child: GestureDetector(
                     onTap: () {
-                      Get.toNamed(Routes.ONBOARDING, arguments: widget.role);
+                      if (widget.role == 'wholesale' || widget.role == 'wholesales') {
+                        Get.to(() => const WholesaleRegistrationScreen());
+                      } else {
+                        Get.toNamed(Routes.ONBOARDING, arguments: widget.role);
+                      }
                     },
                     child: RichText(
                       text: TextSpan(
-                        text: "Don't have an account? ",
+                        text: widget.role == 'wholesale' || widget.role == 'wholesales'
+                            ? "New Business? "
+                            : "Don't have an account? ",
                         style: TextStyle(
                           color: const Color(0xFF6D7A73),
                           fontSize: 14.sp,
@@ -252,7 +316,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                         children: [
                           TextSpan(
-                            text: 'Sign Up',
+                            text: widget.role == 'wholesale' || widget.role == 'wholesales'
+                                ? 'Apply for Wholesale ID'
+                                : 'Sign Up',
                             style: TextStyle(
                               color: primaryBrandColor,
                               fontWeight: FontWeight.bold,
