@@ -10,6 +10,9 @@ import '../../../../constants/text_font_style.dart';
 import '../../../../constants/app_assets/assets_icons.dart';
 import '../../../../provider/singnup_provider.dart';
 import '../../../../route/app_pages.dart';
+import 'package:rxdart/rxdart.dart';
+import 'data/rx.dart';
+import 'model/post_register_model.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String? role;
@@ -27,6 +30,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  late final PostRegisterRx _postRegisterRx;
+
+  @override
+  void initState() {
+    super.initState();
+    _postRegisterRx = PostRegisterRx(
+      empty: PostRegisterModel(),
+      dataFetcher: BehaviorSubject<PostRegisterModel>(),
+    );
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -34,12 +48,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _postRegisterRx.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     const Color primaryBrandColor = Color(0xFF00694C);
+
+    final isShopPortal = widget.role == 'shopPortal' || widget.role == 'shop Portal';
+    final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee';
+    final isSpecialPortal = isShopPortal || isEmployee;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
@@ -70,7 +89,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  'Create an account to order fresh produce.',
+                  isShopPortal
+                      ? 'Create a Store Staff account.'
+                      : isEmployee
+                          ? 'Create an Employee Self-Service account.'
+                          : 'Create an account to order fresh produce.',
                   style: TextFontStyle.textStyle12Poppins400494953.copyWith(
                     fontSize: 14.sp,
                     color: const Color(0xFF6D7A73),
@@ -78,44 +101,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                // Social Log In Button
-                SocialLoginButton(
-                  title: 'Continue with Google',
-                  iconPath: AssetsIcons.googleIcon,
-                  onPressed: () {
-                    // Handle social sign up
-                  },
-                ),
-                SizedBox(height: 24.h),
+                if (!isSpecialPortal) ...[
+                  // Social Log In Button
+                  SocialLoginButton(
+                    title: 'Continue with Google',
+                    iconPath: AssetsIcons.googleIcon,
+                    onPressed: () {
+                      // Handle social sign up
+                    },
+                  ),
+                  SizedBox(height: 24.h),
 
-                // Divider
-                Row(
-                  children: [
-                    Expanded(
-                      child: Divider(
-                        color: Colors.grey.shade300,
-                        thickness: 1,
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Text(
-                        'or',
-                        style: TextStyle(
-                          color: const Color(0xFF6D7A73),
-                          fontSize: 14.sp,
+                  // Divider
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.grey.shade300,
+                          thickness: 1,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Divider(
-                        color: Colors.grey.shade300,
-                        thickness: 1,
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Text(
+                          'or',
+                          style: TextStyle(
+                            color: const Color(0xFF6D7A73),
+                            fontSize: 14.sp,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 24.h),
+                      Expanded(
+                        child: Divider(
+                          color: Colors.grey.shade300,
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24.h),
+                ],
 
                 // Full Name
                 Text(
@@ -259,8 +284,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       provider.setPassword(_passwordController.text);
                       provider.setPasswordConfirm(_confirmPasswordController.text);
                       
-                      // Go to Nav/Home
-                      Get.offAllNamed(Routes.NAV, arguments: widget.role);
+                      _postRegisterRx.registerFunc(
+                        name: _nameController.text,
+                        email: _emailController.text,
+                        phone: _phoneController.text,
+                        password: _passwordController.text,
+                        passwordConfirm: _confirmPasswordController.text,
+                        role: widget.role ?? 'customer',
+                      );
                     }
                   },
                 ),

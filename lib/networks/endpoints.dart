@@ -1,5 +1,5 @@
 // ignore_for_file: constant_identifier_names
-String? url = 'https://api.briic.cloud/api/';
+String? url = 'https://frutos.athome.com.bd/api/';
 
 final class NetworkConstants {
   NetworkConstants._();
@@ -18,8 +18,8 @@ final class Endpoints {
   //backend_url
   // App Url
 
-  static String register() => "/auth/register";
-  static String signIn() => "/auth/login";
+  static String register() => "auth/register/";
+  static String signIn() => "auth/login/";
   static String otpVerify() => "/auth/verify-email";
   static String login() => "/login";
   static String profile() => "/profile";
