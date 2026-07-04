@@ -11,6 +11,9 @@ import '../../../../constants/app_assets/assets_icons.dart';
 import '../../../../provider/singnup_provider.dart';
 import '../../../../route/app_pages.dart';
 import '../../../wholesale_b2b/presentation/wholesale_registration_screen.dart';
+import 'package:rxdart/rxdart.dart';
+import 'data/rx.dart';
+import 'model/post_sign_in_model.dart';
 
 class SignInScreen extends StatefulWidget {
   final String? role;
@@ -26,11 +29,23 @@ class _SignInScreenState extends State<SignInScreen> {
   final _shopIdController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  late final PostSignInRx _postSignInRx;
+
+  @override
+  void initState() {
+    super.initState();
+    _postSignInRx = PostSignInRx(
+      empty: PostSignInModel(),
+      dataFetcher: BehaviorSubject<PostSignInModel>(),
+    );
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
     _shopIdController.dispose();
     _passwordController.dispose();
+    _postSignInRx.dispose();
     super.dispose();
   }
 
@@ -287,8 +302,11 @@ class _SignInScreenState extends State<SignInScreen> {
                       final provider = Provider.of<SignupProvider>(context, listen: false);
                       provider.setLoginEmail(_emailController.text);
                       
-                      // Go to Nav/Home
-                      Get.offAllNamed(Routes.NAV, arguments: widget.role);
+                      _postSignInRx.loginFunc(
+                        email: _emailController.text,
+                        password: _passwordController.text,
+                        role: widget.role ?? 'customer',
+                      );
                     }
                   },
                 ),
@@ -301,7 +319,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       if (widget.role == 'wholesale' || widget.role == 'wholesales') {
                         Get.to(() => const WholesaleRegistrationScreen());
                       } else {
-                        Get.toNamed(Routes.ONBOARDING, arguments: widget.role);
+                        Get.toNamed(Routes.REGISTER, arguments: widget.role);
                       }
                     },
                     child: RichText(

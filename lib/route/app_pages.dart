@@ -12,6 +12,8 @@ import '../onboarding/onboarding_screen.dart';
 import '../splash.dart';
 import '../common_wigdets/user_role.dart';
 
+import '../featuers/auth/register/presentation/register_screen.dart';
+
 part 'app_routes.dart';
 
 class AppPages {
@@ -76,6 +78,11 @@ class AppPages {
     GetPage(
       name: Routes.OTP,
       page: () => const OtpScreen(),
+    ),
+
+    GetPage(
+      name: Routes.REGISTER,
+      page: () => RegisterScreen(role: Get.arguments is String ? Get.arguments as String : (Get.arguments as UserRole?)?.value),
     ),
   ];
 }
