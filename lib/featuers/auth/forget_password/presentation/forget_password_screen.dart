@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:rxdart/rxdart.dart';
 
 import '../../../../common_wigdets/custom_textfiled.dart';
 import '../../../../common_wigdets/common_button.dart';
 import '../../../../constants/text_font_style.dart';
 import '../../../../provider/forget_password_provider.dart';
-import '../../../../route/app_pages.dart';
+import 'data/rx.dart';
+import 'model/forget_model.dart';
 
 class ForgetPasswordScreen extends StatefulWidget {
   const ForgetPasswordScreen({super.key});
@@ -20,9 +22,21 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
 
+  late final ForgetPasswordRx _forgetPasswordRx;
+
+  @override
+  void initState() {
+    super.initState();
+    _forgetPasswordRx = ForgetPasswordRx(
+      empty: ForgetEmailModel(),
+      dataFetcher: BehaviorSubject<ForgetEmailModel>(),
+    );
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
+    _forgetPasswordRx.dispose();
     super.dispose();
   }
 
@@ -105,8 +119,8 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       final provider = Provider.of<ForgetPasswordProvider>(context, listen: false);
                       provider.setForgetEmail(_emailController.text);
                       
-                      // Navigate to OTP Verification Screen
-                      Get.toNamed(Routes.OTP);
+                      // Request reset OTP from the backend API
+                      _forgetPasswordRx.sendOtpFunc(email: _emailController.text);
                     }
                   },
                 ),

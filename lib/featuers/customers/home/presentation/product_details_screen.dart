@@ -3,7 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../../wishlist/presentation/data/rx.dart';
+import 'model/post_wishlist_model.dart';
+
 class ProductDetailsScreen extends StatefulWidget {
+  final String? id;
   final String name;
   final String origin;
   final String price;
@@ -13,6 +17,7 @@ class ProductDetailsScreen extends StatefulWidget {
 
   const ProductDetailsScreen({
     super.key,
+    this.id,
     required this.name,
     required this.origin,
     required this.price,
@@ -27,6 +32,17 @@ class ProductDetailsScreen extends StatefulWidget {
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int _quantity = 1;
+  late final WishlistRx? _wishlistRx;
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _wishlistRx = Get.find<WishlistRx>();
+    } catch (_) {
+      _wishlistRx = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,16 +68,33 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
             ),
             actions: [
-              Padding(
-                padding: EdgeInsets.only(right: 16.w, top: 8.h),
-                child: CircleAvatar(
-                  backgroundColor: Colors.white,
-                  child: IconButton(
-                    icon: const Icon(Icons.favorite_border, color: Color(0xFF151E13)),
-                    onPressed: () {},
+              if (widget.id != null && _wishlistRx != null)
+                Padding(
+                  padding: EdgeInsets.only(right: 16.w, top: 8.h),
+                  child: StreamBuilder<List<PostCreateWishlistModel>>(
+                    stream: _wishlistRx.valueStreamData,
+                    builder: (context, snapshot) {
+                      final isWish = _wishlistRx.isWishlisted(widget.id);
+
+                      return CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: IconButton(
+                          icon: Icon(
+                            isWish ? Icons.favorite : Icons.favorite_border_rounded,
+                            color: isWish ? Colors.red : const Color(0xFF151E13),
+                          ),
+                          onPressed: () {
+                            if (isWish) {
+                              _wishlistRx.removeItem(widget.id!);
+                            } else {
+                              _wishlistRx.addItem(widget.id!);
+                            }
+                          },
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: CachedNetworkImage(

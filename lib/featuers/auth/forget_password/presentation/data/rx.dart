@@ -1,0 +1,59 @@
+import 'dart:developer';
+import 'package:dio/dio.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:get/get.dart';
+import 'package:rxdart/rxdart.dart';
+import '../../../../../../networks/rx_base.dart';
+import '../../../../../common_wigdets/app_toast.dart';
+import '../model/forget_model.dart';
+import 'api.dart';
+import '../../../../../../route/app_pages.dart';
+
+/// Reactive response handler for Password Reset OTP flow.
+class ForgetPasswordRx extends RxResponseInt<ForgetEmailModel> {
+  final api = ForgetPasswordApi.instance;
+
+  ForgetPasswordRx({
+    required super.empty,
+    required super.dataFetcher,
+  });
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  /// Calls the API to send OTP to the user's email.
+  Future<void> sendOtpFunc({required String email}) async {
+    try {
+      await EasyLoading.show(status: "Sending OTP...");
+
+      final data = await api.sendOtp(email: email);
+
+      await handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Send OTP error: $error");
+      await handleErrorWithReturn(error);
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  @override
+  handleSuccessWithReturn(ForgetEmailModel data) async {
+    AppToast.success(data.detail ?? "OTP sent successfully!");
+    Get.toNamed(Routes.OTP);
+  }
+
+  @override
+  handleErrorWithReturn(error) async {
+    String message = "Failed to send OTP";
+
+    if (error is DioException) {
+      message = error.response?.data["message"] ?? error.response?.data["detail"] ?? message;
+
+      if (error.type == DioExceptionType.connectionError) {
+        message = "Check Your Network Connection";
+      }
+    }
+
+    AppToast.error(message);
+  }
+}

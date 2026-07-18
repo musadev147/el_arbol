@@ -8,15 +8,15 @@ class PostRegisterModel {
   PostRegisterModel.fromJson(Map<String, dynamic> json) {
     access = json['access'];
     refresh = json['refresh'];
-    user = json['user'] != null ? new User.fromJson(json['user']) : null;
+    user = json['user'] != null ? User.fromJson(json['user']) : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['access'] = this.access;
-    data['refresh'] = this.refresh;
-    if (this.user != null) {
-      data['user'] = this.user!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['access'] = access;
+    data['refresh'] = refresh;
+    if (user != null) {
+      data['user'] = user!.toJson();
     }
     return data;
   }
@@ -34,13 +34,13 @@ class User {
 
   User(
       {this.id,
-        this.email,
-        this.username,
-        this.firstName,
-        this.lastName,
-        this.fullName,
-        this.profile,
-        this.userType});
+      this.email,
+      this.username,
+      this.firstName,
+      this.lastName,
+      this.fullName,
+      this.profile,
+      this.userType});
 
   User.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -50,22 +50,22 @@ class User {
     lastName = json['lastName'];
     fullName = json['fullName'];
     profile =
-    json['profile'] != null ? new Profile.fromJson(json['profile']) : null;
+        json['profile'] != null ? Profile.fromJson(json['profile']) : null;
     userType = json['user_type'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['email'] = this.email;
-    data['username'] = this.username;
-    data['firstName'] = this.firstName;
-    data['lastName'] = this.lastName;
-    data['fullName'] = this.fullName;
-    if (this.profile != null) {
-      data['profile'] = this.profile!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['email'] = email;
+    data['username'] = username;
+    data['firstName'] = firstName;
+    data['lastName'] = lastName;
+    data['fullName'] = fullName;
+    if (profile != null) {
+      data['profile'] = profile!.toJson();
     }
-    data['user_type'] = this.userType;
+    data['user_type'] = userType;
     return data;
   }
 }
@@ -81,12 +81,12 @@ class Profile {
 
   Profile(
       {this.resolvedAvatar,
-        this.phone,
-        this.bio,
-        this.notifOrderUpdates,
-        this.notifPromotions,
-        this.notifPriceChanges,
-        this.notifLeftoverPacks});
+      this.phone,
+      this.bio,
+      this.notifOrderUpdates,
+      this.notifPromotions,
+      this.notifPriceChanges,
+      this.notifLeftoverPacks});
 
   Profile.fromJson(Map<String, dynamic> json) {
     resolvedAvatar = json['resolvedAvatar'];
@@ -99,14 +99,14 @@ class Profile {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['resolvedAvatar'] = this.resolvedAvatar;
-    data['phone'] = this.phone;
-    data['bio'] = this.bio;
-    data['notifOrderUpdates'] = this.notifOrderUpdates;
-    data['notifPromotions'] = this.notifPromotions;
-    data['notifPriceChanges'] = this.notifPriceChanges;
-    data['notifLeftoverPacks'] = this.notifLeftoverPacks;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['resolvedAvatar'] = resolvedAvatar;
+    data['phone'] = phone;
+    data['bio'] = bio;
+    data['notifOrderUpdates'] = notifOrderUpdates;
+    data['notifPromotions'] = notifPromotions;
+    data['notifPriceChanges'] = notifPriceChanges;
+    data['notifLeftoverPacks'] = notifLeftoverPacks;
     return data;
   }
 }

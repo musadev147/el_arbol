@@ -13,4 +13,5 @@ abstract class Routes {
   static const FORGET_PASSWORD = '/forget_password';
   static const OTP = '/otp';
   static const REGISTER = '/register';
+  static const WISHLIST = '/wishlist';
 }

@@ -1,5 +1,5 @@
 // ignore_for_file: constant_identifier_names
-String? url = 'https://frutos.athome.com.bd/api/';
+String? url = 'https://apielarbol.icommerce.com.bd/api/';
 
 final class NetworkConstants {
   NetworkConstants._();
@@ -20,6 +20,12 @@ final class Endpoints {
 
   static String register() => "auth/register/";
   static String signIn() => "auth/login/";
+  static String refreshToken() => "auth/token/refresh/";
+  static String forgetPasswordSendOtp() => "auth/password-reset/send-otp/";
+  static String getProducts() => "products/products/";
+  static String getCategories() => "products/categories/";
+  static String wishlist() => "auth/wishlist/";
+  static String wishlistDelete(String productId) => "auth/wishlist/$productId/";
   static String otpVerify() => "/auth/verify-email";
   static String login() => "/login";
   static String profile() => "/profile";

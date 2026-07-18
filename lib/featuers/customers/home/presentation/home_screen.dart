@@ -4,7 +4,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:rxdart/rxdart.dart';
 import 'product_details_screen.dart';
+import 'data/rx.dart';
+import 'model/get_product_model.dart';
+import 'model/get_category_model.dart';
+import '../../wishlist/presentation/data/rx.dart';
+import 'model/post_wishlist_model.dart' show PostCreateWishlistModel;
+import '../../../../route/app_pages.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,112 +29,109 @@ class _HomeScreenState extends State<HomeScreen> {
   // Cart state
   final RxList<Map<String, dynamic>> _cartItems = <Map<String, dynamic>>[].obs;
 
-  final List<String> _categories = [
-    'All',
-    'Fruits',
-    'Vegetables',
-    'Herbs',
-    'Grocery',
-    'Drinks',
-    'Fresh Cheese'
-  ];
+  final List<String> _categories = ['All'];
 
   final Map<String, List<String>> _subcategories = {
     'All': ['All'],
-    'Fruits': ['All', 'Berries', 'Citrus', 'Stone Fruits'],
-    'Vegetables': ['All', 'Leafy Green', 'Roots', 'Solanaceae'],
-    'Herbs': ['All', 'Culinary', 'Medicinal'],
-    'Grocery': ['All', 'Honey', 'Oils', 'Spreads'],
-    'Drinks': ['All', 'Cold Pressed', 'Kombucha'],
-    'Fresh Cheese': ['All', 'Goat Cheese', 'Sheep Cheese']
   };
 
-  // Products with Unsplash network images
-  final List<Map<String, dynamic>> _allProducts = [
-    {
-      'name': 'Organic Heirloom Tomatoes',
-      'origin': 'Andalusia, ES',
-      'price': 4.20,
-      'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
-      'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain. They offer rich, sweet flavor.',
-      'category': 'Vegetables',
-      'subcategory': 'Solanaceae',
-      'promo': true,
-      'onSale': false,
-    },
-    {
-      'name': 'Fresh Haas Avocados',
-      'origin': 'Michoacán, MX',
-      'price': 3.20,
-      'imageUrl': 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=500&auto=format&fit=crop',
-      'description': 'Sourced directly from the mountains of Michoacán, Haas avocados have a rich, buttery texture.',
-      'category': 'Fruits',
-      'subcategory': 'Stone Fruits',
-      'promo': true,
-      'onSale': true,
-      'originalPrice': 4.50,
-    },
-    {
-      'name': 'Sweet Organic Strawberries',
-      'origin': 'Huelva, ES',
-      'price': 5.50,
-      'imageUrl': 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=500&auto=format&fit=crop',
-      'description': 'Juicy, hand-picked organic strawberries from Huelva. Known for their intense aroma.',
-      'category': 'Fruits',
-      'subcategory': 'Berries',
-      'promo': false,
-      'onSale': true,
-      'originalPrice': 6.90,
-    },
-    {
-      'name': 'Artisan Raw Honey',
-      'origin': 'Black Forest, DE',
-      'price': 8.90,
-      'imageUrl': 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500&auto=format&fit=crop',
-      'description': 'Pure, unpasteurized honey harvested from organic apiaries in the deep valleys of the Black Forest.',
-      'category': 'Grocery',
-      'subcategory': 'Honey',
-      'promo': false,
-      'onSale': false,
-    },
-    {
-      'name': 'Fresh Goat Cheese',
-      'origin': 'Loire Valley, FR',
-      'price': 6.80,
-      'imageUrl': 'https://images.unsplash.com/photo-1524351199679-46cddf530c04?w=500&auto=format&fit=crop',
-      'description': 'A creamy, traditional French chèvre made using raw goat milk from sustainable herds.',
-      'category': 'Fresh Cheese',
-      'subcategory': 'Goat Cheese',
-      'promo': true,
-      'onSale': false,
-    },
-    {
-      'name': 'Cold Pressed Green Juice',
-      'origin': 'Local Kitchen',
-      'price': 4.90,
-      'imageUrl': 'https://images.unsplash.com/photo-1610970881699-44a5587caa9a?w=500&auto=format&fit=crop',
-      'description': 'Freshly squeezed cucumber, celery, kale, apple, and lemon. High in vitamins and minerals.',
-      'category': 'Drinks',
-      'subcategory': 'Cold Pressed',
-      'promo': false,
-      'onSale': true,
-      'originalPrice': 5.90,
-    },
-    {
-      'name': 'Culinary Fresh Rosemary',
-      'origin': 'Murcia, ES',
-      'price': 1.80,
-      'imageUrl': 'https://images.unsplash.com/photo-1515516969-d4008cc6241a?w=500&auto=format&fit=crop',
-      'description': 'Aromatic organic rosemary sprigs, perfect for roasting, seasoning, and herbal infusions.',
-      'category': 'Herbs',
-      'subcategory': 'Culinary',
-      'promo': false,
-      'onSale': false,
-    }
-  ];
+  // Products list fallback (empty since they are loaded dynamically from API)
+  final List<Map<String, dynamic>> _allProducts = [];
+
+  late final GetProductRx _getProductRx;
+  late final GetCategoryRx _getCategoryRx;
+  late final WishlistRx _wishlistRx;
+  List<Results> _apiProducts = [];
+  List<Category> _apiCategories = [];
+  StreamSubscription? _productSubscription;
+  StreamSubscription? _categorySubscription;
+  bool _hasNetworkError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getProductRx = GetProductRx(
+      empty: GetProductModel(),
+      dataFetcher: BehaviorSubject<GetProductModel>(),
+    );
+    _getCategoryRx = GetCategoryRx(
+      empty: GetCategoryModel(),
+      dataFetcher: BehaviorSubject<GetCategoryModel>(),
+    );
+    _wishlistRx = Get.put(
+      WishlistRx(
+        empty: [],
+        dataFetcher: BehaviorSubject<List<PostCreateWishlistModel>>.seeded([]),
+      ),
+      permanent: true,
+    );
+
+    _productSubscription = _getProductRx.valueStreamData.listen((data) {
+      if (data is GetProductModel && data.results != null) {
+        setState(() {
+          _apiProducts = data.results!;
+          _hasNetworkError = false;
+        });
+      }
+    }, onError: (error) {
+      setState(() {
+        _hasNetworkError = true;
+      });
+    });
+
+    _categorySubscription = _getCategoryRx.valueStreamData.listen((data) {
+      if (data is GetCategoryModel && data.results != null) {
+        setState(() {
+          _apiCategories = data.results!;
+          _hasNetworkError = false;
+        });
+      }
+    }, onError: (error) {
+      setState(() {
+        _hasNetworkError = true;
+      });
+    });
+
+    _getProductRx.fetchProducts();
+    _getCategoryRx.fetchCategories();
+    _wishlistRx.fetchWishlist();
+  }
+
+  @override
+  void dispose() {
+    _productSubscription?.cancel();
+    _categorySubscription?.cancel();
+    _getProductRx.dispose();
+    _getCategoryRx.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> get _mappedApiProducts {
+    return _apiProducts.map((p) {
+      final double originalPrice = double.tryParse(p.price ?? '') ?? 0.0;
+      final double discountPrice = double.tryParse(p.discountPrice ?? '') ?? 0.0;
+      final double finalPrice = (discountPrice > 0) ? discountPrice : originalPrice;
+      final bool onSale = discountPrice > 0;
+
+      return {
+        'id': p.id ?? '',
+        'name': p.name ?? '',
+        'origin': p.origin ?? 'Unknown',
+        'price': finalPrice,
+        'imageUrl': p.thumbnailUrl ?? 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+        'description': p.description ?? '',
+        'category': p.category?.name ?? 'All',
+        'subcategory': p.subCategory?.name ?? 'All',
+        'promo': p.badge != null && p.badge!.isNotEmpty,
+        'onSale': onSale,
+        'originalPrice': originalPrice,
+      };
+    }).toList();
+  }
 
   List<Map<String, dynamic>> get _filteredProducts {
-    List<Map<String, dynamic>> list = List.from(_allProducts);
+    final sourceList = _mappedApiProducts.isNotEmpty ? _mappedApiProducts : _allProducts;
+    List<Map<String, dynamic>> list = List.from(sourceList);
 
     // Filter by category
     if (_selectedCategory != 'All') {
@@ -157,6 +161,103 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     return list;
+  }
+
+  List<String> get _dynamicCategories {
+    if (_apiCategories.isEmpty) return _categories;
+    final List<String> list = ['All'];
+    list.addAll(_apiCategories.map<String>((c) => c.name ?? '').where((name) => name.isNotEmpty));
+    return list;
+  }
+
+  Map<String, List<String>> get _dynamicSubcategories {
+    if (_apiCategories.isEmpty) return _subcategories;
+    final Map<String, List<String>> map = {'All': ['All']};
+    for (var cat in _apiCategories) {
+      final name = cat.name ?? '';
+      if (name.isNotEmpty) {
+        final List<String> subs = ['All'];
+        if (cat.subcategories != null) {
+          subs.addAll(cat.subcategories!.map<String>((s) => s.name ?? '').where((s) => s.isNotEmpty));
+        }
+        map[name] = subs;
+      }
+    }
+    return map;
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(24.r),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00694C).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.wifi_off_rounded,
+                color: const Color(0xFF00694C),
+                size: 80.sp,
+              ),
+            ),
+            SizedBox(height: 24.h),
+            Text(
+              'No Connection',
+              style: TextStyle(
+                fontSize: 22.sp,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF151E13),
+                fontFamily: 'Poppins',
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Please check your internet connection or try again later. We couldn\'t load the store database.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: const Color(0xFF6D7A73),
+                height: 1.4,
+              ),
+            ),
+            SizedBox(height: 32.h),
+            SizedBox(
+              width: double.infinity,
+              height: 48.h,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _hasNetworkError = false;
+                  });
+                  _getProductRx.fetchProducts();
+                  _getCategoryRx.fetchCategories();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00694C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Try Again',
+                  style: TextStyle(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _addToCart(Map<String, dynamic> prod) {
@@ -500,6 +601,13 @@ class _HomeScreenState extends State<HomeScreen> {
     const Color primaryColor = Color(0xFF00694C);
     final products = _filteredProducts;
 
+    if (_hasNetworkError) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFAFAF8),
+        body: SafeArea(child: _buildErrorView()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
       appBar: AppBar(
@@ -514,6 +622,10 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite_border_rounded, color: Color(0xFF151E13)),
+            onPressed: () => Get.toNamed(Routes.WISHLIST),
+          ),
           Stack(
             alignment: Alignment.center,
             children: [
@@ -613,9 +725,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
-                itemCount: _categories.length,
+                itemCount: _dynamicCategories.length,
                 itemBuilder: (context, index) {
-                  final cat = _categories[index];
+                  final cat = _dynamicCategories[index];
                   final isSelected = _selectedCategory == cat;
 
                   return Container(
@@ -647,16 +759,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             // Subcategories horizontal list (if category is not 'All')
-            if (_selectedCategory != 'All' && _subcategories[_selectedCategory] != null) ...[
+            if (_selectedCategory != 'All' && _dynamicSubcategories[_selectedCategory] != null) ...[
               SizedBox(height: 6.h),
               SizedBox(
                 height: 35.h,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: EdgeInsets.symmetric(horizontal: 24.w),
-                  itemCount: _subcategories[_selectedCategory]!.length,
+                  itemCount: _dynamicSubcategories[_selectedCategory]!.length,
                   itemBuilder: (context, index) {
-                    final sub = _subcategories[_selectedCategory]![index];
+                    final sub = _dynamicSubcategories[_selectedCategory]![index];
                     final isSelected = _selectedSubcategory == sub;
 
                     return Container(
@@ -726,6 +838,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () {
         Get.to(() => ProductDetailsScreen(
+              id: prod['id']?.toString(),
               name: prod['name'],
               origin: prod['origin'],
               price: '€${(prod['price'] as double).toStringAsFixed(2)}',
@@ -769,7 +882,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (onSale)
                     Positioned(
                       top: 8,
-                      right: 8,
+                      left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
@@ -788,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   if (isPromo)
                     Positioned(
-                      top: 8,
+                      top: onSale ? 32 : 8,
                       left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -804,6 +917,40 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ),
+                    ),
+                  // Wishlist heart toggle button
+                  if (prod['id'] != null && prod['id'].toString().isNotEmpty)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: StreamBuilder<List<PostCreateWishlistModel>>(
+                        stream: _wishlistRx.valueStreamData,
+                        builder: (context, snapshot) {
+                          final isWish = _wishlistRx.isWishlisted(prod['id'].toString());
+
+                          return GestureDetector(
+                            onTap: () {
+                              if (isWish) {
+                                _wishlistRx.removeItem(prod['id'].toString());
+                              } else {
+                                _wishlistRx.addItem(prod['id'].toString());
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isWish ? Icons.favorite : Icons.favorite_border_rounded,
+                                color: isWish ? Colors.red : Colors.grey,
+                                size: 18.r,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                 ],

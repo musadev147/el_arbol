@@ -14,8 +14,6 @@ import '../../../../../common_wigdets/custom_navigation.dart';
 import '../model/post_register_model.dart';
 import 'api.dart';
 
-import '../../../../../../route/app_pages.dart';
-
 class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
   final api = PostRegisterApi.instance;
 
@@ -76,7 +74,7 @@ class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
     final role = UserRole.fromString(_selectedRole);
     await appData.write('user_role', role.value);
 
-    Get.offAllNamed(Routes.LOGIN, arguments: role.value);
+    Get.offAll(() => CustomNavigation(role: role));
   }
 
   @override
