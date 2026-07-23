@@ -29,6 +29,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _businessNameController = TextEditingController();
+  final _contactNameController = TextEditingController();
+  final _tradeLicenseController = TextEditingController();
+  final _postcodeController = TextEditingController();
+  final _businessTypeController = TextEditingController();
+  final _monthlyVolumeController = TextEditingController();
 
   late final PostRegisterRx _postRegisterRx;
 
@@ -48,6 +54,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _businessNameController.dispose();
+    _contactNameController.dispose();
+    _tradeLicenseController.dispose();
+    _postcodeController.dispose();
+    _businessTypeController.dispose();
+    _monthlyVolumeController.dispose();
     _postRegisterRx.dispose();
     super.dispose();
   }
@@ -59,6 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final isShopPortal = widget.role == 'shopPortal' || widget.role == 'shop Portal';
     final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee';
     final isSpecialPortal = isShopPortal || isEmployee;
+    final isWholesale = widget.role == 'wholesale' || widget.role == 'wholesales';
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
@@ -89,11 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  isShopPortal
-                      ? 'Create a Store Staff account.'
-                      : isEmployee
-                          ? 'Create an Employee Self-Service account.'
-                          : 'Create an account to order fresh produce.',
+                  'Create an account.',
                   style: TextFontStyle.textStyle12Poppins400494953.copyWith(
                     fontSize: 14.sp,
                     color: const Color(0xFF6D7A73),
@@ -101,7 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                if (!isSpecialPortal) ...[
+
                   // Social Log In Button
                   SocialLoginButton(
                     title: 'Continue with Google',
@@ -140,30 +149,104 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                   SizedBox(height: 24.h),
+
+
+                if (isWholesale) ...[
+                  // Business Name
+                  Text(
+                    'Business Name',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF151E13),
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(
+                    controller: _businessNameController,
+                    hintText: 'e.g. Valencia Food Group S.L.',
+                    borderRadius: 8.r,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter business name';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16.h),
+
+                  // Contact Name
+                  Text(
+                    'Contact Name',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF151E13),
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(
+                    controller: _contactNameController,
+                    hintText: 'e.g. Mario Silva',
+                    borderRadius: 8.r,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter contact name';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16.h),
+
+                  // Trade License
+                  Text('Trade License Number', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: const Color(0xFF151E13))),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(controller: _tradeLicenseController, hintText: 'e.g. TL-12345/2023', borderRadius: 8.r),
+                  SizedBox(height: 16.h),
+
+                  // Postcode
+                  Text('Postcode', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: const Color(0xFF151E13))),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(controller: _postcodeController, hintText: 'e.g. 1212', borderRadius: 8.r),
+                  SizedBox(height: 16.h),
+
+                  // Business Type
+                  Text('Business Type', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: const Color(0xFF151E13))),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(controller: _businessTypeController, hintText: 'e.g. food_retail', borderRadius: 8.r),
+                  SizedBox(height: 16.h),
+
+                  // Monthly Volume
+                  Text('Monthly Volume', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: const Color(0xFF151E13))),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(controller: _monthlyVolumeController, hintText: 'e.g. 1000_3000', borderRadius: 8.r),
+                  SizedBox(height: 16.h),
                 ],
 
-                // Full Name
-                Text(
-                  'Full Name',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF151E13),
+                // Full Name (Only for non-wholesale)
+                if (!isWholesale) ...[
+                  Text(
+                    'Full Name',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF151E13),
+                    ),
                   ),
-                ),
-                SizedBox(height: 6.h),
-                CustomTextFormField(
-                  controller: _nameController,
-                  hintText: 'Jane Doe',
-                  borderRadius: 8.r,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16.h),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(
+                    controller: _nameController,
+                    hintText: 'Jane Doe',
+                    borderRadius: 8.r,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your name';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16.h),
+                ],
 
                 // Email Address
                 Text(
@@ -285,12 +368,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       provider.setPasswordConfirm(_confirmPasswordController.text);
                       
                       _postRegisterRx.registerFunc(
-                        name: _nameController.text,
+                        name: isWholesale ? _contactNameController.text : _nameController.text,
                         email: _emailController.text,
                         phone: _phoneController.text,
                         password: _passwordController.text,
                         passwordConfirm: _confirmPasswordController.text,
                         role: widget.role ?? 'customer',
+                        businessName: isWholesale ? _businessNameController.text : null,
+                        contactName: isWholesale ? _contactNameController.text : null,
+                        tradeLicenseNumber: isWholesale ? _tradeLicenseController.text : null,
+                        postcode: isWholesale ? _postcodeController.text : null,
+                        businessType: isWholesale ? _businessTypeController.text : null,
+                        monthlyVolume: isWholesale ? _monthlyVolumeController.text : null,
                       );
                     }
                   },

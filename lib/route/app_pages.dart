@@ -14,6 +14,12 @@ import '../common_wigdets/user_role.dart';
 
 import '../featuers/auth/register/presentation/register_screen.dart';
 import '../featuers/customers/wishlist/presentation/wishlist_screen.dart';
+import '../featuers/employee_self_service/presentation/staff_tasks_screen.dart';
+import '../featuers/employee_self_service/presentation/staff_colleagues_screen.dart';
+import '../featuers/employee_self_service/presentation/staff_order_history_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_notifications_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_daily_reports_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_support_tickets_screen.dart';
 
 part 'app_routes.dart';
 
@@ -88,6 +94,30 @@ class AppPages {
     GetPage(
       name: Routes.WISHLIST,
       page: () => const WishlistScreen(),
+    ),
+    GetPage(
+      name: Routes.STAFF_TASKS_SCREEN,
+      page: () => const StaffTasksScreen(),
+    ),
+    GetPage(
+      name: Routes.STAFF_COLLEAGUES_SCREEN,
+      page: () => const StaffColleaguesScreen(),
+    ),
+    GetPage(
+      name: Routes.STAFF_ORDER_HISTORY_SCREEN,
+      page: () => const StaffOrderHistoryScreen(),
+    ),
+    GetPage(
+      name: Routes.WHOLESALE_NOTIFICATIONS_SCREEN,
+      page: () => const WholesaleNotificationsScreen(),
+    ),
+    GetPage(
+      name: Routes.WHOLESALE_DAILY_REPORTS_SCREEN,
+      page: () => const WholesaleDailyReportsScreen(),
+    ),
+    GetPage(
+      name: Routes.WHOLESALE_SUPPORT_TICKETS_SCREEN,
+      page: () => const WholesaleSupportTicketsScreen(),
     ),
   ];
 }

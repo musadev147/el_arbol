@@ -7,6 +7,10 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:el_arbol/common_wigdets/user_role.dart';
 import 'package:el_arbol/route/app_pages.dart';
+import 'package:el_arbol/featuers/employee_self_service/presentation/update_staff_profile_screen.dart';
+import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_api.dart';
+import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
+import 'package:rxdart/rxdart.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserRole? role;
@@ -43,6 +47,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Employee details
   final String _employeeName = 'Sofia Rossi';
   final String _employeeEmail = 'sofia.rossi@elarbol.com';
+
+  // Wholesale B2B specific
+  late WholesaleProfileRx _wholesaleProfileRx;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.role == UserRole.wholesale) {
+      _wholesaleProfileRx = WholesaleProfileRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>());
+      _wholesaleProfileRx.fetchProfile();
+      
+      _wholesaleProfileRx.valueStreamData.listen((data) {
+        if (data != null && mounted) {
+          setState(() {
+            _businessName = data['business_name'] ?? _businessName;
+            _cif = data['cif'] ?? _cif;
+            _contactPerson = data['contact_person'] ?? _contactPerson;
+            _businessEmail = data['email'] ?? _businessEmail;
+            _contactPhone = data['contact_phone'] ?? _contactPhone;
+            _profileImageUrl = data['avatar'] ?? _profileImageUrl;
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.role == UserRole.wholesale) {
+      _wholesaleProfileRx.dispose();
+    }
+    super.dispose();
+  }
 
   void _editB2bDetails() {
     final nameController = TextEditingController(text: _businessName);
@@ -126,14 +163,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: double.infinity,
                 height: 50.h,
                 child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _businessName = nameController.text;
-                      _contactPerson = contactController.text;
-                      _contactPhone = phoneController.text;
-                    });
-                    Fluttertoast.showToast(msg: 'Business details updated!');
-                    Navigator.pop(context);
+                  onPressed: () async {
+                    if (widget.role == UserRole.wholesale) {
+                      final success = await _wholesaleProfileRx.updateProfile({
+                        "business_name": nameController.text,
+                        "contact_person": contactController.text,
+                        "contact_phone": phoneController.text,
+                      });
+                      if (success) {
+                        Fluttertoast.showToast(msg: 'Business details updated successfully!');
+                        Navigator.pop(context);
+                      }
+                    } else {
+                      setState(() {
+                        _businessName = nameController.text;
+                        _contactPerson = contactController.text;
+                        _contactPhone = phoneController.text;
+                      });
+                      Fluttertoast.showToast(msg: 'Business details updated successfully!');
+                      Navigator.pop(context);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00694C),
@@ -186,13 +235,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (newPasswordController.text != confirmController.text) {
                   Fluttertoast.showToast(msg: 'New passwords do not match.');
                   return;
                 }
-                Fluttertoast.showToast(msg: 'Password updated successfully!');
-                Navigator.pop(context);
+                
+                final role = widget.role ?? UserRole.customer;
+                if (role == UserRole.wholesale) {
+                  try {
+                    await WholesaleApi.instance.changePassword(
+                      oldPasswordController.text,
+                      newPasswordController.text,
+                    );
+                    Fluttertoast.showToast(msg: 'Password updated successfully!');
+                    Navigator.pop(context);
+                  } catch (e) {
+                    Fluttertoast.showToast(msg: 'Failed to update password');
+                  }
+                } else {
+                  // Fallback for other roles or mock
+                  Fluttertoast.showToast(msg: 'Password updated successfully!');
+                  Navigator.pop(context);
+                }
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
               child: const Text('Update'),
@@ -583,7 +648,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Row(
                     children: [
                       GestureDetector(
-                        onTap: _changeProfileImage,
+                        onTap: () {
+                          if (currentRole == UserRole.wholesale) {
+                            _changeProfileImage();
+                          } else {
+                            Get.to(() => UpdateStaffProfileScreen(
+                              initialName: _employeeName,
+                              initialPhone: _personalPhone,
+                              initialPhoto: _profileImageUrl,
+                            ));
+                          }
+                        },
                         child: Stack(
                           alignment: Alignment.bottomRight,
                           children: [
@@ -646,10 +721,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         ),
                       ),
-                      if (currentRole == UserRole.wholesale)
+                      if (currentRole == UserRole.wholesale || currentRole == UserRole.staff || currentRole == UserRole.employeeSelfService)
                         IconButton(
                           icon: const Icon(Icons.edit, color: primaryColor),
-                          onPressed: _editB2bDetails,
+                          onPressed: () {
+                            if (currentRole == UserRole.wholesale) {
+                              _editB2bDetails();
+                            } else {
+                              Get.to(() => UpdateStaffProfileScreen(
+                                initialName: _employeeName,
+                                initialPhone: _personalPhone,
+                                initialPhoto: _profileImageUrl,
+                              ));
+                            }
+                          },
                         ),
                     ],
                   ),
@@ -657,67 +742,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               SizedBox(height: 20.h),
 
-              // Personal Details Card
-              Text(
-                'Personal Information',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 13.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8.h),
-              Material(
-                color: Colors.white,
-                clipBehavior: Clip.antiAlias,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.r),
-                  side: BorderSide(color: Colors.grey.shade100),
+              if (currentRole != UserRole.staff && currentRole != UserRole.employeeSelfService) ...[
+                // Personal Details Card
+                Text(
+                  'Personal Information',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13.sp, fontWeight: FontWeight.bold),
                 ),
-                child: Padding(
-                  padding: EdgeInsets.all(16.r),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('CONTACT PHONE', style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.bold)),
-                              SizedBox(height: 4.h),
-                              Text(_personalPhone, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text('GENDER', style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.bold)),
-                              SizedBox(height: 4.h),
-                              Text(_personalGender, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('DATE OF BIRTH', style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.bold)),
-                              SizedBox(height: 4.h),
-                              Text('${_personalDob.day}/${_personalDob.month}/${_personalDob.year}', style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, color: primaryColor, size: 20),
-                            onPressed: _editPersonalInfo,
-                          ),
-                        ],
-                      ),
-                    ],
+                SizedBox(height: 8.h),
+                Material(
+                  color: Colors.white,
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                    side: BorderSide(color: Colors.grey.shade100),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(16.r),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('CONTACT PHONE', style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 4.h),
+                                Text(_personalPhone, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('GENDER', style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 4.h),
+                                Text(_personalGender, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('DATE OF BIRTH', style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 4.h),
+                                Text('${_personalDob.day}/${_personalDob.month}/${_personalDob.year}', style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, color: primaryColor, size: 20),
+                              onPressed: _editPersonalInfo,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: 20.h),
+                SizedBox(height: 20.h),
+              ],
 
               if (currentRole == UserRole.wholesale) ...[
                 // B2B Wholesale sections
@@ -735,6 +822,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Column(
                     children: [
+                      ListTile(
+                        leading: const Icon(Icons.notifications_outlined, color: primaryColor),
+                        title: const Text('Notifications'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.toNamed(Routes.WHOLESALE_NOTIFICATIONS_SCREEN),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.assessment_outlined, color: primaryColor),
+                        title: const Text('Daily Reports'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.toNamed(Routes.WHOLESALE_DAILY_REPORTS_SCREEN),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.support_agent, color: primaryColor),
+                        title: const Text('Support Tickets'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.toNamed(Routes.WHOLESALE_SUPPORT_TICKETS_SCREEN),
+                      ),
+                      const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.lock_outline, color: primaryColor),
                         title: const Text('Change Account Password'),
@@ -876,13 +984,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: const Text('Assigned Shop ID'),
                         trailing: Text(currentRole == UserRole.shopPortal ? 'SHOP-VALENCIA-04' : 'MEM-8902', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.lock_outline, color: primaryColor),
-                        title: const Text('Change Password'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                        onTap: _changePassword,
-                      ),
+
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.privacy_tip_outlined, color: primaryColor),

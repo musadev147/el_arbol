@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../../common_wigdets/custom_textfiled.dart';
 import '../../../../common_wigdets/common_button.dart';
 import '../../../../common_wigdets/social_login_button.dart';
+import '../../../../common_wigdets/user_role.dart';
 import '../../../../constants/text_font_style.dart';
 import '../../../../constants/app_assets/assets_icons.dart';
 import '../../../../provider/singnup_provider.dart';
@@ -53,8 +54,8 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     // Target brand color from website: #00694C
     const Color primaryBrandColor = Color(0xFF00694C);
-    final isShopPortal = widget.role == 'shopPortal' || widget.role == 'shop Portal';
-    final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee';
+    final isShopPortal = widget.role == 'shopPortal' || widget.role == 'shop Portal' || widget.role == UserRole.shopPortal.value;
+    final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee' || widget.role == 'staff' || widget.role == UserRole.staff.value;
     final isSpecialPortal = isShopPortal || isEmployee;
 
     return Scaffold(
@@ -246,50 +247,52 @@ class _SignInScreenState extends State<SignInScreen> {
                 ],
 
                 // Password Field
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Password',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF151E13),
-                      ),
-                    ),
-                    if (!isShopPortal)
-                      GestureDetector(
-                        onTap: () {
-                          Get.toNamed(Routes.FORGET_PASSWORD);
-                        },
-                        child: Text(
-                          'Forgot password?',
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
-                            color: primaryBrandColor,
-                          ),
+                if (!isEmployee) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Password',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF151E13),
                         ),
                       ),
-                  ],
-                ),
-                SizedBox(height: 6.h),
-                CustomTextFormField(
-                  controller: _passwordController,
-                  hintText: '••••••••',
-                  isPassword: true,
-                  borderRadius: 8.r,
-                  fillColor: const Color(0xFFECF7E4),
-                  borderColor: const Color(0xFF00694C).withOpacity(0.2),
-                  focusBorderColor: const Color(0xFF00694C),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 24.h),
+                      if (!isShopPortal)
+                        GestureDetector(
+                          onTap: () {
+                            Get.toNamed(Routes.FORGET_PASSWORD, arguments: widget.role);
+                          },
+                          child: Text(
+                            'Forgot password?',
+                            style: TextStyle(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w600,
+                              color: primaryBrandColor,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 6.h),
+                  CustomTextFormField(
+                    controller: _passwordController,
+                    hintText: '••••••••',
+                    isPassword: true,
+                    borderRadius: 8.r,
+                    fillColor: const Color(0xFFECF7E4),
+                    borderColor: const Color(0xFF00694C).withOpacity(0.2),
+                    focusBorderColor: const Color(0xFF00694C),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your password';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 24.h),
+                ],
 
                 // Log In Button
                 CommonButton(
@@ -313,40 +316,33 @@ class _SignInScreenState extends State<SignInScreen> {
                 SizedBox(height: 24.h),
 
                 // Sign Up Toggle Link
-                Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      if (widget.role == 'wholesale' || widget.role == 'wholesales') {
-                        Get.to(() => const WholesaleRegistrationScreen());
-                      } else {
+                if (!isEmployee)
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
                         Get.toNamed(Routes.REGISTER, arguments: widget.role);
-                      }
-                    },
-                    child: RichText(
-                      text: TextSpan(
-                        text: widget.role == 'wholesale' || widget.role == 'wholesales'
-                            ? "New Business? "
-                            : "Don't have an account? ",
-                        style: TextStyle(
-                          color: const Color(0xFF6D7A73),
-                          fontSize: 14.sp,
-                          fontFamily: 'Poppins',
-                        ),
-                        children: [
-                          TextSpan(
-                            text: widget.role == 'wholesale' || widget.role == 'wholesales'
-                                ? 'Apply for Wholesale ID'
-                                : 'Sign Up',
-                            style: TextStyle(
-                              color: primaryBrandColor,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      },
+                      child: RichText(
+                        text: TextSpan(
+                          text: "Don't have an account? ",
+                          style: TextStyle(
+                            color: const Color(0xFF6D7A73),
+                            fontSize: 14.sp,
+                            fontFamily: 'Poppins',
                           ),
-                        ],
+                          children: [
+                            TextSpan(
+                              text: 'Sign Up',
+                              style: TextStyle(
+                                color: primaryBrandColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

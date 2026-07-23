@@ -24,6 +24,12 @@ final class DioSingleton {
           NetworkConstants.ACCEPT_LANGUAGE: appData.read(kKeyCountryCode) ?? "pt",
           NetworkConstants.APP_KEY: NetworkConstants.APP_KEY_VALUE,
         });
+        
+    final token = appData.read(kKeyAccessToken);
+    if (token != null && token.toString().trim().isNotEmpty) {
+      options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $token";
+    }
+    
     dio = Dio(options)..interceptors.add(Logger());
   }
 
@@ -38,11 +44,15 @@ final class DioSingleton {
         NetworkConstants.ACCEPT: NetworkConstants.ACCEPT_TYPE,
         NetworkConstants.ACCEPT_LANGUAGE: appData.read(kKeyLanguage) ?? "pt",
         NetworkConstants.APP_KEY: NetworkConstants.APP_KEY_VALUE,
-        NetworkConstants.AUTHORIZATION: "Bearer $auth",
       },
       connectTimeout: const Duration(milliseconds: 100000),
       receiveTimeout: const Duration(milliseconds: 100000),
     );
+    
+    if (auth.trim().isNotEmpty) {
+      options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $auth";
+    }
+    
     dio = Dio(options)..interceptors.add(Logger());
   }
 
@@ -57,11 +67,16 @@ final class DioSingleton {
         NetworkConstants.ACCEPT: NetworkConstants.ACCEPT_TYPE,
         NetworkConstants.ACCEPT_LANGUAGE: countryCode,
         NetworkConstants.APP_KEY: NetworkConstants.APP_KEY_VALUE,
-        NetworkConstants.AUTHORIZATION: "Bearer ${appData.read(kKeyAccessToken)} ",
       },
       connectTimeout: const Duration(milliseconds: 100000),
       receiveTimeout: const Duration(milliseconds: 100000),
     );
+    
+    final token = appData.read(kKeyAccessToken);
+    if (token != null && token.toString().trim().isNotEmpty) {
+      options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $token";
+    }
+    
     dio = Dio(options)..interceptors.add(Logger());
   }
 }

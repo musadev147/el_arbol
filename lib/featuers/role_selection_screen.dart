@@ -3,6 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:el_arbol/common_wigdets/user_role.dart';
 import 'package:el_arbol/route/app_pages.dart';
+import 'package:el_arbol/helpers/di.dart';
+import 'package:el_arbol/constants/app_constants.dart';
+import 'package:el_arbol/networks/dio/dio.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
@@ -13,6 +16,19 @@ class RoleSelectionScreen extends StatefulWidget {
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   UserRole _selectedRole = UserRole.customer;
+
+  @override
+  void initState() {
+    super.initState();
+    _clearOldSession();
+  }
+
+  Future<void> _clearOldSession() async {
+    await appData.remove(kKeyAccessToken);
+    await appData.remove(kKeyUserID);
+    await appData.remove('user_role');
+    DioSingleton.instance.update('');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +111,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     ),
                     SizedBox(height: 16.h),
                     _buildRoleCard(
-                      UserRole.employeeSelfService,
-                      'Employee Self-service',
-                      'View work schedule, request leaves, and access payslips.',
+                      UserRole.staff,
+                      'Staff',
+                      'Staff portal for administrative and operational tasks.',
                       Icons.badge,
                       primaryBrandColor,
                     ),

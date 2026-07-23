@@ -14,4 +14,10 @@ abstract class Routes {
   static const OTP = '/otp';
   static const REGISTER = '/register';
   static const WISHLIST = '/wishlist';
+  static const STAFF_TASKS_SCREEN = '/staff_tasks';
+  static const STAFF_COLLEAGUES_SCREEN = '/staff_colleagues';
+  static const STAFF_ORDER_HISTORY_SCREEN = '/staff_order_history';
+  static const WHOLESALE_NOTIFICATIONS_SCREEN = '/wholesale_notifications';
+  static const WHOLESALE_DAILY_REPORTS_SCREEN = '/wholesale_daily_reports';
+  static const WHOLESALE_SUPPORT_TICKETS_SCREEN = '/wholesale_support_tickets';
 }

@@ -18,8 +18,17 @@ final class Endpoints {
   //backend_url
   // App Url
 
-  static String register() => "auth/register/";
-  static String signIn() => "auth/login/";
+  static String register({String? role}) {
+    if (role == 'wholesale') return 'wholesale/auth/register/';
+    if (role == 'employee' || role == 'staff') return 'staff/auth/register/';
+    return 'auth/register/';
+  }
+
+  static String signIn({String? role}) {
+    if (role == 'wholesale') return 'wholesale/auth/login/';
+    if (role == 'employee' || role == 'staff') return 'staff/auth/login/';
+    return 'auth/login/';
+  }
   static String refreshToken() => "auth/token/refresh/";
   static String forgetPasswordSendOtp() => "auth/password-reset/send-otp/";
   static String getProducts() => "products/products/";
@@ -37,6 +46,18 @@ final class Endpoints {
   static String sendOtp() => "/forgot-password";
   static String forgetOtp() => "/verify_otp-otp";
   static String forgetChange() => "/reset-password";
+  static String myTeamPerformance() => "employee/my-team-performance/";
+
+  // Staff APIs
+  static String staffDashboard() => "staff/dashboard/";
+  static String staffShiftHistory() => "staff/shifts/";
+  static String updateStaffProfile() => "staff/profile/";
+  static String staffCheckIn() => "staff/attendance/check-in/";
+  static String staffCheckOut() => "staff/attendance/check-out/";
+  static String staffColleagues() => "staff/colleagues/";
+  static String staffTasks() => "staff/tasks/";
+  static String staffUpdateTask(String taskId) => "staff/tasks/$taskId/";
+  static String staffOrderHistory() => "staff/orders/";
   static String patientInfo() => "/patient-information";
   static String patientDetails(int page) => "/patient-information?page=$page";
   static String patientUpdate(int id) => "/patient-information/$id";
@@ -141,4 +162,24 @@ final class Endpoints {
   static String postAssignAgent() => "/property/agents/store";
   static String getAllTenantDropDown() => "/all-tenants/index";
 
+  // Wholesale Auth & Profile
+  static String wholesaleProfile() => "wholesale/profile/";
+  static String wholesaleProfileImage() => "wholesale/profile/image/";
+  static String wholesalePasswordResetSendOtp() => "wholesale/auth/password-reset/send-otp/";
+  static String wholesaleChangePassword() => "wholesale/auth/change-password/";
+  static String wholesalePasswordResetVerify() => "wholesale/auth/password-reset/verify/";
+
+  // Wholesale Tickets
+  static String wholesaleTickets() => "wholesale/tickets/";
+  static String wholesaleSingleTicket(String id) => "wholesale/tickets/$id/";
+  static String wholesaleTicketReply(String id) => "wholesale/tickets/$id/reply/";
+
+  // Wholesale Notifications
+  static String wholesaleNotifications() => "wholesale/notifications/";
+  static String wholesaleNotificationUnreadCount() => "wholesale/notifications/unread-count/";
+  static String wholesaleNotificationMarkRead() => "wholesale/notifications/mark-read/";
+  static String wholesaleNotificationDelete(String id) => "wholesale/notifications/$id/delete/";
+
+  // Wholesale Daily Reports
+  static String wholesaleDailyReports() => "wholesale/daily-reports/";
 }

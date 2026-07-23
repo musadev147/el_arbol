@@ -62,6 +62,12 @@ class _CustomNavigationState extends State<CustomNavigation> {
       AssetsIcons.propertyIcons,
       AssetsIcons.usernavIcons,
     ],
+    UserRole.staff: [
+      AssetsIcons.homeIcons,
+      AssetsIcons.messagenavIcons,
+      AssetsIcons.propertyIcons,
+      AssetsIcons.usernavIcons,
+    ],
   };
 
   late final Map<UserRole, List<String>> roleLabels = {
@@ -85,6 +91,12 @@ class _CustomNavigationState extends State<CustomNavigation> {
       "Profile",
     ],
     UserRole.employeeSelfService: [
+      "Dashboard",
+      "Messages",
+      "Payslips",
+      "Profile",
+    ],
+    UserRole.staff: [
       "Dashboard",
       "Messages",
       "Payslips",
@@ -117,6 +129,12 @@ class _CustomNavigationState extends State<CustomNavigation> {
       MessagesScreen(),
       TenantWallet(),
       const ProfileScreen(role: UserRole.employeeSelfService),
+    ],
+    UserRole.staff: [
+      const EmployeeDashboardScreen(),
+      MessagesScreen(),
+      TenantWallet(),
+      const ProfileScreen(role: UserRole.staff),
     ],
   };
 

@@ -23,7 +23,7 @@ class PostRegisterModel {
 }
 
 class User {
-  int? id;
+  dynamic id;
   String? email;
   String? username;
   String? firstName;

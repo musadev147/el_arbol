@@ -88,8 +88,8 @@ class AuthInterceptor extends Interceptor {
   /// Clears stored JWT credentials and navigates the user back to the Login screen.
   Future<void> _handleLogout() async {
     await authRepository.clearSession();
-    // Redirect to login using GetX Route management
-    get_route.Get.offAllNamed(Routes.LOGIN);
+    // Redirect to role selection using GetX Route management
+    get_route.Get.offAllNamed(Routes.ROLE_SELECTION);
   }
 
   /// Retries a request using a fresh Dio instance to prevent infinite loops.

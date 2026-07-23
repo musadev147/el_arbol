@@ -18,7 +18,9 @@ abstract class RxResponseInt<T> {
       this.dataFetcher2});
 
   dynamic handleSuccessWithReturn(T data) {
-    dataFetcher.sink.add(data);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data);
+    }
     return data;
   }
 
@@ -40,7 +42,9 @@ abstract class RxResponseInt<T> {
     // Show at top of screen using AppToast (uses showToast which respects toastPosition)
     AppToast.error(errorMessage);
 
-    dataFetcher.sink.addError(error);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
     throw error;
   }
 
