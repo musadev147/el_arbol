@@ -8,9 +8,17 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:el_arbol/common_wigdets/user_role.dart';
 import 'package:el_arbol/route/app_pages.dart';
 import 'package:el_arbol/featuers/employee_self_service/presentation/update_staff_profile_screen.dart';
-import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_api.dart';
+import 'dart:io';
 import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:el_arbol/featuers/customers/tickets/presentation/customer_tickets_screen.dart' as el_arbol;
+import 'package:el_arbol/featuers/customers/addresses/presentation/customer_addresses_screen.dart' as el_arbol_addr;
+import 'package:el_arbol/featuers/customers/orders/presentation/customer_orders_screen.dart' as el_arbol_order;
+import 'package:el_arbol/featuers/customers/wishlist/presentation/customer_wishlist_screen.dart' as el_arbol_wish;
+import 'package:el_arbol/featuers/customers/notifications/presentation/customer_notifications_screen.dart' as el_arbol_notif;
+import '../../wholesale_b2b/data/wholesale_api.dart';
+import 'data/rx.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserRole? role;
@@ -51,6 +59,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Wholesale B2B specific
   late WholesaleProfileRx _wholesaleProfileRx;
 
+  // Customer specific
+  late CustomerProfileRx _customerProfileRx;
+  final CustomerChangePasswordRx _changePasswordRx = CustomerChangePasswordRx(empty: null, dataFetcher: BehaviorSubject<void>());
+
   @override
   void initState() {
     super.initState();
@@ -70,6 +82,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
         }
       });
+    } else if (widget.role == UserRole.customer) {
+      _customerProfileRx = CustomerProfileRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>());
+      _customerProfileRx.fetchProfile();
+
+      _customerProfileRx.valueStreamData.listen((data) {
+        if (data != null && mounted) {
+          setState(() {
+            _personalPhone = data['phone'] ?? _personalPhone;
+            _personalGender = data['gender'] ?? _personalGender;
+            if (data['dob'] != null) {
+              try {
+                _personalDob = DateTime.parse(data['dob']);
+              } catch (_) {}
+            }
+            _profileImageUrl = data['avatar'] ?? _profileImageUrl;
+          });
+        }
+      });
     }
   }
 
@@ -77,6 +107,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     if (widget.role == UserRole.wholesale) {
       _wholesaleProfileRx.dispose();
+    } else if (widget.role == UserRole.customer) {
+      _customerProfileRx.dispose();
+      _changePasswordRx.dispose();
     }
     super.dispose();
   }
@@ -253,6 +286,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   } catch (e) {
                     Fluttertoast.showToast(msg: 'Failed to update password');
                   }
+                } else if (role == UserRole.customer) {
+                  final success = await _changePasswordRx.changePassword(
+                    oldPasswordController.text,
+                    newPasswordController.text,
+                  );
+                  if (success) Navigator.pop(context);
                 } else {
                   // Fallback for other roles or mock
                   Fluttertoast.showToast(msg: 'Password updated successfully!');
@@ -448,69 +487,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Get.offAllNamed(Routes.ROLE_SELECTION);
   }
 
-  void _changeProfileImage() {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20.r))),
-      builder: (ctx) {
-        final avatars = [
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop',
-        ];
-        return Padding(
-          padding: EdgeInsets.all(20.r),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Choose Profile Photo',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 16.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: avatars.map((url) => GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _profileImageUrl = url;
-                    });
-                    Fluttertoast.showToast(msg: 'Profile photo updated!');
-                    Navigator.pop(ctx);
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(30.r),
-                    child: CachedNetworkImage(
-                      imageUrl: url,
-                      width: 50.w,
-                      height: 50.h,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                )).toList(),
-              ),
-              SizedBox(height: 20.h),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _profileImageUrl = null;
-                    });
-                    Fluttertoast.showToast(msg: 'Reset to default avatar.');
-                    Navigator.pop(ctx);
-                  },
-                  icon: const Icon(Icons.refresh, color: Colors.grey),
-                  label: const Text('Reset Default', style: TextStyle(color: Colors.grey)),
-                ),
-              )
-            ],
-          ),
-        );
-      },
-    );
+  Future<void> _changeProfileImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (image != null) {
+      if (widget.role == UserRole.customer) {
+        final success = await _customerProfileRx.updateAvatar(File(image.path));
+        if (success) {
+          // Success handled by Rx toast
+        }
+      } else {
+        // Mock fallback
+        setState(() {
+          _profileImageUrl = null;
+        });
+        Fluttertoast.showToast(msg: 'Avatar mocked upload successful');
+      }
+    }
   }
 
   void _editPersonalInfo() {
@@ -579,15 +573,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: double.infinity,
                       height: 48.h,
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (formKey.currentState!.validate()) {
-                            setState(() {
-                              _personalPhone = phoneController.text;
-                              _personalGender = selectedGender;
-                              _personalDob = selectedDob;
-                            });
-                            Fluttertoast.showToast(msg: 'Personal details updated!');
-                            Navigator.pop(ctx);
+                            if (widget.role == UserRole.customer) {
+                              final success = await _customerProfileRx.updateProfile({
+                                'phone': phoneController.text,
+                                'gender': selectedGender,
+                                'dob': selectedDob.toIso8601String().split('T').first,
+                              });
+                              if (success) {
+                                Navigator.pop(ctx);
+                              }
+                            } else {
+                              setState(() {
+                                _personalPhone = phoneController.text;
+                                _personalGender = selectedGender;
+                                _personalDob = selectedDob;
+                              });
+                              Fluttertoast.showToast(msg: 'Personal details updated!');
+                              Navigator.pop(ctx);
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
@@ -964,6 +969,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               );
                             }).toList(),
                           ),
+                  ),
+                ),
+              ] else if (currentRole == UserRole.customer) ...[
+                Text(
+                  'Account Settings',
+                  style: TextStyle(fontFamily: 'Poppins', fontSize: 13.sp, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8.h),
+                Material(
+                  color: Colors.white,
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                    side: BorderSide(color: Colors.grey.shade100),
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.location_on_outlined, color: primaryColor),
+                        title: const Text('My Addresses'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.to(() => const el_arbol_addr.CustomerAddressesScreen()),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.favorite_border, color: primaryColor),
+                        title: const Text('My Wishlist'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.to(() => const el_arbol_wish.CustomerWishlistScreen()),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.shopping_bag_outlined, color: primaryColor),
+                        title: const Text('My Orders'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.to(() => const el_arbol_order.CustomerOrdersScreen()),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.support_agent, color: primaryColor),
+                        title: const Text('Support Tickets'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.to(() => const el_arbol.CustomerSupportTicketsScreen()),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.notifications_none, color: primaryColor),
+                        title: const Text('Notifications'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.to(() => const el_arbol_notif.CustomerNotificationsScreen()),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.lock_outline, color: primaryColor),
+                        title: const Text('Change Password'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: _changePassword,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.privacy_tip_outlined, color: primaryColor),
+                        title: const Text('Privacy Policy'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: _showPrivacyPolicy,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        leading: const Icon(Icons.gavel, color: primaryColor),
+                        title: const Text('Terms & Conditions'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: _showTermsAndConditions,
+                      ),
+                    ],
                   ),
                 ),
               ] else ...[

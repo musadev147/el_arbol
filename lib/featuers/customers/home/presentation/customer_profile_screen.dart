@@ -7,6 +7,17 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:get/get.dart';
 import '../../../../route/app_pages.dart';
 
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:el_arbol/featuers/customers/profile/data/rx.dart';
+
+import 'package:el_arbol/featuers/customers/tickets/presentation/customer_tickets_screen.dart' as el_arbol;
+import 'package:el_arbol/featuers/customers/addresses/presentation/customer_addresses_screen.dart' as el_arbol_addr;
+import 'package:el_arbol/featuers/customers/orders/presentation/customer_orders_screen.dart' as el_arbol_order;
+import 'package:el_arbol/featuers/customers/wishlist/presentation/customer_wishlist_screen.dart' as el_arbol_wish;
+import 'package:el_arbol/featuers/customers/notifications/presentation/customer_notifications_screen.dart' as el_arbol_notif;
+
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
 
@@ -16,12 +27,64 @@ class CustomerProfileScreen extends StatefulWidget {
 
 class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   // Profile Info state
-  String _userName = 'Jane Doe';
-  String _userEmail = 'jane.doe@example.com';
-  String _userPhone = '+34 611 223 344';
-  String _userGender = 'Female';
-  DateTime _userDob = DateTime(1996, 6, 15);
+  String _userName = 'Loading...';
+  String _userEmail = '';
+  String _userPhone = '';
+  String _userGender = 'Male';
+  DateTime _userDob = DateTime(1990, 1, 1);
   String? _profileImageUrl;
+
+  late CustomerProfileRx _rx;
+  final CustomerChangePasswordRx _changePasswordRx = CustomerChangePasswordRx(empty: null, dataFetcher: BehaviorSubject<void>());
+
+  @override
+  void initState() {
+    super.initState();
+    _rx = CustomerProfileRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>());
+    _rx.fetchProfile();
+
+    _rx.valueStreamData.listen((data) {
+      if (data != null && mounted) {
+        setState(() {
+          // Parse user data
+          final first = data['firstName'] ?? '';
+          final last = data['lastName'] ?? '';
+          _userName = data['fullName'] ?? '$first $last'.trim();
+          if (_userName.isEmpty) _userName = 'Customer';
+          _userEmail = data['email'] ?? '';
+          
+          _userGender = data['gender'] ?? _userGender;
+          if (data['dob'] != null) {
+            try {
+              _userDob = DateTime.parse(data['dob'].toString());
+            } catch (_) {}
+          }
+
+          if (data['profile'] != null && data['profile'] is Map) {
+            final p = data['profile'];
+            _userPhone = p['phone'] ?? _userPhone;
+            _profileImageUrl = p['resolvedAvatar'] ?? p['avatar'] ?? _profileImageUrl;
+            if (_profileImageUrl != null && _profileImageUrl!.isEmpty) {
+              _profileImageUrl = null;
+            }
+            if (p['gender'] != null) _userGender = p['gender'];
+            if (p['dob'] != null) {
+              try {
+                _userDob = DateTime.parse(p['dob'].toString());
+              } catch (_) {}
+            }
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _rx.dispose();
+    _changePasswordRx.dispose();
+    super.dispose();
+  }
   
   // Addresses state
   final List<String> _addresses = [
@@ -41,69 +104,15 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   bool _notifyPriceDrops = false;
   bool _notifyLeftovers = true;
 
-  void _changeProfileImage() {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20.r))),
-      builder: (ctx) {
-        final avatars = [
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop',
-          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop',
-        ];
-        return Padding(
-          padding: EdgeInsets.all(20.r),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Choose Profile Photo',
-                style: TextStyle(fontFamily: 'Poppins', fontSize: 16.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: avatars.map((url) => GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _profileImageUrl = url;
-                    });
-                    Fluttertoast.showToast(msg: 'Profile photo updated!');
-                    Navigator.pop(ctx);
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(30.r),
-                    child: CachedNetworkImage(
-                      imageUrl: url,
-                      width: 50.w,
-                      height: 50.h,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                )).toList(),
-              ),
-              SizedBox(height: 20.h),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _profileImageUrl = null;
-                    });
-                    Fluttertoast.showToast(msg: 'Reset to default avatar.');
-                    Navigator.pop(ctx);
-                  },
-                  icon: const Icon(Icons.refresh, color: Colors.grey),
-                  label: const Text('Reset Default', style: TextStyle(color: Colors.grey)),
-                ),
-              )
-            ],
-          ),
-        );
-      },
-    );
+  void _changeProfileImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final success = await _rx.updateAvatar(File(pickedFile.path));
+      if (success) {
+        Fluttertoast.showToast(msg: 'Profile photo updated!');
+      }
+    }
   }
 
   void _addAddress() {
@@ -444,15 +453,20 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     width: double.infinity,
                     height: 50.h,
                     child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _userName = nameController.text;
-                          _userPhone = phoneController.text;
-                          _userGender = selectedGender;
-                          _userDob = tempDob;
+                      onPressed: () async {
+                        final names = nameController.text.trim().split(' ');
+                        final firstName = names.isNotEmpty ? names.first : '';
+                        final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+                        final success = await _rx.updateProfile({
+                          "firstName": firstName,
+                          "lastName": lastName,
+                          "phone": phoneController.text,
+                          "gender": selectedGender,
+                          "dob": DateFormat('yyyy-MM-dd').format(tempDob),
                         });
-                        Fluttertoast.showToast(msg: 'Profile updated successfully!');
-                        Navigator.pop(context);
+                        if (success) {
+                          Navigator.pop(context);
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00694C),
@@ -507,7 +521,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (newPasswordController.text != confirmController.text) {
                   Fluttertoast.showToast(msg: 'New passwords do not match.');
                   return;
@@ -516,8 +530,13 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   Fluttertoast.showToast(msg: 'Password must be at least 6 characters.');
                   return;
                 }
-                Fluttertoast.showToast(msg: 'Password updated successfully!');
-                Navigator.pop(context);
+                final success = await _changePasswordRx.changePassword(
+                  oldPasswordController.text,
+                  newPasswordController.text,
+                );
+                if (success) {
+                  Navigator.pop(context);
+                }
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
               child: const Text('Update'),
@@ -616,14 +635,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 
-  void _launchWhatsApp() async {
-    final Uri whatsappUrl = Uri.parse("https://wa.me/34600123456");
-    if (await canLaunchUrl(whatsappUrl)) {
-      await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-    } else {
-      Fluttertoast.showToast(msg: "Could not launch WhatsApp. Sourced number: +34 600 123 456");
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -740,6 +752,60 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             ),
             SizedBox(height: 20.h),
 
+            // Account Settings
+            Text(
+              'Account Settings',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 14.sp, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8.h),
+            Material(
+              color: Colors.white,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.r),
+                side: BorderSide(color: Colors.grey.shade100),
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.location_on_outlined, color: primaryColor),
+                    title: const Text('My Addresses'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => Get.to(() => const el_arbol_addr.CustomerAddressesScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.favorite_border, color: primaryColor),
+                    title: const Text('My Wishlist'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => Get.to(() => const el_arbol_wish.CustomerWishlistScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.shopping_bag_outlined, color: primaryColor),
+                    title: const Text('My Orders'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => Get.to(() => const el_arbol_order.CustomerOrdersScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.support_agent, color: primaryColor),
+                    title: const Text('Support Tickets'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => Get.to(() => const el_arbol.CustomerSupportTicketsScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.notifications_none, color: primaryColor),
+                    title: const Text('Notifications'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => Get.to(() => const el_arbol_notif.CustomerNotificationsScreen()),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20.h),
+
             // Security Settings
             Text(
               'Security & Login',
@@ -762,147 +828,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             ),
             SizedBox(height: 20.h),
 
-            // Saved Addresses
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Saved Delivery Addresses',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: _addAddress,
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add'),
-                  style: TextButton.styleFrom(foregroundColor: primaryColor),
-                ),
-              ],
-            ),
-            Material(
-              color: Colors.white,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.r),
-                side: BorderSide(color: Colors.grey.shade100),
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(12.r),
-                child: _addresses.isEmpty
-                    ? const Center(child: Text('No saved addresses yet.'))
-                    : Column(
-                        children: _addresses.map((address) {
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.location_on, color: primaryColor),
-                            title: Text(address, style: TextStyle(fontSize: 12.sp)),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  _addresses.remove(address);
-                                });
-                                Fluttertoast.showToast(msg: 'Address removed.');
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
-              ),
-            ),
-            SizedBox(height: 20.h),
-
-            // Saved Payment Cards
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Saved Stripe Cards',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 14.sp, fontWeight: FontWeight.bold),
-                ),
-                TextButton.icon(
-                  onPressed: _addPaymentCard,
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add'),
-                  style: TextButton.styleFrom(foregroundColor: primaryColor),
-                ),
-              ],
-            ),
-            Material(
-              color: Colors.white,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.r),
-                side: BorderSide(color: Colors.grey.shade100),
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(12.r),
-                child: _savedCards.isEmpty
-                    ? const Center(child: Text('No linked cards.'))
-                    : Column(
-                        children: _savedCards.map((card) {
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.credit_card, color: Colors.blue),
-                            title: Text('${card['brand']} ending in ${card['last4']}'),
-                            subtitle: Text('Expires ${card['expiry']}'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  _savedCards.remove(card);
-                                });
-                                Fluttertoast.showToast(msg: 'Payment card removed.');
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
-              ),
-            ),
-            SizedBox(height: 20.h),
-
-            // Push Notification Preferences
-            Text(
-              'Notification Preferences',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14.sp, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8.h),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: Colors.grey.shade100),
-              ),
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    title: const Text('Order Status Updates'),
-                    value: _notifyOrderUpdates,
-                    activeColor: primaryColor,
-                    onChanged: (val) => setState(() => _notifyOrderUpdates = val),
-                  ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    title: const Text('Promotional Offers'),
-                    value: _notifyPromos,
-                    activeColor: primaryColor,
-                    onChanged: (val) => setState(() => _notifyPromos = val),
-                  ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    title: const Text('Price Drops & surplus alerts'),
-                    value: _notifyLeftovers,
-                    activeColor: primaryColor,
-                    onChanged: (val) => setState(() => _notifyLeftovers = val),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 20.h),
 
             // Legal & Information section
             Text(
@@ -944,52 +869,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             ),
             SizedBox(height: 20.h),
 
-            // Support & Help Page
-            Text(
-              'Help & Support',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 14.sp, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8.h),
-            Container(
-              padding: EdgeInsets.all(16.r),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: Colors.grey.shade100),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.info_outline, color: primaryColor),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: Text(
-                          'El Árbol SL - Premium Organic Produce\nMadrid, Spain',
-                          style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16.h),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48.h,
-                    child: ElevatedButton.icon(
-                      onPressed: _launchWhatsApp,
-                      icon: const Icon(Icons.chat, color: Colors.white),
-                      label: const Text('Quick Chat on WhatsApp'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 24.h),
 
             // Log Out & Delete Account
             Column(

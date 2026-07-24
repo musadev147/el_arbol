@@ -92,3 +92,6 @@ Future<Response> getHttp(String path, [dynamic data]) =>
 
 Future<Response> deleteHttp(String path, [dynamic data]) =>
     DioSingleton.instance.dio.delete(path, data: data, cancelToken: DioSingleton.cancelToken);
+
+Future<Response> patchHttp(String path, [dynamic data]) =>
+    DioSingleton.instance.dio.patch(path, data: data, cancelToken: DioSingleton.cancelToken);

@@ -48,6 +48,32 @@ final class Endpoints {
   static String forgetChange() => "/reset-password";
   static String myTeamPerformance() => "employee/my-team-performance/";
 
+  // Customer Profile & Auth
+  static String customerProfile() => "auth/profile/";
+  static String customerAvatar() => "auth/avatar/";
+  static String customerChangePassword() => "auth/change-password/";
+
+  // Customer Addresses
+  static String customerAddresses() => "auth/addresses/";
+  static String customerAddress(String id) => "auth/addresses/$id/";
+
+  // Customer Orders
+  static String customerOrders() => "auth/orders/";
+  static String customerOrderDetails(String id) => "auth/orders/$id/";
+
+  // Customer Tickets
+  static String customerTickets() => "auth/tickets/";
+  static String customerTicketReply(String id) => "auth/tickets/$id/reply/";
+  static String customerTicketMessage(String ticketId, String messageId) => "auth/tickets/$ticketId/messages/$messageId/";
+  static String customerTicketTyping(String id) => "auth/tickets/$id/typing/";
+
+  // Customer Notifications
+  static String customerNotificationsBulkDelete() => "auth/notifications/bulk-delete/";
+
+  // Customer Wishlist
+  static String wishlistRemove(String id) => "auth/wishlist/$id/";
+  static String wishlistClear() => "auth/wishlist/clear/";
+
   // Staff APIs
   static String staffDashboard() => "staff/dashboard/";
   static String staffShiftHistory() => "staff/shifts/";
