@@ -20,6 +20,7 @@ import '../featuers/employee_self_service/presentation/staff_order_history_scree
 import '../featuers/wholesale_b2b/presentation/wholesale_notifications_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_daily_reports_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_support_tickets_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_add_product_screen.dart';
 
 part 'app_routes.dart';
 
@@ -118,6 +119,10 @@ class AppPages {
     GetPage(
       name: Routes.WHOLESALE_SUPPORT_TICKETS_SCREEN,
       page: () => const WholesaleSupportTicketsScreen(),
+    ),
+    GetPage(
+      name: Routes.WHOLESALE_ADD_PRODUCT,
+      page: () => const WholesaleAddProductScreen(),
     ),
   ];
 }

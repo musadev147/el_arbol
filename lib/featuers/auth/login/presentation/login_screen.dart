@@ -134,46 +134,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                if (!isSpecialPortal) ...[
-                  // Social Log In Button
-                  SocialLoginButton(
-                    title: 'Continue with Google',
-                    iconPath: AssetsIcons.googleIcon,
-                    onPressed: () {
-                      // Handle social login
-                    },
-                  ),
-                  SizedBox(height: 24.h),
 
-                  // Divider
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: Colors.grey.shade300,
-                          thickness: 1,
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w),
-                        child: Text(
-                          'or',
-                          style: TextStyle(
-                            color: const Color(0xFF6D7A73),
-                            fontSize: 14.sp,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: Colors.grey.shade300,
-                          thickness: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 24.h),
-                ],
 
                 // Email / Employee ID / Member ID Field
                 Text(
@@ -248,9 +209,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
                 // Password Field
                 if (!isEmployee) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
                       Text(
                         'Password',
                         style: TextStyle(
@@ -259,22 +217,6 @@ class _SignInScreenState extends State<SignInScreen> {
                           color: const Color(0xFF151E13),
                         ),
                       ),
-                      if (!isShopPortal)
-                        GestureDetector(
-                          onTap: () {
-                            Get.toNamed(Routes.FORGET_PASSWORD, arguments: widget.role);
-                          },
-                          child: Text(
-                            'Forgot password?',
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w600,
-                              color: primaryBrandColor,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
                   SizedBox(height: 6.h),
                   CustomTextFormField(
                     controller: _passwordController,
@@ -291,6 +233,25 @@ class _SignInScreenState extends State<SignInScreen> {
                       return null;
                     },
                   ),
+                  if (!isShopPortal) ...[
+                    SizedBox(height: 8.h),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () {
+                          Get.toNamed(Routes.FORGET_PASSWORD, arguments: widget.role);
+                        },
+                        child: Text(
+                          'Forgot password?',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: primaryBrandColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   SizedBox(height: 24.h),
                 ],
 

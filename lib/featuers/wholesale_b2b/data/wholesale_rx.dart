@@ -5,6 +5,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:dio/dio.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
 import 'dart:developer';
+import 'dart:io';
 
 class WholesaleProfileRx extends RxResponseInt<Map<String, dynamic>> {
   final api = WholesaleApi.instance;
@@ -35,6 +36,32 @@ class WholesaleProfileRx extends RxResponseInt<Map<String, dynamic>> {
       String message = "Failed to update profile";
       if (e is DioException) {
         message = e.response?.data["message"] ?? message;
+      }
+      AppToast.error(message);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  Future<bool> updateAvatar(File image) async {
+    try {
+      await EasyLoading.show(status: 'Uploading Image...');
+      String fileName = image.path.split('/').last;
+      FormData formData = FormData.fromMap({
+        "profile_image": await MultipartFile.fromFile(image.path, filename: fileName),
+      });
+      await api.updateProfileImage(formData);
+      AppToast.success("Avatar Updated Successfully!");
+      fetchProfile();
+      return true;
+    } catch (e) {
+      log('WholesaleProfileRx updateAvatar error: $e');
+      String message = "Failed to upload image";
+      if (e is DioException) {
+        if (e.response?.data is Map) {
+          message = e.response?.data["message"] ?? message;
+        }
       }
       AppToast.error(message);
       return false;
@@ -339,5 +366,36 @@ class WholesaleDailyReportsRx extends RxResponseInt<Map<String, dynamic>> {
   @override
   Future<void> handleErrorWithReturn(dynamic error) async {
     dataFetcher.sink.addError(error);
+  }
+}
+
+class WholesaleCreateProductRx extends RxResponseInt<void> {
+  final api = WholesaleApi.instance;
+  WholesaleCreateProductRx({required super.empty, required super.dataFetcher});
+
+  @override
+  Future<void> handleSuccessWithReturn(dynamic data) async {
+    return;
+  }
+
+  Future<bool> createProduct(Map<String, dynamic> payload) async {
+    try {
+      await EasyLoading.show(status: 'Creating Product...');
+      await api.createProduct(payload);
+      AppToast.success("Product Created Successfully!");
+      return true;
+    } catch (e) {
+      log('WholesaleCreateProductRx createProduct error: $e');
+      String message = "Failed to create product";
+      if (e is DioException) {
+        if (e.response?.data is Map) {
+          message = e.response?.data["message"] ?? message;
+        }
+      }
+      AppToast.error(message);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
   }
 }

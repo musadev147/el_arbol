@@ -43,17 +43,31 @@ class WholesaleApi {
 
   Future<Map<String, dynamic>> updateProfileImage(FormData formData) async {
     try {
-      final response = await DioSingleton.instance.dio.patch(
+      final response = await patchHttp(
         Endpoints.wholesaleProfileImage(),
-        data: formData,
+        formData,
       );
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
     } catch (e) {
       log('Wholesale updateProfileImage error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> payload) async {
+    try {
+      final response = await postHttp(Endpoints.getProducts(), payload);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data;
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      log('Wholesale createProduct error: $e');
       rethrow;
     }
   }

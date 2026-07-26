@@ -1,5 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../../featuers/auth/data/repositories/auth_repository_impl.dart';
+import '../../featuers/auth/data/services/auth_service.dart';
+import 'auth_interceptor.dart';
+import 'token_storage.dart';
 import '/helpers/di.dart';
 import '../../constants/app_constants.dart';
 import '../endpoints.dart';
@@ -13,6 +17,13 @@ final class DioSingleton {
   static DioSingleton get instance => _singleton;
 
   late Dio dio;
+
+  late final AuthInterceptor _authInterceptor = AuthInterceptor(
+    authRepository: AuthRepositoryImpl(
+      authService: AuthService(),
+      tokenStorage: TokenStorage(),
+    ),
+  );
 
   void create() {
     BaseOptions options = BaseOptions(
@@ -30,7 +41,7 @@ final class DioSingleton {
       options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $token";
     }
     
-    dio = Dio(options)..interceptors.add(Logger());
+    dio = Dio(options)..interceptors.addAll([_authInterceptor, Logger()]);
   }
 
   void update(String auth) {
@@ -53,7 +64,7 @@ final class DioSingleton {
       options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $auth";
     }
     
-    dio = Dio(options)..interceptors.add(Logger());
+    dio = Dio(options)..interceptors.addAll([_authInterceptor, Logger()]);
   }
 
   void updateLanguage(String countryCode) {
@@ -77,7 +88,7 @@ final class DioSingleton {
       options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $token";
     }
     
-    dio = Dio(options)..interceptors.add(Logger());
+    dio = Dio(options)..interceptors.addAll([_authInterceptor, Logger()]);
   }
 }
 

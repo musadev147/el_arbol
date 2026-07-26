@@ -729,17 +729,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 2.h),
-                        Row(
-                          children: [
-                            Icon(Icons.phone, size: 12.r, color: Colors.grey),
-                            SizedBox(width: 4.w),
-                            Text(
-                              _userPhone,
-                              style: TextStyle(fontSize: 11.sp, color: Colors.grey),
-                            ),
-                          ],
-                        ),
+
                       ],
                     ),
                   ),

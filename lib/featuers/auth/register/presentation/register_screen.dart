@@ -111,44 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(height: 24.h),
 
 
-                  // Social Log In Button
-                  SocialLoginButton(
-                    title: 'Continue with Google',
-                    iconPath: AssetsIcons.googleIcon,
-                    onPressed: () {
-                      // Handle social sign up
-                    },
-                  ),
-                  SizedBox(height: 24.h),
 
-                  // Divider
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: Colors.grey.shade300,
-                          thickness: 1,
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w),
-                        child: Text(
-                          'or',
-                          style: TextStyle(
-                            color: const Color(0xFF6D7A73),
-                            fontSize: 14.sp,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: Colors.grey.shade300,
-                          thickness: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 24.h),
 
 
                 if (isWholesale) ...[

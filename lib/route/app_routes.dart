@@ -20,4 +20,5 @@ abstract class Routes {
   static const WHOLESALE_NOTIFICATIONS_SCREEN = '/wholesale_notifications';
   static const WHOLESALE_DAILY_REPORTS_SCREEN = '/wholesale_daily_reports';
   static const WHOLESALE_SUPPORT_TICKETS_SCREEN = '/wholesale_support_tickets';
+  static const WHOLESALE_ADD_PRODUCT = '/wholesale_add_product';
 }

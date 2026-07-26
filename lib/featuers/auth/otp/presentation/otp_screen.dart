@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -11,6 +12,9 @@ import '../../../../provider/forget_password_provider.dart';
 import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
 import '../../../../route/app_pages.dart';
 import 'package:rxdart/rxdart.dart';
+
+import '../../forget_password/presentation/data/rx.dart';
+import '../../forget_password/presentation/model/forget_model.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key});
@@ -26,7 +30,28 @@ class _OtpScreenState extends State<OtpScreen> {
   final _confirmPasswordController = TextEditingController();
   
   late final WholesalePasswordResetVerifyRx _wholesaleRx;
+  late final WholesalePasswordResetSendOtpRx _wholesaleSendOtpRx;
+  late final ForgetPasswordRx _forgetPasswordRx;
   String? _role;
+  Timer? _timer;
+  int _secondsRemaining = 59;
+
+  void _startTimer() {
+    setState(() {
+      _secondsRemaining = 59;
+    });
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -35,6 +60,14 @@ class _OtpScreenState extends State<OtpScreen> {
       empty: null,
       dataFetcher: BehaviorSubject<dynamic>(),
     );
+    _wholesaleSendOtpRx = WholesalePasswordResetSendOtpRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _forgetPasswordRx = ForgetPasswordRx(
+      empty: ForgetEmailModel(),
+      dataFetcher: BehaviorSubject<ForgetEmailModel>(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Get.arguments != null && Get.arguments is String) {
         setState(() {
@@ -42,6 +75,7 @@ class _OtpScreenState extends State<OtpScreen> {
         });
       }
     });
+    _startTimer();
   }
 
   @override
@@ -50,6 +84,9 @@ class _OtpScreenState extends State<OtpScreen> {
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     _wholesaleRx.dispose();
+    _wholesaleSendOtpRx.dispose();
+    _forgetPasswordRx.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -191,13 +228,18 @@ class _OtpScreenState extends State<OtpScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          // Handle resend code action
+                        onTap: _secondsRemaining > 0 ? null : () {
+                          if (_role == UserRole.wholesale.value || _role == 'wholesale') {
+                            _wholesaleSendOtpRx.sendOtp(email);
+                          } else {
+                            _forgetPasswordRx.sendOtpFunc(email: email, isResend: true);
+                          }
+                          _startTimer();
                         },
-                        child: const Text(
-                          'Resend',
+                        child: Text(
+                          _secondsRemaining > 0 ? 'Resend in ${_secondsRemaining}s' : 'Resend',
                           style: TextStyle(
-                            color: primaryBrandColor,
+                            color: _secondsRemaining > 0 ? Colors.grey : primaryBrandColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

@@ -79,6 +79,7 @@ class CustomerProfileRx extends RxResponseInt<Map<String, dynamic>> {
   }
 }
 
+
 class CustomerChangePasswordRx extends RxResponseInt<void> {
   final api = CustomerProfileApi.instance;
 

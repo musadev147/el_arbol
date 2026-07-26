@@ -101,9 +101,10 @@ class _CustomerWishlistScreenState extends State<CustomerWishlistScreen> {
               final item = items[index];
               final id = item['id']?.toString() ?? '';
               final productId = item['product_id']?.toString() ?? '';
-              final name = item['name'] ?? item['product_name'] ?? 'Product';
-              final image = item['image'] ?? item['product_image'];
-              final price = item['price']?.toString() ?? '0.0';
+              final product = item['product'] ?? {};
+              final name = product['name'] ?? item['name'] ?? item['product_name'] ?? 'Product';
+              final image = product['thumbnail_url'] ?? item['image'] ?? item['product_image'];
+              final price = product['price']?.toString() ?? item['price']?.toString() ?? '0.0';
               
               return Container(
                 padding: EdgeInsets.all(12.r),

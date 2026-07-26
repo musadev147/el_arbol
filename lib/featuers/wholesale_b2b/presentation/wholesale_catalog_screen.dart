@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'wholesale_cart_state.dart';
 import 'wholesale_cart_screen.dart';
 import '../../customers/home/presentation/product_details_screen.dart';
+import '../../../route/app_pages.dart';
 
 class WholesaleProduct {
   final String name;
@@ -358,6 +359,13 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Get.toNamed(Routes.WHOLESALE_ADD_PRODUCT);
+        },
+        backgroundColor: primaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

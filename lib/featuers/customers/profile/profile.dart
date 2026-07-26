@@ -78,7 +78,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _contactPerson = data['contact_person'] ?? _contactPerson;
             _businessEmail = data['email'] ?? _businessEmail;
             _contactPhone = data['contact_phone'] ?? _contactPhone;
-            _profileImageUrl = data['avatar'] ?? _profileImageUrl;
+            if (data['avatar'] != null) {
+              String avatar = data['avatar'];
+              _profileImageUrl = avatar.contains('?') 
+                  ? '$avatar&v=${DateTime.now().millisecondsSinceEpoch}' 
+                  : '$avatar?v=${DateTime.now().millisecondsSinceEpoch}';
+            }
           });
         }
       });
@@ -96,7 +101,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _personalDob = DateTime.parse(data['dob']);
               } catch (_) {}
             }
-            _profileImageUrl = data['avatar'] ?? _profileImageUrl;
+            if (data['avatar'] != null) {
+              String avatar = data['avatar'];
+              _profileImageUrl = avatar.contains('?') 
+                  ? '$avatar&v=${DateTime.now().millisecondsSinceEpoch}' 
+                  : '$avatar?v=${DateTime.now().millisecondsSinceEpoch}';
+            }
           });
         }
       });
@@ -497,12 +507,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (success) {
           // Success handled by Rx toast
         }
+      } else if (widget.role == UserRole.wholesale) {
+        final success = await _wholesaleProfileRx.updateAvatar(File(image.path));
+        if (success) {
+          // Success handled by Rx toast
+        }
       } else {
         // Mock fallback
         setState(() {
-          _profileImageUrl = null;
+          // just mock it with a local path visually or don't set it to null
+          // _profileImageUrl = null;
         });
-        Fluttertoast.showToast(msg: 'Avatar mocked upload successful');
+        Fluttertoast.showToast(msg: 'Avatar update is mocked for this role');
       }
     }
   }
@@ -654,7 +670,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       GestureDetector(
                         onTap: () {
-                          if (currentRole == UserRole.wholesale) {
+                          if (currentRole == UserRole.wholesale || currentRole == UserRole.customer) {
                             _changeProfileImage();
                           } else {
                             Get.to(() => UpdateStaffProfileScreen(
