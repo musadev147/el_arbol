@@ -18,6 +18,12 @@ class PostRegisterApi {
     required String password,
     required String passwordConfirm,
     required String role,
+    String? businessName,
+    String? contactName,
+    String? tradeLicenseNumber,
+    String? postcode,
+    String? businessType,
+    String? monthlyVolume,
   }) async {
     log("register: $email");
     log("Role: $role");
@@ -48,7 +54,26 @@ class PostRegisterApi {
         "user_type": userType,
       };
 
-      final response = await postHttp(Endpoints.register(), data);
+      if (businessName != null && businessName.isNotEmpty) {
+        data["business_name"] = businessName;
+      }
+      if (contactName != null && contactName.isNotEmpty) {
+        data["contact_name"] = contactName;
+      }
+      if (tradeLicenseNumber != null && tradeLicenseNumber.isNotEmpty) {
+        data["trade_license_number"] = tradeLicenseNumber;
+      }
+      if (postcode != null && postcode.isNotEmpty) {
+        data["postcode"] = postcode;
+      }
+      if (businessType != null && businessType.isNotEmpty) {
+        data["business_type"] = businessType;
+      }
+      if (monthlyVolume != null && monthlyVolume.isNotEmpty) {
+        data["monthly_volume"] = monthlyVolume;
+      }
+
+      final response = await postHttp(Endpoints.register(role: role), data);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return PostRegisterModel.fromJson(response.data);

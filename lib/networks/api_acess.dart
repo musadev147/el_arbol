@@ -1,4 +1,9 @@
 import 'package:rxdart/rxdart.dart';
+import 'package:get/get.dart';
+import '../helpers/di.dart';
+import '../constants/app_constants.dart';
+import '../route/app_pages.dart';
+import '../networks/dio/dio.dart';
 
 class PostLogoutRX {
   final dynamic empty;
@@ -7,7 +12,16 @@ class PostLogoutRX {
   PostLogoutRX({required this.empty, required this.dataFetcher});
 
   Future<void> logOut() async {
-    // Stub implementation
+    try {
+      await appData.remove(kKeyAccessToken);
+      await appData.remove(kKeyUserID);
+      await appData.remove('user_role');
+      DioSingleton.instance.update('');
+    } catch (e) {
+      // Ignore errors during local cleanup
+    } finally {
+      Get.offAllNamed(Routes.ROLE_SELECTION);
+    }
   }
 }
 

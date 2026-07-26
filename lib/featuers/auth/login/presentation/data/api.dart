@@ -27,7 +27,7 @@ class PostSignInApi {
         "password": password,
       };
 
-      final response = await postHttp(Endpoints.signIn(), data);
+      final response = await postHttp(Endpoints.signIn(role: role), data);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return PostSignInModel.fromJson(response.data);

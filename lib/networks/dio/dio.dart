@@ -1,5 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../../featuers/auth/data/repositories/auth_repository_impl.dart';
+import '../../featuers/auth/data/services/auth_service.dart';
+import 'auth_interceptor.dart';
+import 'token_storage.dart';
 import '/helpers/di.dart';
 import '../../constants/app_constants.dart';
 import '../endpoints.dart';
@@ -14,6 +18,13 @@ final class DioSingleton {
 
   late Dio dio;
 
+  late final AuthInterceptor _authInterceptor = AuthInterceptor(
+    authRepository: AuthRepositoryImpl(
+      authService: AuthService(),
+      tokenStorage: TokenStorage(),
+    ),
+  );
+
   void create() {
     BaseOptions options = BaseOptions(
         baseUrl: url!,
@@ -24,7 +35,13 @@ final class DioSingleton {
           NetworkConstants.ACCEPT_LANGUAGE: appData.read(kKeyCountryCode) ?? "pt",
           NetworkConstants.APP_KEY: NetworkConstants.APP_KEY_VALUE,
         });
-    dio = Dio(options)..interceptors.add(Logger());
+        
+    final token = appData.read(kKeyAccessToken);
+    if (token != null && token.toString().trim().isNotEmpty) {
+      options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $token";
+    }
+    
+    dio = Dio(options)..interceptors.addAll([_authInterceptor, Logger()]);
   }
 
   void update(String auth) {
@@ -38,12 +55,16 @@ final class DioSingleton {
         NetworkConstants.ACCEPT: NetworkConstants.ACCEPT_TYPE,
         NetworkConstants.ACCEPT_LANGUAGE: appData.read(kKeyLanguage) ?? "pt",
         NetworkConstants.APP_KEY: NetworkConstants.APP_KEY_VALUE,
-        NetworkConstants.AUTHORIZATION: "Bearer $auth",
       },
       connectTimeout: const Duration(milliseconds: 100000),
       receiveTimeout: const Duration(milliseconds: 100000),
     );
-    dio = Dio(options)..interceptors.add(Logger());
+    
+    if (auth.trim().isNotEmpty) {
+      options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $auth";
+    }
+    
+    dio = Dio(options)..interceptors.addAll([_authInterceptor, Logger()]);
   }
 
   void updateLanguage(String countryCode) {
@@ -57,12 +78,17 @@ final class DioSingleton {
         NetworkConstants.ACCEPT: NetworkConstants.ACCEPT_TYPE,
         NetworkConstants.ACCEPT_LANGUAGE: countryCode,
         NetworkConstants.APP_KEY: NetworkConstants.APP_KEY_VALUE,
-        NetworkConstants.AUTHORIZATION: "Bearer ${appData.read(kKeyAccessToken)} ",
       },
       connectTimeout: const Duration(milliseconds: 100000),
       receiveTimeout: const Duration(milliseconds: 100000),
     );
-    dio = Dio(options)..interceptors.add(Logger());
+    
+    final token = appData.read(kKeyAccessToken);
+    if (token != null && token.toString().trim().isNotEmpty) {
+      options.headers[NetworkConstants.AUTHORIZATION] = "Bearer $token";
+    }
+    
+    dio = Dio(options)..interceptors.addAll([_authInterceptor, Logger()]);
   }
 }
 
@@ -77,3 +103,6 @@ Future<Response> getHttp(String path, [dynamic data]) =>
 
 Future<Response> deleteHttp(String path, [dynamic data]) =>
     DioSingleton.instance.dio.delete(path, data: data, cancelToken: DioSingleton.cancelToken);
+
+Future<Response> patchHttp(String path, [dynamic data]) =>
+    DioSingleton.instance.dio.patch(path, data: data, cancelToken: DioSingleton.cancelToken);

@@ -20,10 +20,13 @@ class ForgetPasswordRx extends RxResponseInt<ForgetEmailModel> {
 
   ValueStream get valueStreamData => dataFetcher.stream;
 
+  bool _isResend = false;
+
   /// Calls the API to send OTP to the user's email.
-  Future<void> sendOtpFunc({required String email}) async {
+  Future<void> sendOtpFunc({required String email, bool isResend = false}) async {
+    _isResend = isResend;
     try {
-      await EasyLoading.show(status: "Sending OTP...");
+      await EasyLoading.show(status: isResend ? "Resending OTP..." : "Sending OTP...");
 
       final data = await api.sendOtp(email: email);
 
@@ -39,7 +42,9 @@ class ForgetPasswordRx extends RxResponseInt<ForgetEmailModel> {
   @override
   handleSuccessWithReturn(ForgetEmailModel data) async {
     AppToast.success(data.detail ?? "OTP sent successfully!");
-    Get.toNamed(Routes.OTP);
+    if (!_isResend) {
+      Get.toNamed(Routes.OTP);
+    }
   }
 
   @override

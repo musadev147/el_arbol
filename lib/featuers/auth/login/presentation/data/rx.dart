@@ -67,7 +67,7 @@ class PostSignInRx extends RxResponseInt<PostSignInModel> {
     AppToast.success("Login Successful!");
 
     final accessToken = data.access ?? "";
-    final id = data.user?.id ?? 0;
+    final id = data.user?.id ?? "";
 
     await appData.write(kKeyAccessToken, accessToken);
     await appData.write(kKeyUserID, id.toString());

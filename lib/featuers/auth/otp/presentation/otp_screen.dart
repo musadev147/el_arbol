@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -6,8 +7,14 @@ import 'package:provider/provider.dart';
 
 import '../../../../common_wigdets/common_button.dart';
 import '../../../../constants/text_font_style.dart';
+import '../../../../common_wigdets/user_role.dart';
 import '../../../../provider/forget_password_provider.dart';
+import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
 import '../../../../route/app_pages.dart';
+import 'package:rxdart/rxdart.dart';
+
+import '../../forget_password/presentation/data/rx.dart';
+import '../../forget_password/presentation/model/forget_model.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key});
@@ -19,10 +26,67 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  
+  late final WholesalePasswordResetVerifyRx _wholesaleRx;
+  late final WholesalePasswordResetSendOtpRx _wholesaleSendOtpRx;
+  late final ForgetPasswordRx _forgetPasswordRx;
+  String? _role;
+  Timer? _timer;
+  int _secondsRemaining = 59;
+
+  void _startTimer() {
+    setState(() {
+      _secondsRemaining = 59;
+    });
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _wholesaleRx = WholesalePasswordResetVerifyRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _wholesaleSendOtpRx = WholesalePasswordResetSendOtpRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _forgetPasswordRx = ForgetPasswordRx(
+      empty: ForgetEmailModel(),
+      dataFetcher: BehaviorSubject<ForgetEmailModel>(),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.arguments != null && Get.arguments is String) {
+        setState(() {
+          _role = Get.arguments;
+        });
+      }
+    });
+    _startTimer();
+  }
 
   @override
   void dispose() {
     _otpController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    _wholesaleRx.dispose();
+    _wholesaleSendOtpRx.dispose();
+    _forgetPasswordRx.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -99,17 +163,53 @@ class _OtpScreenState extends State<OtpScreen> {
                   },
                   onChanged: (value) {},
                 ),
+                SizedBox(height: 24.h),
+                Text('New Password', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500)),
+                SizedBox(height: 6.h),
+                TextFormField(
+                  controller: _newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w),
+                  ),
+                  validator: (val) => val == null || val.isEmpty ? 'Enter new password' : null,
+                ),
+                SizedBox(height: 16.h),
+                Text('Confirm Password', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500)),
+                SizedBox(height: 6.h),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.isEmpty) return 'Confirm password';
+                    if (val != _newPasswordController.text) return 'Passwords do not match';
+                    return null;
+                  },
+                ),
                 SizedBox(height: 32.h),
 
                 // Verify Button
                 CommonButton(
-                  text: 'Verify',
+                  text: 'Verify & Reset',
                   backgroundColor: primaryBrandColor,
                   borderRadius: 8.r,
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      // Navigate to nav / home on successful validation
-                      Get.offAllNamed(Routes.NAV);
+                      if (_role == UserRole.wholesale.value || _role == 'wholesale') {
+                        _wholesaleRx.verifyOtpAndReset(email, _otpController.text, _newPasswordController.text).then((success) {
+                          if (success) {
+                            Get.offAllNamed(Routes.LOGIN, arguments: _role);
+                          }
+                        });
+                      } else {
+                        // existing logic for other roles
+                        Get.offAllNamed(Routes.NAV);
+                      }
                     }
                   },
                 ),
@@ -128,13 +228,18 @@ class _OtpScreenState extends State<OtpScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          // Handle resend code action
+                        onTap: _secondsRemaining > 0 ? null : () {
+                          if (_role == UserRole.wholesale.value || _role == 'wholesale') {
+                            _wholesaleSendOtpRx.sendOtp(email);
+                          } else {
+                            _forgetPasswordRx.sendOtpFunc(email: email, isResend: true);
+                          }
+                          _startTimer();
                         },
-                        child: const Text(
-                          'Resend',
+                        child: Text(
+                          _secondsRemaining > 0 ? 'Resend in ${_secondsRemaining}s' : 'Resend',
                           style: TextStyle(
-                            color: primaryBrandColor,
+                            color: _secondsRemaining > 0 ? Colors.grey : primaryBrandColor,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

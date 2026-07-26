@@ -2,7 +2,8 @@ enum UserRole {
   customer,
   wholesale,
   shopPortal,
-  employeeSelfService;
+  employeeSelfService,
+  staff;
 
   String get value => name;
 
@@ -23,6 +24,8 @@ enum UserRole {
       case 'employee self-service':
       case 'employee':
         return UserRole.employeeSelfService;
+      case 'staff':
+        return UserRole.staff;
       default:
         throw Exception("Invalid user role: $role");
     }

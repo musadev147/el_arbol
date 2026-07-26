@@ -7,7 +7,10 @@ import 'package:rxdart/rxdart.dart';
 import '../../../../common_wigdets/custom_textfiled.dart';
 import '../../../../common_wigdets/common_button.dart';
 import '../../../../constants/text_font_style.dart';
+import '../../../../common_wigdets/user_role.dart';
 import '../../../../provider/forget_password_provider.dart';
+import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
+import '../../../../route/app_pages.dart';
 import 'data/rx.dart';
 import 'model/forget_model.dart';
 
@@ -23,6 +26,8 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   final _emailController = TextEditingController();
 
   late final ForgetPasswordRx _forgetPasswordRx;
+  late final WholesalePasswordResetSendOtpRx _wholesaleRx;
+  String? _role;
 
   @override
   void initState() {
@@ -31,12 +36,25 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
       empty: ForgetEmailModel(),
       dataFetcher: BehaviorSubject<ForgetEmailModel>(),
     );
+    _wholesaleRx = WholesalePasswordResetSendOtpRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    // Read role from arguments
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.arguments != null && Get.arguments is String) {
+        setState(() {
+          _role = Get.arguments;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _forgetPasswordRx.dispose();
+    _wholesaleRx.dispose();
     super.dispose();
   }
 
@@ -119,8 +137,16 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       final provider = Provider.of<ForgetPasswordProvider>(context, listen: false);
                       provider.setForgetEmail(_emailController.text);
                       
-                      // Request reset OTP from the backend API
-                      _forgetPasswordRx.sendOtpFunc(email: _emailController.text);
+                      if (_role == UserRole.wholesale.value || _role == 'wholesale') {
+                        _wholesaleRx.sendOtp(_emailController.text).then((success) {
+                          if (success) {
+                            Get.toNamed(Routes.OTP, arguments: _role);
+                          }
+                        });
+                      } else {
+                        // Request reset OTP from the backend API for normal customers
+                        _forgetPasswordRx.sendOtpFunc(email: _emailController.text);
+                      }
                     }
                   },
                 ),

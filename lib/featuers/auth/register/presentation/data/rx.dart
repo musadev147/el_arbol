@@ -33,6 +33,12 @@ class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
     required String password,
     required String passwordConfirm,
     required String role,
+    String? businessName,
+    String? contactName,
+    String? tradeLicenseNumber,
+    String? postcode,
+    String? businessType,
+    String? monthlyVolume,
   }) async {
     _selectedRole = role;
 
@@ -46,6 +52,12 @@ class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
         password: password,
         passwordConfirm: passwordConfirm,
         role: role,
+        businessName: businessName,
+        contactName: contactName,
+        tradeLicenseNumber: tradeLicenseNumber,
+        postcode: postcode,
+        businessType: businessType,
+        monthlyVolume: monthlyVolume,
       );
 
       await handleSuccessWithReturn(data);
@@ -62,7 +74,7 @@ class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
     AppToast.success("Registration Successful!");
 
     final accessToken = data.access ?? "";
-    final id = data.user?.id ?? 0;
+    final id = data.user?.id ?? "";
 
     await appData.write(kKeyAccessToken, accessToken);
     await appData.write(kKeyUserID, id.toString());
