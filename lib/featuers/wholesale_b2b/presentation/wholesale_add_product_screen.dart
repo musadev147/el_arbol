@@ -212,3 +212,8 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
     );
   }
 }
+
+
+
+
+

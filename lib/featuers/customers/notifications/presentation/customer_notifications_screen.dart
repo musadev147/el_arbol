@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:rxdart/rxdart.dart';
 import '../data/customer_notifications_rx.dart';
 
 class CustomerNotificationsScreen extends StatefulWidget {
@@ -10,25 +11,18 @@ class CustomerNotificationsScreen extends StatefulWidget {
 }
 
 class _CustomerNotificationsScreenState extends State<CustomerNotificationsScreen> {
-  final CustomerNotificationsRx _rx = CustomerNotificationsRx();
-  List<Map<String, dynamic>> _mockNotifications = [
-    {
-      "id": "1",
-      "title": "Order Shipped",
-      "body": "Your order #12345 has been shipped.",
-      "date": "2 hours ago",
-      "isRead": false,
-    },
-    {
-      "id": "2",
-      "title": "Welcome",
-      "body": "Welcome to El Arbol! We're glad to have you.",
-      "date": "1 day ago",
-      "isRead": true,
-    }
-  ];
+  final CustomerNotificationsRx _rx = CustomerNotificationsRx(
+    empty: [],
+    dataFetcher: BehaviorSubject<dynamic>(),
+  );
 
-  void _bulkDelete() async {
+  @override
+  void initState() {
+    super.initState();
+    _rx.fetchNotifications();
+  }
+
+  void _bulkDelete(List<dynamic> notifications) async {
     showDialog(
       context: context,
       builder: (context) {
@@ -41,12 +35,10 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () async {
                 Navigator.pop(context);
-                final ids = _mockNotifications.map((e) => e['id'].toString()).toList();
+                final ids = notifications.map((e) => e['id'].toString()).toList();
                 final success = await _rx.bulkDeleteNotifications(ids);
                 if (success) {
-                  setState(() {
-                    _mockNotifications.clear();
-                  });
+                  _rx.fetchNotifications();
                 }
               },
               child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -68,16 +60,31 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
         backgroundColor: primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          if (_mockNotifications.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep, color: Colors.white),
-              onPressed: _bulkDelete,
-              tooltip: 'Clear All',
-            ),
+          StreamBuilder<dynamic>(
+            stream: _rx.valueStreamData,
+            builder: (context, snapshot) {
+              final notifications = snapshot.data as List? ?? [];
+              if (notifications.isEmpty) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.delete_sweep, color: Colors.white),
+                onPressed: () => _bulkDelete(notifications),
+                tooltip: 'Clear All',
+              );
+            },
+          ),
         ],
       ),
-      body: _mockNotifications.isEmpty
-          ? Center(
+      body: StreamBuilder<dynamic>(
+        stream: _rx.valueStreamData,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: primaryColor));
+          }
+
+          final notifications = snapshot.data as List? ?? [];
+
+          if (notifications.isEmpty) {
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -86,51 +93,55 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
                   Text('No notifications', style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600)),
                 ],
               ),
-            )
-          : ListView.separated(
-              padding: EdgeInsets.all(16.r),
-              itemCount: _mockNotifications.length,
-              separatorBuilder: (context, index) => SizedBox(height: 12.h),
-              itemBuilder: (context, index) {
-                final notif = _mockNotifications[index];
-                final isRead = notif['isRead'] == true;
+            );
+          }
 
-                return Container(
-                  padding: EdgeInsets.all(16.r),
-                  decoration: BoxDecoration(
-                    color: isRead ? Colors.white : Colors.blue.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(color: isRead ? Colors.grey.shade100 : Colors.blue.withOpacity(0.2)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(12.r),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.notifications, color: primaryColor),
+          return ListView.separated(
+            padding: EdgeInsets.all(16.r),
+            itemCount: notifications.length,
+            separatorBuilder: (context, index) => SizedBox(height: 12.h),
+            itemBuilder: (context, index) {
+              final notif = notifications[index] as Map<String, dynamic>;
+              final isRead = (notif['is_read'] ?? notif['isRead']) == true;
+
+              return Container(
+                padding: EdgeInsets.all(16.r),
+                decoration: BoxDecoration(
+                  color: isRead ? Colors.white : Colors.blue.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(color: isRead ? Colors.grey.shade100 : Colors.blue.withOpacity(0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12.r),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
                       ),
-                      SizedBox(width: 16.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(notif['title'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
-                            SizedBox(height: 4.h),
-                            Text(notif['body'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp)),
-                            SizedBox(height: 8.h),
-                            Text(notif['date'] ?? '', style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp)),
-                          ],
-                        ),
+                      child: const Icon(Icons.notifications, color: primaryColor),
+                    ),
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(notif['title'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                          SizedBox(height: 4.h),
+                          Text(notif['body'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp)),
+                          SizedBox(height: 8.h),
+                          Text(notif['created_at'] ?? notif['date'] ?? '', style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp)),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

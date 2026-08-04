@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:el_arbol/common_wigdets/user_role.dart';
 import 'package:el_arbol/route/app_pages.dart';
 import 'package:el_arbol/featuers/employee_self_service/presentation/update_staff_profile_screen.dart';
+import 'package:el_arbol/featuers/employee_self_service/data/rx.dart';
+import 'package:el_arbol/featuers/employee_self_service/model/staff_dashboard_model.dart';
 import 'dart:io';
 import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
 import 'package:image_picker/image_picker.dart';
@@ -53,8 +55,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ];
 
   // Employee details
-  final String _employeeName = 'Sofia Rossi';
-  final String _employeeEmail = 'sofia.rossi@elarbol.com';
+  String _employeeName = 'Sofia Rossi';
+  String _employeeEmail = 'sofia.rossi@elarbol.com';
 
   // Wholesale B2B specific
   late WholesaleProfileRx _wholesaleProfileRx;
@@ -62,6 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Customer specific
   late CustomerProfileRx _customerProfileRx;
   final CustomerChangePasswordRx _changePasswordRx = CustomerChangePasswordRx(empty: null, dataFetcher: BehaviorSubject<void>());
+
+  // Staff specific
+  late UpdateStaffProfileRx _staffProfileRx;
 
   @override
   void initState() {
@@ -110,6 +115,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
         }
       });
+    } else {
+      _staffProfileRx = UpdateStaffProfileRx(empty: null, dataFetcher: BehaviorSubject<dynamic>());
+      _staffProfileRx.fetchStaffProfile();
+
+      _staffProfileRx.valueStreamData.listen((data) {
+        if (data != null && mounted) {
+          setState(() {
+            _employeeName = data['name'] ?? _employeeName;
+            _employeeEmail = data['email'] ?? _employeeEmail;
+            _personalPhone = data['phone'] ?? _personalPhone;
+            if (data['photo'] != null) {
+              String avatar = data['photo'];
+              _profileImageUrl = avatar.contains('?') 
+                  ? '$avatar&v=${DateTime.now().millisecondsSinceEpoch}' 
+                  : '$avatar?v=${DateTime.now().millisecondsSinceEpoch}';
+            } else {
+              _profileImageUrl = null;
+            }
+          });
+        }
+      });
     }
   }
 
@@ -120,6 +146,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } else if (widget.role == UserRole.customer) {
       _customerProfileRx.dispose();
       _changePasswordRx.dispose();
+    } else {
+      _staffProfileRx.dispose();
     }
     super.dispose();
   }
@@ -677,7 +705,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               initialName: _employeeName,
                               initialPhone: _personalPhone,
                               initialPhoto: _profileImageUrl,
-                            ));
+                            ))?.then((val) {
+                              if (val == true) {
+                                _staffProfileRx.fetchStaffProfile();
+                              }
+                            });
                           }
                         },
                         child: Stack(
@@ -753,7 +785,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 initialName: _employeeName,
                                 initialPhone: _personalPhone,
                                 initialPhoto: _profileImageUrl,
-                              ));
+                              ))?.then((val) {
+                                if (val == true) {
+                                  _staffProfileRx.fetchStaffProfile();
+                                }
+                              });
                             }
                           },
                         ),
@@ -1074,9 +1110,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.store, color: primaryColor),
-                        title: const Text('Assigned Shop ID'),
-                        trailing: Text(currentRole == UserRole.shopPortal ? 'SHOP-VALENCIA-04' : 'MEM-8902', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        leading: const Icon(Icons.badge_outlined, color: primaryColor),
+                        title: const Text('Member ID'),
+                        trailing: const Text('MEM-8902', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
 
                       const Divider(height: 1),

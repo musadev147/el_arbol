@@ -33,6 +33,8 @@ class _OtpScreenState extends State<OtpScreen> {
   late final WholesalePasswordResetSendOtpRx _wholesaleSendOtpRx;
   late final ForgetPasswordRx _forgetPasswordRx;
   String? _role;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
   Timer? _timer;
   int _secondsRemaining = 59;
 
@@ -80,14 +82,14 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   void dispose() {
-    _otpController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
+    _timer?.cancel();
     _wholesaleRx.dispose();
     _wholesaleSendOtpRx.dispose();
     _forgetPasswordRx.dispose();
-    _timer?.cancel();
     super.dispose();
+    _otpController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
   }
 
   @override
@@ -137,7 +139,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 // PIN Code Entry
                 PinCodeTextField(
                   appContext: context,
-                  length: 4,
+                  length: 6,
                   controller: _otpController,
                   keyboardType: TextInputType.number,
                   animationType: AnimationType.fade,
@@ -145,7 +147,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     shape: PinCodeFieldShape.box,
                     borderRadius: BorderRadius.circular(8.r),
                     fieldHeight: 56.h,
-                    fieldWidth: 56.w,
+                    fieldWidth: 44.w,
                     activeFillColor: Colors.white,
                     inactiveFillColor: Colors.white,
                     selectedFillColor: Colors.white,
@@ -156,8 +158,8 @@ class _OtpScreenState extends State<OtpScreen> {
                   animationDuration: const Duration(milliseconds: 300),
                   enableActiveFill: true,
                   validator: (value) {
-                    if (value == null || value.length < 4) {
-                      return 'Please enter the 4-digit code';
+                    if (value == null || value.length < 6) {
+                      return 'Please enter the 6-digit code';
                     }
                     return null;
                   },
@@ -168,10 +170,21 @@ class _OtpScreenState extends State<OtpScreen> {
                 SizedBox(height: 6.h),
                 TextFormField(
                   controller: _newPasswordController,
-                  obscureText: true,
+                  obscureText: _obscureNewPassword,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureNewPassword ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureNewPassword = !_obscureNewPassword;
+                        });
+                      },
+                    ),
                   ),
                   validator: (val) => val == null || val.isEmpty ? 'Enter new password' : null,
                 ),
@@ -180,10 +193,21 @@ class _OtpScreenState extends State<OtpScreen> {
                 SizedBox(height: 6.h),
                 TextFormField(
                   controller: _confirmPasswordController,
-                  obscureText: true,
+                  obscureText: _obscureConfirmPassword,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
                   ),
                   validator: (val) {
                     if (val == null || val.isEmpty) return 'Confirm password';
@@ -207,8 +231,16 @@ class _OtpScreenState extends State<OtpScreen> {
                           }
                         });
                       } else {
-                        // existing logic for other roles
-                        Get.offAllNamed(Routes.NAV);
+                        _forgetPasswordRx.verifyOtpAndReset(
+                          email: email,
+                          otp: _otpController.text,
+                          password: _newPasswordController.text,
+                          role: _role,
+                        ).then((success) {
+                          if (success) {
+                            Get.offAllNamed(Routes.LOGIN, arguments: _role);
+                          }
+                        });
                       }
                     }
                   },
@@ -232,7 +264,7 @@ class _OtpScreenState extends State<OtpScreen> {
                           if (_role == UserRole.wholesale.value || _role == 'wholesale') {
                             _wholesaleSendOtpRx.sendOtp(email);
                           } else {
-                            _forgetPasswordRx.sendOtpFunc(email: email, isResend: true);
+                            _forgetPasswordRx.sendOtpFunc(email: email, role: _role, isResend: true);
                           }
                           _startTimer();
                         },

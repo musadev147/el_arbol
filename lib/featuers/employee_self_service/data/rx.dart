@@ -3,6 +3,7 @@ import 'package:rxdart/rxdart.dart';
 import '../../../../networks/rx_base.dart';
 import '../model/staff_dashboard_model.dart';
 import '../model/get_staff_history_model.dart';
+import '../model/staff_chat_model.dart';
 import 'api.dart';
 
 class GetStaffDashboardRx extends RxResponseInt<StaffDashboardModel> {
@@ -56,6 +57,16 @@ class UpdateStaffProfileRx extends RxResponseInt<dynamic> {
   });
 
   ValueStream<dynamic> get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchStaffProfile() async {
+    try {
+      final data = await api.getStaffProfile();
+      handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Fetch staff profile error: $error");
+      handleErrorWithReturn(error);
+    }
+  }
 
   Future<bool> updateProfile({
     required String name,
@@ -170,3 +181,159 @@ class StaffOrderHistoryRx extends RxResponseInt<dynamic> {
     }
   }
 }
+
+class StaffDayOffRequestsRx extends RxResponseInt<dynamic> {
+  final api = StaffDashboardApi.instance;
+  StaffDayOffRequestsRx({required super.empty, required super.dataFetcher});
+
+  ValueStream<dynamic> get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchDayOffRequests() async {
+    try {
+      final data = await api.getDayOffRequests();
+      handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Fetch day off requests error: $error");
+      handleErrorWithReturn(error);
+    }
+  }
+
+  Future<bool> createRequest(String date, String reason) async {
+    try {
+      final data = await api.createDayOffRequest(date, reason);
+      handleSuccessWithReturn(data);
+      return true;
+    } catch (error) {
+      log("Create day off request error: $error");
+      handleErrorWithReturn(error);
+      return false;
+    }
+  }
+
+  Future<void> fetchRequestDetails(String id) async {
+    try {
+      final data = await api.getDayOffRequestDetails(id);
+      handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Fetch day off request details error: $error");
+      handleErrorWithReturn(error);
+    }
+  }
+
+  Future<bool> updateRequest(String id, String date, String reason) async {
+    try {
+      final data = await api.updateDayOffRequest(id, date, reason);
+      handleSuccessWithReturn(data);
+      return true;
+    } catch (error) {
+      log("Update day off request error: $error");
+      handleErrorWithReturn(error);
+      return false;
+    }
+  }
+
+  Future<bool> deleteRequest(String id) async {
+    try {
+      await api.deleteDayOffRequest(id);
+      return true;
+    } catch (error) {
+      log("Delete day off request error: $error");
+      handleErrorWithReturn(error);
+      return false;
+    }
+  }
+}
+
+class StaffNotificationsRx extends RxResponseInt<dynamic> {
+  final api = StaffDashboardApi.instance;
+  StaffNotificationsRx({required super.empty, required super.dataFetcher});
+
+  ValueStream<dynamic> get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchNotifications() async {
+    try {
+      final data = await api.getStaffNotifications();
+      handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Fetch staff notifications error: $error");
+      handleErrorWithReturn(error);
+    }
+  }
+
+  Future<void> fetchNotificationDetails(String id) async {
+    try {
+      final data = await api.getStaffNotificationDetails(id);
+      handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Fetch staff notification details error: $error");
+      handleErrorWithReturn(error);
+    }
+  }
+
+  Future<bool> deleteNotification(String id) async {
+    try {
+      await api.deleteStaffNotification(id);
+      return true;
+    } catch (error) {
+      log("Delete staff notification error: $error");
+      handleErrorWithReturn(error);
+      return false;
+    }
+  }
+}
+
+class StoreStaffRx extends RxResponseInt<dynamic> {
+  final api = StaffDashboardApi.instance;
+  StoreStaffRx({required super.empty, required super.dataFetcher});
+
+  ValueStream<dynamic> get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchStoreStaff(String storeId) async {
+    try {
+      final data = await api.getStoreStaff(storeId);
+      handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Fetch store staff error: $error");
+      handleErrorWithReturn(error);
+    }
+  }
+}
+
+class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
+  final api = StaffDashboardApi.instance;
+
+  StaffChatRx({
+    required super.empty,
+    required super.dataFetcher,
+  });
+
+  ValueStream<List<StaffChatMessage>> get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchChatMessages() async {
+    try {
+      final data = await api.getStaffChat();
+      handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Fetch staff chat messages error: $error");
+      handleErrorWithReturn(error);
+    }
+  }
+
+  Future<bool> sendMessage(String message) async {
+    try {
+      final sentMessage = await api.sendStaffChatMessage(message);
+      
+      // Update local stream to show sent message instantly
+      final currentList = dataFetcher.value ?? [];
+      final newList = List<StaffChatMessage>.from(currentList)..add(sentMessage);
+      dataFetcher.sink.add(newList);
+      
+      return true;
+    } catch (error) {
+      log("Send staff chat message error: $error");
+      handleErrorWithReturn(error);
+      return false;
+    }
+  }
+}
+

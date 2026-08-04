@@ -27,7 +27,6 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _shopIdController = TextEditingController();
   final _passwordController = TextEditingController();
 
   late final PostSignInRx _postSignInRx;
@@ -44,7 +43,6 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   void dispose() {
     _emailController.dispose();
-    _shopIdController.dispose();
     _passwordController.dispose();
     _postSignInRx.dispose();
     super.dispose();
@@ -54,9 +52,8 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     // Target brand color from website: #00694C
     const Color primaryBrandColor = Color(0xFF00694C);
-    final isShopPortal = widget.role == 'shopPortal' || widget.role == 'shop Portal' || widget.role == UserRole.shopPortal.value;
     final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee' || widget.role == 'staff' || widget.role == UserRole.staff.value;
-    final isSpecialPortal = isShopPortal || isEmployee;
+    final isSpecialPortal = isEmployee;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8), // matching web body bg
@@ -95,11 +92,9 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       SizedBox(height: 8.h),
                       Text(
-                        isShopPortal
-                            ? 'Store Staff Portal — Daily Operations'
-                            : isEmployee
-                                ? 'Employee Self-Service Portal'
-                                : 'Artisan produce, delivered with care.',
+                        isEmployee
+                            ? 'Employee Self-Service Portal'
+                            : 'Artisan produce, delivered with care.',
                         style: TextFontStyle.textStyle12Poppins400494953.copyWith(
                           fontSize: 14.sp,
                           color: const Color(0xFF6D7A73),
@@ -122,11 +117,9 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  isShopPortal
-                      ? 'Please enter your Employee ID and Shop ID.'
-                      : isEmployee
-                          ? 'Please enter your Member ID.'
-                          : 'Welcome back! Please enter your details.',
+                  isEmployee
+                      ? 'Please enter your Member ID.'
+                      : 'Welcome back! Please enter your details.',
                   style: TextFontStyle.textStyle12Poppins400494953.copyWith(
                     fontSize: 14.sp,
                     color: const Color(0xFF6D7A73),
@@ -138,11 +131,9 @@ class _SignInScreenState extends State<SignInScreen> {
 
                 // Email / Employee ID / Member ID Field
                 Text(
-                  isShopPortal
-                      ? 'Employee ID'
-                      : isEmployee
-                          ? 'Member ID'
-                          : 'Email Address',
+                  isEmployee
+                      ? 'Member ID'
+                      : 'Email Address',
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
@@ -152,11 +143,9 @@ class _SignInScreenState extends State<SignInScreen> {
                 SizedBox(height: 6.h),
                 CustomTextFormField(
                   controller: _emailController,
-                  hintText: isShopPortal
-                      ? 'EMP12345'
-                      : isEmployee
-                          ? 'MEM-8902'
-                          : 'jane@example.com',
+                  hintText: isEmployee
+                      ? 'MEM-8902'
+                      : 'jane@example.com',
                   keyboardType: isSpecialPortal ? TextInputType.text : TextInputType.emailAddress,
                   borderRadius: 8.r,
                   fillColor: const Color(0xFFECF7E4),
@@ -164,11 +153,9 @@ class _SignInScreenState extends State<SignInScreen> {
                   focusBorderColor: const Color(0xFF00694C),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return isShopPortal
-                          ? 'Please enter your Employee ID'
-                          : isEmployee
-                              ? 'Please enter your Member ID'
-                              : 'Please enter your email';
+                      return isEmployee
+                          ? 'Please enter your Member ID'
+                          : 'Please enter your email';
                     }
                     if (!isSpecialPortal && !GetUtils.isEmail(value)) {
                       return 'Please enter a valid email';
@@ -177,35 +164,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   },
                 ),
                 SizedBox(height: 16.h),
-
-                // Shop ID Field (Only for Shop Portal)
-                if (isShopPortal) ...[
-                  Text(
-                    'Shop ID',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF151E13),
-                    ),
-                  ),
-                  SizedBox(height: 6.h),
-                  CustomTextFormField(
-                    controller: _shopIdController,
-                    hintText: 'SHOP-09',
-                    keyboardType: TextInputType.text,
-                    borderRadius: 8.r,
-                    fillColor: const Color(0xFFECF7E4),
-                    borderColor: const Color(0xFF00694C).withOpacity(0.2),
-                    focusBorderColor: const Color(0xFF00694C),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter Shop ID';
-                      }
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: 16.h),
-                ],
 
                 // Password Field
                 if (!isEmployee) ...[
@@ -233,25 +191,23 @@ class _SignInScreenState extends State<SignInScreen> {
                       return null;
                     },
                   ),
-                  if (!isShopPortal) ...[
-                    SizedBox(height: 8.h),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: () {
-                          Get.toNamed(Routes.FORGET_PASSWORD, arguments: widget.role);
-                        },
-                        child: Text(
-                          'Forgot password?',
-                          style: TextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w600,
-                            color: primaryBrandColor,
-                          ),
+                  SizedBox(height: 8.h),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () {
+                        Get.toNamed(Routes.FORGET_PASSWORD, arguments: widget.role);
+                      },
+                      child: Text(
+                        'Forgot password?',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                          color: primaryBrandColor,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                   SizedBox(height: 24.h),
                 ],
 

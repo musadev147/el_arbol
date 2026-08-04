@@ -85,7 +85,11 @@ class PostSignInRx extends RxResponseInt<PostSignInModel> {
     String message = "Login failed";
 
     if (error is DioException) {
-      message = error.response?.data["message"] ?? message;
+      if (error.response?.data is Map) {
+        message = error.response?.data["message"] ?? message;
+      } else if (error.response?.data is String && error.response!.data.toString().contains("<!DOCTYPE html>")) {
+        message = "Server error: Page not found (404)";
+      }
 
       if (error.type == DioExceptionType.connectionError) {
         message = "Check Your Network Connection";

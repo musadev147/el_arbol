@@ -103,14 +103,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     ),
                     SizedBox(height: 16.h),
                     _buildRoleCard(
-                      UserRole.shopPortal,
-                      'Shop Portal',
-                      'Internal store staff portal for order fulfillment and stock scanner.',
-                      Icons.local_shipping,
-                      primaryBrandColor,
-                    ),
-                    SizedBox(height: 16.h),
-                    _buildRoleCard(
                       UserRole.staff,
                       'Staff',
                       'Staff portal for administrative and operational tasks.',

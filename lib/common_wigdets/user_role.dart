@@ -1,7 +1,6 @@
 enum UserRole {
   customer,
   wholesale,
-  shopPortal,
   employeeSelfService,
   staff;
 
@@ -17,9 +16,6 @@ enum UserRole {
       case 'wholesale':
       case 'wholesales':
         return UserRole.wholesale;
-      case 'shopportal':
-      case 'shop portal':
-        return UserRole.shopPortal;
       case 'employeeselfservice':
       case 'employee self-service':
       case 'employee':

@@ -20,17 +20,16 @@ final class Endpoints {
 
   static String register({String? role}) {
     if (role == 'wholesale') return 'wholesale/auth/register/';
-    if (role == 'employee' || role == 'staff') return 'staff/auth/register/';
     return 'auth/register/';
   }
 
   static String signIn({String? role}) {
     if (role == 'wholesale') return 'wholesale/auth/login/';
-    if (role == 'employee' || role == 'staff') return 'staff/auth/login/';
     return 'auth/login/';
   }
   static String refreshToken() => "auth/token/refresh/";
   static String forgetPasswordSendOtp() => "auth/password-reset/send-otp/";
+  static String passwordResetVerify() => "auth/password-reset/verify/";
   static String getProducts() => "products/products/";
   static String getCategories() => "products/categories/";
   static String wishlist() => "auth/wishlist/";
@@ -60,6 +59,13 @@ final class Endpoints {
   // Customer Orders
   static String customerOrders() => "auth/orders/";
   static String customerOrderDetails(String id) => "auth/orders/$id/";
+  static String createOrder() => "orders/";
+  static String submitOrder() => "orders/submit/";
+  static String calculateShipping() => "orders/shipping/calculate/";
+  static String validateCoupon() => "orders/coupons/validate/";
+  static String confirmPayment() => "orders/confirm-payment/";
+  static String orderInvoice(String orderNumber) => "orders/invoice/$orderNumber/";
+  static String shippingMethods() => "orders/shipping-methods/";
 
   // Customer Tickets
   static String customerTickets() => "auth/tickets/";
@@ -68,6 +74,7 @@ final class Endpoints {
   static String customerTicketTyping(String id) => "auth/tickets/$id/typing/";
 
   // Customer Notifications
+  static String customerNotifications() => "auth/notifications/";
   static String customerNotificationsBulkDelete() => "auth/notifications/bulk-delete/";
 
   // Customer Wishlist
@@ -75,15 +82,21 @@ final class Endpoints {
   static String wishlistClear() => "auth/wishlist/clear/";
 
   // Staff APIs
-  static String staffDashboard() => "staff/dashboard/";
-  static String staffShiftHistory() => "staff/shifts/";
-  static String updateStaffProfile() => "staff/profile/";
-  static String staffCheckIn() => "staff/attendance/check-in/";
-  static String staffCheckOut() => "staff/attendance/check-out/";
-  static String staffColleagues() => "staff/colleagues/";
-  static String staffTasks() => "staff/tasks/";
-  static String staffUpdateTask(String taskId) => "staff/tasks/$taskId/";
-  static String staffOrderHistory() => "staff/orders/";
+  static String staffDashboard() => "staff/me/dashboard/";
+  static String staffShiftHistory() => "staff/me/shift-history/";
+  static String updateStaffProfile() => "staff/me/profile/";
+  static String staffCheckIn() => "staff/me/check-in/";
+  static String staffCheckOut() => "staff/me/check-out/";
+  static String staffColleagues() => "staff/me/colleagues/";
+  static String staffTasks() => "staff/me/tasks/";
+  static String staffUpdateTask(String taskId) => "staff/me/tasks/$taskId/";
+  static String staffOrderHistory() => "staff/me/orders/";
+  static String staffDayOffRequests() => "staff/me/day-off-requests/";
+  static String staffDayOffRequest(String id) => "staff/me/day-off-requests/$id/";
+  static String staffNotifications() => "staff/me/notifications/";
+  static String staffNotification(String id) => "staff/me/notifications/$id/";
+  static String viewStoreStaff(String storeId) => "staff/store/$storeId/staff/";
+  static String staffChat() => "staff/me/chat/";
   static String patientInfo() => "/patient-information";
   static String patientDetails(int page) => "/patient-information?page=$page";
   static String patientUpdate(int id) => "/patient-information/$id";
@@ -199,6 +212,7 @@ final class Endpoints {
   static String wholesaleTickets() => "wholesale/tickets/";
   static String wholesaleSingleTicket(String id) => "wholesale/tickets/$id/";
   static String wholesaleTicketReply(String id) => "wholesale/tickets/$id/reply/";
+  static String wholesaleTicketTyping(String id) => "wholesale/tickets/$id/typing/";
 
   // Wholesale Notifications
   static String wholesaleNotifications() => "wholesale/notifications/";
@@ -208,4 +222,6 @@ final class Endpoints {
 
   // Wholesale Daily Reports
   static String wholesaleDailyReports() => "wholesale/daily-reports/";
+  static String wholesaleStatus() => "wholesale/status/";
+  static String wholesaleContent() => "wholesale/content/";
 }

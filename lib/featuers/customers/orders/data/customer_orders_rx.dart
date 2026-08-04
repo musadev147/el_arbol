@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../../../../networks/rx_base.dart';
 import 'customer_orders_api.dart';
 import 'dart:developer';
@@ -67,5 +68,138 @@ class CustomerSingleOrderRx extends RxResponseInt<Map<String, dynamic>> {
   @override
   Future<void> handleErrorWithReturn(dynamic error) async {
     dataFetcher.sink.addError(error);
+  }
+}
+
+class CustomerCreateOrderRx extends RxResponseInt<dynamic> {
+  final api = CustomerOrdersApi.instance;
+  CustomerCreateOrderRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<bool> createOrder(Map<String, dynamic> data) async {
+    try {
+      await EasyLoading.show(status: 'Placing order...');
+      final response = await api.createOrder(data);
+      await handleSuccessWithReturn(response);
+      return true;
+    } catch (e) {
+      log('CustomerCreateOrderRx error: $e');
+      await handleErrorWithReturn(e);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  Future<bool> submitOrder(Map<String, dynamic> data) async {
+    try {
+      await EasyLoading.show(status: 'Submitting order...');
+      final response = await api.submitOrder(data);
+      await handleSuccessWithReturn(response);
+      return true;
+    } catch (e) {
+      log('CustomerSubmitOrderRx error: $e');
+      await handleErrorWithReturn(e);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+}
+
+class CustomerShippingCalculatorRx extends RxResponseInt<dynamic> {
+  final api = CustomerOrdersApi.instance;
+  CustomerShippingCalculatorRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<dynamic> calculateShipping(Map<String, dynamic> data) async {
+    try {
+      final response = await api.calculateShipping(data);
+      await handleSuccessWithReturn(response);
+      return response;
+    } catch (e) {
+      log('CustomerShippingCalculatorRx error: $e');
+      await handleErrorWithReturn(e);
+      return null;
+    }
+  }
+}
+
+class CustomerCouponRx extends RxResponseInt<dynamic> {
+  final api = CustomerOrdersApi.instance;
+  CustomerCouponRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<dynamic> validateCoupon(String code) async {
+    try {
+      final response = await api.validateCoupon(code);
+      await handleSuccessWithReturn(response);
+      return response;
+    } catch (e) {
+      log('CustomerCouponRx error: $e');
+      await handleErrorWithReturn(e);
+      return null;
+    }
+  }
+}
+
+class CustomerPaymentConfirmationRx extends RxResponseInt<dynamic> {
+  final api = CustomerOrdersApi.instance;
+  CustomerPaymentConfirmationRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<bool> confirmPayment(Map<String, dynamic> data) async {
+    try {
+      await EasyLoading.show(status: 'Confirming payment...');
+      final response = await api.confirmPayment(data);
+      await handleSuccessWithReturn(response);
+      return true;
+    } catch (e) {
+      log('CustomerPaymentConfirmationRx error: $e');
+      await handleErrorWithReturn(e);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+}
+
+class CustomerShippingMethodsRx extends RxResponseInt<dynamic> {
+  final api = CustomerOrdersApi.instance;
+  CustomerShippingMethodsRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchShippingMethods() async {
+    try {
+      final data = await api.getShippingMethods();
+      await handleSuccessWithReturn(data);
+    } catch (e) {
+      log('CustomerShippingMethodsRx error: $e');
+      await handleErrorWithReturn(e);
+    }
+  }
+}
+
+class CustomerInvoiceRx extends RxResponseInt<dynamic> {
+  final api = CustomerOrdersApi.instance;
+  CustomerInvoiceRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<dynamic> fetchOrderInvoice(String orderNumber) async {
+    try {
+      final data = await api.getOrderInvoice(orderNumber);
+      await handleSuccessWithReturn(data);
+      return data;
+    } catch (e) {
+      log('CustomerInvoiceRx error: $e');
+      await handleErrorWithReturn(e);
+      return null;
+    }
   }
 }

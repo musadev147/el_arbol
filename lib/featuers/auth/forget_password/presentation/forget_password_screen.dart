@@ -145,7 +145,7 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                         });
                       } else {
                         // Request reset OTP from the backend API for normal customers
-                        _forgetPasswordRx.sendOtpFunc(email: _emailController.text);
+                        _forgetPasswordRx.sendOtpFunc(email: _emailController.text, role: _role);
                       }
                     }
                   },
