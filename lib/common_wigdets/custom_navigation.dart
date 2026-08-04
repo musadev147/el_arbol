@@ -13,8 +13,8 @@ import '../featuers/customers/message/messages_screen.dart';
 import '../featuers/customers/profile/profile.dart';
 import '../featuers/customers/wallet/tenant_wallet_screen.dart';
 
-import '../featuers/shope_protal_staff/presentation/shop_portal_dashboard.dart';
 import '../featuers/employee_self_service/presentation/employee_dashboard_screen.dart';
+import '../featuers/employee_self_service/presentation/staff_chat_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_catalog_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_orders_screen.dart';
 
@@ -50,12 +50,6 @@ class _CustomNavigationState extends State<CustomNavigation> {
       AssetsIcons.propertyIcons,
       AssetsIcons.usernavIcons,
     ],
-    UserRole.shopPortal: [
-      AssetsIcons.homeIcons,
-      AssetsIcons.messagenavIcons,
-      AssetsIcons.propertyIcons,
-      AssetsIcons.usernavIcons,
-    ],
     UserRole.employeeSelfService: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
@@ -82,12 +76,6 @@ class _CustomNavigationState extends State<CustomNavigation> {
       "Market",
       "Messages",
       "Orders",
-      "Profile",
-    ],
-    UserRole.shopPortal: [
-      "Dashboard",
-      "Orders",
-      "Terminal",
       "Profile",
     ],
     UserRole.employeeSelfService: [
@@ -118,21 +106,15 @@ class _CustomNavigationState extends State<CustomNavigation> {
       const WholesaleOrdersScreen(),
       const ProfileScreen(role: UserRole.wholesale),
     ],
-    UserRole.shopPortal: [
-      const ShopPortalDashboardScreen(),
-      MessagesScreen(),
-      TenantWallet(),
-      const ProfileScreen(role: UserRole.shopPortal),
-    ],
     UserRole.employeeSelfService: [
       const EmployeeDashboardScreen(),
-      MessagesScreen(),
+      const StaffChatScreen(),
       TenantWallet(),
       const ProfileScreen(role: UserRole.employeeSelfService),
     ],
     UserRole.staff: [
       const EmployeeDashboardScreen(),
-      MessagesScreen(),
+      const StaffChatScreen(),
       TenantWallet(),
       const ProfileScreen(role: UserRole.staff),
     ],

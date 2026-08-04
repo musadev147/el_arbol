@@ -399,3 +399,71 @@ class WholesaleCreateProductRx extends RxResponseInt<void> {
     }
   }
 }
+
+class WholesaleTicketTypingRx {
+  final api = WholesaleApi.instance;
+
+  Future<bool> sendTyping(String id, bool isTyping) async {
+    try {
+      await api.sendTicketTyping(id, isTyping);
+      return true;
+    } catch (e) {
+      log('WholesaleTicketTypingRx sendTyping error: $e');
+      return false;
+    }
+  }
+}
+
+class WholesaleStatusRx extends RxResponseInt<Map<String, dynamic>> {
+  final api = WholesaleApi.instance;
+  WholesaleStatusRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchStatus() async {
+    try {
+      final data = await api.getWholesaleStatus();
+      await handleSuccessWithReturn(data);
+    } catch (e) {
+      log('WholesaleStatusRx fetchStatus error: $e');
+      await handleErrorWithReturn(e);
+    }
+  }
+
+  @override
+  Future<void> handleSuccessWithReturn(Map<String, dynamic> data) async {
+    dataFetcher.sink.add(data);
+  }
+
+  @override
+  Future<void> handleErrorWithReturn(dynamic error) async {
+    dataFetcher.sink.addError(error);
+  }
+}
+
+class WholesaleContentRx extends RxResponseInt<Map<String, dynamic>> {
+  final api = WholesaleApi.instance;
+  WholesaleContentRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchContent() async {
+    try {
+      final data = await api.getWholesaleContent();
+      await handleSuccessWithReturn(data);
+    } catch (e) {
+      log('WholesaleContentRx fetchContent error: $e');
+      await handleErrorWithReturn(e);
+    }
+  }
+
+  @override
+  Future<void> handleSuccessWithReturn(Map<String, dynamic> data) async {
+    dataFetcher.sink.add(data);
+  }
+
+  @override
+  Future<void> handleErrorWithReturn(dynamic error) async {
+    dataFetcher.sink.addError(error);
+  }
+}

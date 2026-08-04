@@ -5,8 +5,25 @@ import '../../../../../common_wigdets/app_toast.dart';
 import 'customer_notifications_api.dart';
 import 'dart:developer';
 
-class CustomerNotificationsRx {
+class CustomerNotificationsRx extends RxResponseInt<dynamic> {
   final api = CustomerNotificationsApi.instance;
+
+  CustomerNotificationsRx({
+    required super.empty,
+    required super.dataFetcher,
+  });
+
+  ValueStream<dynamic> get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchNotifications() async {
+    try {
+      final data = await api.fetchNotifications();
+      handleSuccessWithReturn(data);
+    } catch (e) {
+      log('CustomerNotificationsRx fetch error: $e');
+      handleErrorWithReturn(e);
+    }
+  }
 
   Future<bool> bulkDeleteNotifications(List<String> ids) async {
     try {

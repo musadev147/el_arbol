@@ -21,14 +21,16 @@ class ForgetPasswordRx extends RxResponseInt<ForgetEmailModel> {
   ValueStream get valueStreamData => dataFetcher.stream;
 
   bool _isResend = false;
+  String? _role;
 
   /// Calls the API to send OTP to the user's email.
-  Future<void> sendOtpFunc({required String email, bool isResend = false}) async {
+  Future<void> sendOtpFunc({required String email, String? role, bool isResend = false}) async {
     _isResend = isResend;
+    _role = role;
     try {
       await EasyLoading.show(status: isResend ? "Resending OTP..." : "Sending OTP...");
 
-      final data = await api.sendOtp(email: email);
+      final data = await api.sendOtp(email: email, role: role);
 
       await handleSuccessWithReturn(data);
     } catch (error) {
@@ -43,7 +45,7 @@ class ForgetPasswordRx extends RxResponseInt<ForgetEmailModel> {
   handleSuccessWithReturn(ForgetEmailModel data) async {
     AppToast.success(data.detail ?? "OTP sent successfully!");
     if (!_isResend) {
-      Get.toNamed(Routes.OTP);
+      Get.toNamed(Routes.OTP, arguments: _role);
     }
   }
 
@@ -60,5 +62,29 @@ class ForgetPasswordRx extends RxResponseInt<ForgetEmailModel> {
     }
 
     AppToast.error(message);
+  }
+  Future<bool> verifyOtpAndReset({
+    required String email,
+    required String otp,
+    required String password,
+    String? role,
+  }) async {
+    try {
+      await EasyLoading.show(status: 'Resetting password...');
+      await api.verifyOtpAndReset(
+        email: email,
+        otp: otp,
+        password: password,
+        role: role,
+      );
+      AppToast.success("Password reset successful!");
+      return true;
+    } catch (error) {
+      log("Reset password error: $error");
+      handleErrorWithReturn(error);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
   }
 }

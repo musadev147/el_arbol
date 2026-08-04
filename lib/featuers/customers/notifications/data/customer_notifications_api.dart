@@ -8,6 +8,19 @@ class CustomerNotificationsApi {
   CustomerNotificationsApi._internal();
   static CustomerNotificationsApi get instance => _singleton;
 
+  Future<dynamic> fetchNotifications() async {
+    try {
+      final response = await getHttp(Endpoints.customerNotifications());
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<dynamic> bulkDeleteNotifications(List<String> ids) async {
     try {
       final response = await deleteHttp(Endpoints.customerNotificationsBulkDelete(), {"ids": ids});

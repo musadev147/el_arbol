@@ -68,9 +68,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     const Color primaryBrandColor = Color(0xFF00694C);
 
-    final isShopPortal = widget.role == 'shopPortal' || widget.role == 'shop Portal';
     final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee';
-    final isSpecialPortal = isShopPortal || isEmployee;
+    final isSpecialPortal = isEmployee;
     final isWholesale = widget.role == 'wholesale' || widget.role == 'wholesales';
 
     return Scaffold(

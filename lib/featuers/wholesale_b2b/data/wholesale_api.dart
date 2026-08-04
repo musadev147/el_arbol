@@ -77,7 +77,10 @@ class WholesaleApi {
     try {
       final response = await postHttp(
         Endpoints.wholesalePasswordResetSendOtp(),
-        {"email": email},
+        {
+          "email": email,
+          "type": "WHOLESALE",
+        },
       );
       if (response.statusCode != 200) {
         throw DataSource.DEFAULT.getFailure();
@@ -113,7 +116,7 @@ class WholesaleApi {
         {
           "email": email,
           "otp": otp,
-          "new_password": newPassword,
+          "password": newPassword,
         },
       );
       if (response.statusCode != 200) {
@@ -266,6 +269,49 @@ class WholesaleApi {
       }
     } catch (e) {
       log('Wholesale submitDailyReport error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> sendTicketTyping(String id, bool isTyping) async {
+    try {
+      final response = await postHttp(
+        Endpoints.wholesaleTicketTyping(id),
+        {"is_typing": isTyping},
+      );
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      log('Wholesale sendTicketTyping error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getWholesaleStatus() async {
+    try {
+      final response = await getHttp(Endpoints.wholesaleStatus());
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      log('Wholesale getWholesaleStatus error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getWholesaleContent() async {
+    try {
+      final response = await getHttp(Endpoints.wholesaleContent());
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      log('Wholesale getWholesaleContent error: $e');
       rethrow;
     }
   }
