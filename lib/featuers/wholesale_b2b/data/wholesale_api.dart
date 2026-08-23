@@ -245,7 +245,7 @@ class WholesaleApi {
   }
 
   // DAILY REPORTS APIs
-  Future<Map<String, dynamic>> getDailyReports() async {
+  Future<dynamic> getDailyReports() async {
     try {
       final response = await getHttp(Endpoints.wholesaleDailyReports());
       if (response.statusCode == 200) {

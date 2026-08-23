@@ -56,6 +56,7 @@ class Results {
   String? origin;
   String? unit;
   String? wholesaleUnit;
+  String? wholesalePrice;
   String? badge;
   String? badgeColor;
   String? variant;
@@ -100,6 +101,7 @@ class Results {
         this.origin,
         this.unit,
         this.wholesaleUnit,
+        this.wholesalePrice,
         this.badge,
         this.badgeColor,
         this.variant,
@@ -163,6 +165,7 @@ class Results {
     origin = json['origin'];
     unit = json['unit'];
     wholesaleUnit = json['wholesale_unit'];
+    wholesalePrice = json['wholesale_price']?.toString();
     badge = json['badge'];
     badgeColor = json['badge_color'];
     variant = json['variant'];
@@ -239,6 +242,7 @@ class Results {
     data['origin'] = this.origin;
     data['unit'] = this.unit;
     data['wholesale_unit'] = this.wholesaleUnit;
+    data['wholesale_price'] = this.wholesalePrice;
     data['badge'] = this.badge;
     data['badge_color'] = this.badgeColor;
     data['variant'] = this.variant;

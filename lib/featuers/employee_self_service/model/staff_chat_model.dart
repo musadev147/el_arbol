@@ -21,14 +21,14 @@ class StaffChatMessage {
 
   factory StaffChatMessage.fromJson(Map<String, dynamic> json) {
     return StaffChatMessage(
-      id: json['id'],
-      staff: json['staff'],
-      adminUser: json['admin_user'],
-      sender: json['sender'],
-      message: json['message'],
-      isRead: json['is_read'],
-      createdAt: json['created_at'],
-      staffName: json['staff_name'],
+      id: json['id'] is int ? json['id'] : (json['id'] != null ? int.tryParse(json['id'].toString()) : null),
+      staff: json['staff'] is int ? json['staff'] : (json['staff'] != null ? int.tryParse(json['staff'].toString()) : null),
+      adminUser: json['admin_user'] is int ? json['admin_user'] : (json['admin_user'] != null ? int.tryParse(json['admin_user'].toString()) : null),
+      sender: json['sender']?.toString(),
+      message: json['message']?.toString(),
+      isRead: json['is_read'] is bool ? json['is_read'] : (json['is_read']?.toString() == 'true'),
+      createdAt: json['created_at']?.toString(),
+      staffName: json['staff_name']?.toString(),
     );
   }
 

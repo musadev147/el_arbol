@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'weekly_shift_screen.dart';
 import 'request_shift_change_screen.dart';
@@ -74,13 +75,51 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
   }
 
   void _performCheckIn(int storeId) async {
-    EasyLoading.show(status: 'Checking in...');
-    final success = await _checkInOutRx.checkIn(storeId);
-    EasyLoading.dismiss();
-    if (success) {
-      AppToast.success("Checked in successfully!");
-      _dashboardRx.fetchDashboardData(); // Refresh to update UI
-    }
+    final pinController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          title: const Text('Store Check-In PIN'),
+          content: TextField(
+            controller: pinController,
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Enter Store PIN (e.g. 45678)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final pin = pinController.text.trim();
+                if (pin.isEmpty) {
+                  Fluttertoast.showToast(msg: 'PIN is required');
+                  return;
+                }
+                Navigator.pop(context);
+                
+                EasyLoading.show(status: 'Checking in...');
+                final success = await _checkInOutRx.checkIn(storeId, pin);
+                EasyLoading.dismiss();
+                if (success) {
+                  AppToast.success("Checked in successfully!");
+                  _dashboardRx.fetchDashboardData(); // Refresh to update UI
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
+              child: const Text('Check In'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _handleCheckOut(BuildContext context) async {

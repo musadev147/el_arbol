@@ -56,14 +56,19 @@ class CustomerTicketsRx extends RxResponseInt<List<dynamic>> {
     }
   }
 
-  Future<bool> replyTicket(String ticketId, String messageStr) async {
+  Future<Map<String, dynamic>?> replyTicket(String ticketId, String messageStr) async {
     try {
-      await api.replyTicket(ticketId, {"message": messageStr});
-      return true;
+      final data = await api.replyTicket(ticketId, {"message": messageStr});
+      if (data is Map<String, dynamic>) {
+        return data;
+      } else if (data is Map) {
+        return Map<String, dynamic>.from(data);
+      }
+      return null;
     } catch (e) {
       log('CustomerTicketsRx replyTicket error: $e');
       AppToast.error("Failed to send message");
-      return false;
+      return null;
     }
   }
 

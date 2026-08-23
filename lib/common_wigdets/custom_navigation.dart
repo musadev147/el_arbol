@@ -15,6 +15,7 @@ import '../featuers/customers/wallet/tenant_wallet_screen.dart';
 
 import '../featuers/employee_self_service/presentation/employee_dashboard_screen.dart';
 import '../featuers/employee_self_service/presentation/staff_chat_screen.dart';
+import '../featuers/employee_self_service/presentation/price_list_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_catalog_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_orders_screen.dart';
 
@@ -81,13 +82,13 @@ class _CustomNavigationState extends State<CustomNavigation> {
     UserRole.employeeSelfService: [
       "Dashboard",
       "Messages",
-      "Payslips",
+      "Prices",
       "Profile",
     ],
     UserRole.staff: [
       "Dashboard",
       "Messages",
-      "Payslips",
+      "Prices",
       "Profile",
     ],
   };
@@ -102,20 +103,20 @@ class _CustomNavigationState extends State<CustomNavigation> {
     ],
     UserRole.wholesale: [
       const WholesaleCatalogScreen(),
-      MessagesScreen(),
+      const MessagesScreen(isWholesale: true),
       const WholesaleOrdersScreen(),
       const ProfileScreen(role: UserRole.wholesale),
     ],
     UserRole.employeeSelfService: [
       const EmployeeDashboardScreen(),
       const StaffChatScreen(),
-      TenantWallet(),
+      const PriceListScreen(),
       const ProfileScreen(role: UserRole.employeeSelfService),
     ],
     UserRole.staff: [
       const EmployeeDashboardScreen(),
       const StaffChatScreen(),
-      TenantWallet(),
+      const PriceListScreen(),
       const ProfileScreen(role: UserRole.staff),
     ],
   };

@@ -18,7 +18,7 @@ class _WholesaleDailyReportsScreenState extends State<WholesaleDailyReportsScree
   @override
   void initState() {
     super.initState();
-    _rx = WholesaleDailyReportsRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>());
+    _rx = WholesaleDailyReportsRx(empty: [], dataFetcher: BehaviorSubject<dynamic>());
     _rx.fetchDailyReports();
   }
 

@@ -6,7 +6,8 @@ void main() async {
   final jsonString = await file.readAsString();
   final data = jsonDecode(jsonString);
 
-  final auth = (data['item'] as List).firstWhere((e) => e['name'] == 'Authentication');
+  final fullAuth = (data['item'] as List).firstWhere((e) => e['name'] == 'Full Authentication');
+  final auth = (fullAuth['item'] as List).firstWhere((e) => e['name'] == 'Authentication');
   final userAuth = (auth['item'] as List).firstWhere((e) => e['name'] == 'User Authentication');
   final profileMgmt = (userAuth['item'] as List).firstWhere((e) => e['name'] == 'Profile Management');
 

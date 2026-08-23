@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-
-class ProductPrice {
-  final String name;
-  final String category;
-  final String origin;
-  final String price;
-
-  ProductPrice({required this.name, required this.category, required this.origin, required this.price});
-}
+import 'package:rxdart/rxdart.dart';
+import '../../customers/home/presentation/data/rx.dart';
+import '../../customers/home/presentation/model/get_product_model.dart';
 
 class PriceListScreen extends StatefulWidget {
   const PriceListScreen({super.key});
@@ -21,29 +15,16 @@ class PriceListScreen extends StatefulWidget {
 class _PriceListScreenState extends State<PriceListScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
-
-  final List<ProductPrice> _allProducts = [
-    ProductPrice(name: 'Artisan Raw Honey', category: 'Honey', origin: 'Black Forest, DE', price: '€8.90 / jar'),
-    ProductPrice(name: 'Basil Fresh Herbs', category: 'Herbs', origin: 'Local Farm', price: '€1.50 / bunch'),
-    ProductPrice(name: 'Blueberries Organic', category: 'Forest Fruits', origin: 'Huelva, ES', price: '€3.80 / pack'),
-    ProductPrice(name: 'Cherry Tomatoes', category: 'Tomatoes', origin: 'Almeria, ES', price: '€2.50 / pack'),
-    ProductPrice(name: 'Conference Pears', category: 'Apples & Pears', origin: 'Lleida, ES', price: '€2.10 / kg'),
-    ProductPrice(name: 'Fresh Goat Cheese', category: 'Dairy', origin: 'Loire Valley, FR', price: '€6.80 / pc'),
-    ProductPrice(name: 'Fresh Haas Avocados', category: 'Fruits', origin: 'Michoacán, MX', price: '€3.20 / kg'),
-    ProductPrice(name: 'Gala Apples', category: 'Apples & Pears', origin: 'South Tyrol, IT', price: '€2.40 / kg'),
-    ProductPrice(name: 'Organic Heirloom Tomatoes', category: 'Vegetables', origin: 'Andalusia, ES', price: '€4.20 / kg'),
-    ProductPrice(name: 'Red Bell Peppers', category: 'Peppers', origin: 'Murcia, ES', price: '€2.80 / kg'),
-    ProductPrice(name: 'Romaine Lettuce', category: 'Lettuce', origin: 'Local Farm', price: '€1.20 / head'),
-    ProductPrice(name: 'Sourdough Country Bread', category: 'Bakery', origin: 'Local Bakery', price: '€3.90 / loaf'),
-    ProductPrice(name: 'Strawberries Sweet', category: 'Forest Fruits', origin: 'Huelva, ES', price: '€5.50 / kg'),
-    ProductPrice(name: 'Watermelon Seedless', category: 'Melons', origin: 'Valencia, ES', price: '€1.80 / kg'),
-  ];
+  late final GetProductRx _productRx;
 
   @override
   void initState() {
     super.initState();
-    // Sort all products alphabetically (A-Z)
-    _allProducts.sort((a, b) => a.name.compareTo(b.name));
+    _productRx = GetProductRx(
+      empty: GetProductModel(),
+      dataFetcher: BehaviorSubject<GetProductModel>(),
+    );
+    _productRx.fetchProducts();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -54,18 +35,13 @@ class _PriceListScreenState extends State<PriceListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _productRx.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF00694C);
-
-    final filteredProducts = _allProducts.where((p) {
-      return p.name.toLowerCase().contains(_searchQuery) ||
-          p.category.toLowerCase().contains(_searchQuery) ||
-          p.origin.toLowerCase().contains(_searchQuery);
-    }).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
@@ -117,36 +93,84 @@ class _PriceListScreenState extends State<PriceListScreen> {
               ),
             ),
 
-            // Alphabetical Price Sheet List
+            // Product List
             Expanded(
-              child: filteredProducts.isEmpty
-                  ? Center(
+              child: StreamBuilder<dynamic>(
+                stream: _productRx.valueStreamData,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: primaryColor),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return const Center(
+                      child: Text('Failed to load product price list'),
+                    );
+                  }
+
+                  final GetProductModel? model = snapshot.data;
+                  final List<Results> products = model?.results ?? [];
+
+                  if (products.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No products found.',
+                        style: TextStyle(color: Colors.grey, fontSize: 13.sp),
+                      ),
+                    );
+                  }
+
+                  // Sort A-Z by name
+                  final sortedProducts = List<Results>.from(products)
+                    ..sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
+
+                  // Filter by query
+                  final filteredProducts = sortedProducts.where((p) {
+                    final name = (p.name ?? '').toLowerCase();
+                    final catName = (p.category?.name ?? '').toLowerCase();
+                    final origin = (p.origin ?? '').toLowerCase();
+                    return name.contains(_searchQuery) ||
+                        catName.contains(_searchQuery) ||
+                        origin.contains(_searchQuery);
+                  }).toList();
+
+                  if (filteredProducts.isEmpty) {
+                    return Center(
                       child: Text(
                         'No products found matching your search.',
                         style: TextStyle(color: Colors.grey, fontSize: 13.sp),
                       ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                      itemCount: filteredProducts.length,
-                      itemBuilder: (context, index) {
-                        final product = filteredProducts[index];
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 12.h),
-                          padding: EdgeInsets.all(16.r),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border.all(color: Colors.grey.shade100),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    itemCount: filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = filteredProducts[index];
+                      final displayPrice = product.price != null 
+                          ? '€${product.price} / ${product.unit ?? 'unit'}' 
+                          : 'N/A';
+
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 12.h),
+                        padding: EdgeInsets.all(16.r),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(color: Colors.grey.shade100),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    product.name,
+                                    product.name ?? '',
                                     style: TextStyle(
                                       fontFamily: 'Poppins',
                                       fontSize: 14.sp,
@@ -156,25 +180,28 @@ class _PriceListScreenState extends State<PriceListScreen> {
                                   ),
                                   SizedBox(height: 4.h),
                                   Text(
-                                    '${product.category}  •  Origin: ${product.origin}',
+                                    '${product.category?.name ?? ''}  •  Origin: ${product.origin ?? 'N/A'}',
                                     style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
                                   )
                                 ],
                               ),
-                              Text(
-                                product.price,
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: primaryColor,
-                                ),
-                              )
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                            ),
+                            Text(
+                              displayPrice,
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            )
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),

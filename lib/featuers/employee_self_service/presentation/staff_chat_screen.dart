@@ -154,8 +154,8 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final msg = messages[index];
-                      // Message is from staff (me) if sender is STAFF or adminUser is null
-                      final isMe = msg.sender?.toUpperCase() == 'STAFF' || (msg.sender == null && msg.adminUser == null);
+                      // Message is from staff (me) if adminUser is null and sender is not ADMIN
+                      final isMe = msg.adminUser == null && msg.sender?.toUpperCase() != 'ADMIN';
 
                       return Align(
                         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,

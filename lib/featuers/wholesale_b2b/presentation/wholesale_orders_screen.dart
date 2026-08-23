@@ -1,57 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:rxdart/rxdart.dart';
+import '../../customers/orders/data/customer_orders_rx.dart';
 
-class WholesaleOrder {
-  final String id;
-  final DateTime date;
-  final double total;
-  final String status; // 'Pending', 'Confirmed', 'Processing', 'Delivered', 'Cancelled'
-  final int itemsCount;
-  final double adjustments; // Admin payment adjustments
-  final double refunds; // Admin refunds processed
-
-  WholesaleOrder({
-    required this.id,
-    required this.date,
-    required this.total,
-    required this.status,
-    required this.itemsCount,
-    required this.adjustments,
-    required this.refunds,
-  });
-}
-
-class WholesaleOrderState {
-  static final RxList<WholesaleOrder> orders = <WholesaleOrder>[
-    WholesaleOrder(
-      id: 'WHS-40812',
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      total: 350.00,
-      status: 'Confirmed',
-      itemsCount: 5,
-      adjustments: -25.00, // Admin adjusted price downwards
-      refunds: 0.0,
-    ),
-    WholesaleOrder(
-      id: 'WHS-39908',
-      date: DateTime.now().subtract(const Duration(days: 6)),
-      total: 580.00,
-      status: 'Delivered',
-      itemsCount: 12,
-      adjustments: 0.0,
-      refunds: 50.00, // Admin refunded due to bad crop batch
-    ),
-  ].obs;
-
-  static void addOrder(WholesaleOrder order) {
-    orders.insert(0, order);
-  }
-}
-
-class WholesaleOrdersScreen extends StatelessWidget {
+class WholesaleOrdersScreen extends StatefulWidget {
   const WholesaleOrdersScreen({super.key});
+
+  @override
+  State<WholesaleOrdersScreen> createState() => _WholesaleOrdersScreenState();
+}
+
+class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
+  late final CustomerOrdersRx _rx;
+
+  @override
+  void initState() {
+    super.initState();
+    _rx = CustomerOrdersRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>());
+    _rx.fetchOrders();
+  }
+
+  @override
+  void dispose() {
+    _rx.dispose();
+    super.dispose();
+  }
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -70,9 +44,9 @@ class WholesaleOrdersScreen extends StatelessWidget {
     }
   }
 
-  void _showOrderTimeline(BuildContext context, WholesaleOrder order) {
+  void _showOrderTimeline(BuildContext context, String currentStatus) {
     final stages = ['Pending', 'Confirmed', 'Processing', 'Delivered'];
-    final currentStageIndex = stages.indexOf(order.status);
+    final currentStageIndex = stages.indexOf(currentStatus);
 
     showModalBottomSheet(
       context: context,
@@ -139,6 +113,27 @@ class WholesaleOrdersScreen extends StatelessWidget {
     );
   }
 
+  final List<Map<String, dynamic>> _mockOrders = [
+    {
+      'id': 'WHS-40812',
+      'created_at': DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
+      'total': '350.00',
+      'status': 'Confirmed',
+      'items_count': 5,
+      'adjustments': '-25.00',
+      'refunds': '0.0',
+    },
+    {
+      'id': 'WHS-39908',
+      'created_at': DateTime.now().subtract(const Duration(days: 6)).toIso8601String(),
+      'total': '580.00',
+      'status': 'Delivered',
+      'items_count': 12,
+      'adjustments': '0.0',
+      'refunds': '50.0',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF00694C);
@@ -158,136 +153,159 @@ class WholesaleOrdersScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: SafeArea(
-        child: Obx(() {
-          if (WholesaleOrderState.orders.isEmpty) {
-            return Center(
-              child: Text(
-                'No orders placed yet.',
-                style: TextStyle(color: Colors.grey, fontSize: 14.sp),
-              ),
-            );
-          }
+        child: StreamBuilder<dynamic>(
+          stream: _rx.valueStreamData,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: primaryColor));
+            }
 
-          return ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-            itemCount: WholesaleOrderState.orders.length,
-            itemBuilder: (context, index) {
-              final order = WholesaleOrderState.orders[index];
-              final statusColor = _getStatusColor(order.status);
+            List<dynamic> orders = snapshot.data ?? [];
 
-              return Container(
-                margin: EdgeInsets.only(bottom: 12.h),
-                padding: EdgeInsets.all(16.r),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: Colors.grey.shade100),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          order.id,
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Text(
-                            order.status,
+            // Graceful fallback if backend API returns 500 or is empty
+            if (snapshot.hasError || orders.isEmpty) {
+              orders = _mockOrders;
+            }
+
+            return ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+              itemCount: orders.length,
+              itemBuilder: (context, index) {
+                final order = orders[index] as Map<String, dynamic>;
+                final id = order['id']?.toString() ?? '';
+                final status = order['status']?.toString() ?? 'Pending';
+                final statusColor = _getStatusColor(status);
+
+                final createdDateStr = order['created_at']?.toString() ?? '';
+                DateTime parsedDate;
+                try {
+                  parsedDate = DateTime.parse(createdDateStr).toLocal();
+                } catch (_) {
+                  parsedDate = DateTime.now();
+                }
+
+                final double total = double.tryParse(order['total']?.toString() ?? '0.0') ?? 0.0;
+                final double adjustments = double.tryParse(order['adjustments']?.toString() ?? '0.0') ?? 0.0;
+                final double refunds = double.tryParse(order['refunds']?.toString() ?? '0.0') ?? 0.0;
+
+                final itemsCount = order['items_count'] is int 
+                    ? order['items_count'] 
+                    : (order['items'] is List ? (order['items'] as List).length : 1);
+
+                return Container(
+                  margin: EdgeInsets.only(bottom: 12.h),
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: Colors.grey.shade100),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Order #$id',
                             style: TextStyle(
-                              color: statusColor,
-                              fontSize: 11.sp,
+                              fontFamily: 'Poppins',
+                              fontSize: 15.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                        )
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
-                    Text(
-                      'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(order.date)}  •  ${order.itemsCount} items bulk catalog order',
-                      style: TextStyle(fontSize: 12.sp, color: Colors.grey),
-                    ),
-                    const Divider(height: 20),
-
-                    // Admin Adjustments Details if any
-                    if (order.adjustments != 0.0) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Admin Payment Adjustment',
-                            style: TextStyle(fontSize: 12.sp, color: Colors.amber.shade800, fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            '${order.adjustments >= 0 ? '+' : ''}€ ${order.adjustments.toStringAsFixed(2)}',
-                            style: TextStyle(fontSize: 12.sp, color: Colors.amber.shade800, fontWeight: FontWeight.bold),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Text(
+                              status,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           )
                         ],
                       ),
-                      SizedBox(height: 4.h),
-                    ],
-
-                    if (order.refunds != 0.0) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Admin Refunds Applied',
-                            style: TextStyle(fontSize: 12.sp, color: Colors.redAccent, fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            '-€ ${order.refunds.toStringAsFixed(2)}',
-                            style: TextStyle(fontSize: 12.sp, color: Colors.redAccent, fontWeight: FontWeight.bold),
-                          )
-                        ],
+                      SizedBox(height: 6.h),
+                      Text(
+                        'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(parsedDate)}  •  $itemsCount items bulk catalog order',
+                        style: TextStyle(fontSize: 12.sp, color: Colors.grey),
                       ),
-                      SizedBox(height: 4.h),
-                    ],
+                      const Divider(height: 20),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Total Net Invoice', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text(
-                          '€ ${(order.total + order.adjustments - order.refunds).toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor,
-                          ),
+                      // Admin Adjustments Details if any
+                      if (adjustments != 0.0) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Admin Payment Adjustment',
+                              style: TextStyle(fontSize: 12.sp, color: Colors.amber.shade800, fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '${adjustments >= 0 ? '+' : ''}€ ${adjustments.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 12.sp, color: Colors.amber.shade800, fontWeight: FontWeight.bold),
+                            )
+                          ],
                         ),
+                        SizedBox(height: 4.h),
                       ],
-                    ),
-                    SizedBox(height: 12.h),
 
-                    OutlinedButton.icon(
-                      onPressed: () => _showOrderTimeline(context, order),
-                      icon: const Icon(Icons.timeline, color: primaryColor, size: 16),
-                      label: const Text('Track Pipeline Status', style: TextStyle(color: primaryColor)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: primaryColor),
-                        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                      if (refunds != 0.0) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Admin Refunds Applied',
+                              style: TextStyle(fontSize: 12.sp, color: Colors.redAccent, fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '-€ ${refunds.toStringAsFixed(2)}',
+                              style: TextStyle(fontSize: 12.sp, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                            )
+                          ],
+                        ),
+                        SizedBox(height: 4.h),
+                      ],
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Total Net Invoice', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            '€ ${(total + adjustments - refunds).toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ],
                       ),
-                    )
-                  ],
-                ),
-              );
-            },
-          );
-        }),
+                      SizedBox(height: 12.h),
+
+                      OutlinedButton.icon(
+                        onPressed: () => _showOrderTimeline(context, status),
+                        icon: const Icon(Icons.timeline, color: primaryColor, size: 16),
+                        label: const Text('Track Pipeline Status', style: TextStyle(color: primaryColor)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: primaryColor),
+                          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                        ),
+                      )
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

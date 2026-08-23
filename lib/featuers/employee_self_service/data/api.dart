@@ -50,8 +50,19 @@ class StaffDashboardApi {
 
   Future<dynamic> getStaffProfile() async {
     try {
-      final response = await getHttp(Endpoints.updateStaffProfile());
+      final response = await getHttp(Endpoints.staffDashboard());
       if (response.statusCode == 200) {
+        final profileData = response.data['profile'];
+        if (profileData != null) {
+          final userData = profileData['user'];
+          return {
+            'name': userData?['name'],
+            'email': userData?['email'],
+            'phone': profileData['phone'] ?? userData?['phone'],
+            'photo': profileData['photo'],
+            'staff_id': profileData['staff_id'],
+          };
+        }
         return response.data;
       } else {
         throw DataSource.DEFAULT.getFailure();
@@ -102,9 +113,12 @@ class StaffDashboardApi {
     }
   }
 
-  Future<dynamic> checkIn(int storeId) async {
+  Future<dynamic> checkIn(int storeId, String storeCode) async {
     try {
-      final response = await postHttp(Endpoints.staffCheckIn(), {'store_id': storeId});
+      final response = await postHttp(Endpoints.staffCheckIn(), {
+        'store_id': storeId,
+        'store_code': storeCode,
+      });
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       } else {
@@ -313,6 +327,7 @@ class StaffDashboardApi {
   Future<List<StaffChatMessage>> getStaffChat() async {
     try {
       final response = await getHttp(Endpoints.staffChat());
+      log("GET STAFF CHAT RESPONSE: ${response.data}");
       if (response.statusCode == 200 || response.statusCode == 201) {
         final dynamic rawData = response.data;
         List<dynamic> list = [];

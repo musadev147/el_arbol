@@ -95,9 +95,9 @@ class StaffCheckInOutRx extends RxResponseInt<dynamic> {
   final api = StaffDashboardApi.instance;
   StaffCheckInOutRx({required super.empty, required super.dataFetcher});
 
-  Future<bool> checkIn(int storeId) async {
+  Future<bool> checkIn(int storeId, String storeCode) async {
     try {
-      final data = await api.checkIn(storeId);
+      final data = await api.checkIn(storeId, storeCode);
       handleSuccessWithReturn(data);
       return true;
     } catch (error) {

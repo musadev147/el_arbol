@@ -57,6 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Employee details
   String _employeeName = 'Sofia Rossi';
   String _employeeEmail = 'sofia.rossi@elarbol.com';
+  String _memberId = 'MEM-8902';
 
   // Wholesale B2B specific
   late WholesaleProfileRx _wholesaleProfileRx;
@@ -125,6 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _employeeName = data['name'] ?? _employeeName;
             _employeeEmail = data['email'] ?? _employeeEmail;
             _personalPhone = data['phone'] ?? _personalPhone;
+            _memberId = data['staff_id'] ?? _memberId;
             if (data['photo'] != null) {
               String avatar = data['photo'];
               _profileImageUrl = avatar.contains('?') 
@@ -880,27 +882,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.notifications_outlined, color: primaryColor),
-                        title: const Text('Notifications'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                        onTap: () => Get.toNamed(Routes.WHOLESALE_NOTIFICATIONS_SCREEN),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.assessment_outlined, color: primaryColor),
-                        title: const Text('Daily Reports'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                        onTap: () => Get.toNamed(Routes.WHOLESALE_DAILY_REPORTS_SCREEN),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
-                        leading: const Icon(Icons.support_agent, color: primaryColor),
-                        title: const Text('Support Tickets'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                        onTap: () => Get.toNamed(Routes.WHOLESALE_SUPPORT_TICKETS_SCREEN),
-                      ),
-                      const Divider(height: 1),
-                      ListTile(
                         leading: const Icon(Icons.lock_outline, color: primaryColor),
                         title: const Text('Change Account Password'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 14),
@@ -1112,7 +1093,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ListTile(
                         leading: const Icon(Icons.badge_outlined, color: primaryColor),
                         title: const Text('Member ID'),
-                        trailing: const Text('MEM-8902', style: TextStyle(fontWeight: FontWeight.bold)),
+                        trailing: Text(_memberId, style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
 
                       const Divider(height: 1),

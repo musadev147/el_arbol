@@ -35,6 +35,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     // The main ticket object has a 'message' or 'description' and might have 'replies' or 'messages' array
     _messages = [];
     _messages.add({
+      'id': null,
       'isOriginal': true,
       'message': widget.ticket['description'] ?? widget.ticket['message'] ?? '',
       'sender': 'You',
@@ -46,6 +47,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     for (var r in replies) {
       bool isMe = r['sender_role'] == 'customer' || r['user_role'] == 'customer' || r['is_customer'] == true;
       _messages.add({
+        'id': r['id']?.toString(),
         'isOriginal': false,
         'message': r['message'] ?? '',
         'sender': isMe ? 'You' : 'Support',
@@ -77,6 +79,81 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     });
   }
 
+  void _editMessage(int index, String messageId) {
+    final msg = _messages[index];
+    final controller = TextEditingController(text: msg['message']);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          title: const Text('Edit Message'),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(hintText: 'Enter new message'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newText = controller.text.trim();
+                if (newText.isEmpty) return;
+                final ticketId = widget.ticket['id']?.toString() ?? '';
+                final success = await _rx.updateMessage(ticketId, messageId, newText);
+                if (success) {
+                  setState(() {
+                    _messages[index]['message'] = newText;
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(msg: 'Message updated');
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteMessage(int index, String messageId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          title: const Text('Delete Message'),
+          content: const Text('Are you sure you want to delete this message?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final ticketId = widget.ticket['id']?.toString() ?? '';
+                final success = await _rx.deleteMessage(ticketId, messageId);
+                if (success) {
+                  setState(() {
+                    _messages.removeAt(index);
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _submitReply() async {
     final message = _replyController.text.trim();
     if (message.isEmpty) {
@@ -85,12 +162,13 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     }
 
     final ticketId = widget.ticket['id']?.toString() ?? '';
-    final success = await _rx.replyTicket(ticketId, message);
-    if (success) {
+    final newMsgData = await _rx.replyTicket(ticketId, message);
+    if (newMsgData != null) {
       setState(() {
         _messages.add({
+          'id': newMsgData['id']?.toString(),
           'isOriginal': false,
-          'message': message,
+          'message': newMsgData['message'] ?? message,
           'sender': 'You',
           'created_at': 'Just now',
           'isMe': true,
@@ -121,13 +199,51 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-                return _buildMessageBubble(
+                final isEditable = msg['isMe'] == true && msg['id'] != null;
+                
+                final bubble = _buildMessageBubble(
                   message: msg['message'],
                   sender: msg['sender'],
                   date: msg['created_at'],
                   isMe: msg['isMe'],
                   primaryColor: primaryColor,
                 );
+
+                if (isEditable) {
+                  return GestureDetector(
+                    onLongPress: () {
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (ctx) {
+                          return SafeArea(
+                            child: Wrap(
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.edit, color: primaryColor),
+                                  title: const Text('Edit Message'),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    _editMessage(index, msg['id']);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.delete, color: Colors.red),
+                                  title: const Text('Delete Message'),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    _deleteMessage(index, msg['id']);
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    child: bubble,
+                  );
+                }
+                return bubble;
               },
             ),
           ),

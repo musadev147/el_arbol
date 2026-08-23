@@ -319,7 +319,7 @@ class WholesaleNotificationsRx extends RxResponseInt<Map<String, dynamic>> {
   }
 }
 
-class WholesaleDailyReportsRx extends RxResponseInt<Map<String, dynamic>> {
+class WholesaleDailyReportsRx extends RxResponseInt<dynamic> {
   final api = WholesaleApi.instance;
 
   WholesaleDailyReportsRx({required super.empty, required super.dataFetcher});
@@ -359,7 +359,7 @@ class WholesaleDailyReportsRx extends RxResponseInt<Map<String, dynamic>> {
   }
 
   @override
-  Future<void> handleSuccessWithReturn(Map<String, dynamic> data) async {
+  Future<void> handleSuccessWithReturn(dynamic data) async {
     dataFetcher.sink.add(data);
   }
 

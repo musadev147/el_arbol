@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'wholesale_cart_state.dart';
-import 'wholesale_orders_screen.dart';
 
 class WholesaleCartScreen extends StatelessWidget {
   const WholesaleCartScreen({super.key});
@@ -10,17 +9,8 @@ class WholesaleCartScreen extends StatelessWidget {
   void _checkout(BuildContext context) {
     if (WholesaleCartState.cartItems.isEmpty) return;
 
-    final order = WholesaleOrder(
-      id: 'WHS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-      date: DateTime.now(),
-      total: WholesaleCartState.totalAmount,
-      status: 'Pending',
-      itemsCount: WholesaleCartState.cartItems.length,
-      adjustments: 0.0,
-      refunds: 0.0,
-    );
+    final orderId = 'WHS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
-    WholesaleOrderState.addOrder(order);
     WholesaleCartState.clear();
 
     showDialog(
@@ -29,7 +19,7 @@ class WholesaleCartScreen extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
         title: const Text('Order Placed'),
-        content: Text('Your B2B wholesale bulk order ${order.id} has been submitted to the warehouse pipeline.'),
+        content: Text('Your B2B wholesale bulk order $orderId has been submitted to the warehouse pipeline.'),
         actions: [
           ElevatedButton(
             onPressed: () {
