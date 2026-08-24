@@ -224,4 +224,5 @@ final class Endpoints {
   static String wholesaleDailyReports() => "wholesale/daily-reports/";
   static String wholesaleStatus() => "wholesale/status/";
   static String wholesaleContent() => "wholesale/content/";
+  static String storeLeftoverPacks() => "fulfillment/stores/?feature=leftoverPack";
 }

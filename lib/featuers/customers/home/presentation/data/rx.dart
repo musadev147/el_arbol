@@ -6,6 +6,7 @@ import '../../../../../../networks/rx_base.dart';
 import '../../../../../common_wigdets/app_toast.dart';
 import '../model/get_product_model.dart';
 import '../model/get_category_model.dart';
+import '../model/leftover_store_model.dart';
 import 'api.dart';
 
 /// Reactive response handler for fetching customer products.
@@ -90,6 +91,51 @@ class GetCategoryRx extends RxResponseInt<GetCategoryModel> {
 
     if (error is DioException) {
       message = error.response?.data["message"] ?? message;
+    }
+
+    AppToast.error(message);
+    dataFetcher.sink.addError(error);
+  }
+}
+
+class GetLeftoverStoreRx extends RxResponseInt<List<LeftoverStoreModel>> {
+  final api = GetLeftoverStoreApi.instance;
+
+  GetLeftoverStoreRx({
+    required super.empty,
+    required super.dataFetcher,
+  });
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchLeftoverStores() async {
+    try {
+      await EasyLoading.show(status: "Loading surplus packs...");
+      final data = await api.getLeftoverStores();
+      await handleSuccessWithReturn(data);
+    } catch (error) {
+      log("Fetch leftover stores error: $error");
+      await handleErrorWithReturn(error);
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  @override
+  handleSuccessWithReturn(List<LeftoverStoreModel> data) {
+    dataFetcher.sink.add(data);
+    return data;
+  }
+
+  @override
+  handleErrorWithReturn(error) {
+    String message = "Failed to load leftover stores";
+
+    if (error is DioException) {
+      message = error.response?.data["message"] ?? message;
+      if (error.type == DioExceptionType.connectionError) {
+        message = "Check Your Network Connection";
+      }
     }
 
     AppToast.error(message);

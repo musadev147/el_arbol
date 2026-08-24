@@ -3,6 +3,7 @@ import '../../../../../../networks/exception_handler/data_source.dart';
 import '../../../../../../networks/endpoints.dart';
 import '../model/get_product_model.dart';
 import '../model/get_category_model.dart';
+import '../model/leftover_store_model.dart';
 
 /// API remote data source for Customer Home Screen products.
 class GetProductApi {
@@ -47,3 +48,29 @@ class GetCategoryApi {
     }
   }
 }
+
+class GetLeftoverStoreApi {
+  static final GetLeftoverStoreApi _singleton = GetLeftoverStoreApi._internal();
+  GetLeftoverStoreApi._internal();
+  static GetLeftoverStoreApi get instance => _singleton;
+
+  Future<List<LeftoverStoreModel>> getLeftoverStores() async {
+    try {
+      final response = await getHttp(Endpoints.storeLeftoverPacks());
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (response.data is List) {
+          return (response.data as List)
+              .map((x) => LeftoverStoreModel.fromJson(x as Map<String, dynamic>))
+              .toList();
+        } else {
+          return [];
+        }
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (error) {
+      rethrow;
+    }
+  }
+}
+
