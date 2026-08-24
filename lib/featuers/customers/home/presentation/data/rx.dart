@@ -106,7 +106,7 @@ class GetLeftoverStoreRx extends RxResponseInt<List<LeftoverStoreModel>> {
     required super.dataFetcher,
   });
 
-  ValueStream get valueStreamData => dataFetcher.stream;
+  ValueStream<List<LeftoverStoreModel>> get valueStreamData => dataFetcher.stream;
 
   Future<void> fetchLeftoverStores() async {
     try {
