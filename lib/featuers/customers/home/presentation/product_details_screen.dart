@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../wishlist/presentation/data/rx.dart';
 import 'model/post_wishlist_model.dart';
+import '../../orders/data/customer_orders_api.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final String? id;
@@ -273,7 +274,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     width: double.infinity,
                     height: 56.h,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
+                        if (widget.id != null) {
+                          try {
+                            final api = CustomerOrdersApi.instance;
+                            await api.addBasketItem(widget.id!, _quantity);
+                          } catch (_) {}
+                        }
                         Get.back();
                         Get.snackbar(
                           'Success',

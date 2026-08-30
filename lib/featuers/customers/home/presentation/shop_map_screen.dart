@@ -3,6 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'product_details_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:rxdart/rxdart.dart';
+import '../../orders/data/customer_orders_rx.dart';
 
 class ShopMapScreen extends StatefulWidget {
   const ShopMapScreen({super.key});
@@ -15,100 +18,26 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
   String _selectedDistance = 'All';
   Map<String, dynamic>? _selectedShop;
 
-  final List<Map<String, dynamic>> _allShops = [
-    {
-      'name': 'El Árbol Centro',
-      'address': 'Calle Sierpes 14, Sevilla',
-      'distance': 1.2, // km
-      'phone': '+34 954 123 456',
-      'lat': 0.3,
-      'lng': 0.4,
-      'products': [
-        {
-          'name': 'Organic Heirloom Tomatoes',
-          'price': '€4.20',
-          'origin': 'Andalusia, ES',
-          'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
-          'category': 'Vegetables',
-          'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain.',
-        },
-        {
-          'name': 'Sweet Organic Strawberries',
-          'price': '€5.50',
-          'origin': 'Huelva, ES',
-          'imageUrl': 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=500&auto=format&fit=crop',
-          'category': 'Fruits',
-          'description': 'Juicy, hand-picked organic strawberries from Huelva.',
-        },
-        {
-          'name': 'Fresh Goat Cheese',
-          'price': '€6.80',
-          'origin': 'Loire Valley, FR',
-          'imageUrl': 'https://images.unsplash.com/photo-1524351199679-46cddf530c04?w=500&auto=format&fit=crop',
-          'category': 'Fresh Cheese',
-          'description': 'A creamy, traditional French chèvre made using raw goat milk.',
-        },
-      ]
-    },
-    {
-      'name': 'El Árbol Nervión',
-      'address': 'Avenida de la Buhaira 27, Sevilla',
-      'distance': 4.5, // km
-      'phone': '+34 954 987 654',
-      'lat': 0.6,
-      'lng': 0.5,
-      'products': [
-        {
-          'name': 'Fresh Haas Avocados',
-          'price': '€3.20',
-          'origin': 'Michoacán, MX',
-          'imageUrl': 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=500&auto=format&fit=crop',
-          'category': 'Fruits',
-          'description': 'Sourced directly from the mountains of Michoacán, Haas avocados.',
-        },
-        {
-          'name': 'Artisan Raw Honey',
-          'price': '€8.90',
-          'origin': 'Black Forest, DE',
-          'imageUrl': 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500&auto=format&fit=crop',
-          'category': 'Grocery',
-          'description': 'Pure, unpasteurized honey harvested from organic apiaries.',
-        },
-      ]
-    },
-    {
-      'name': 'El Árbol Triana',
-      'address': 'Calle San Jacinto 82, Sevilla',
-      'distance': 8.7, // km
-      'phone': '+34 954 555 111',
-      'lat': 0.2,
-      'lng': 0.8,
-      'products': [
-        {
-          'name': 'Organic Heirloom Tomatoes',
-          'price': '€4.50',
-          'origin': 'Andalusia, ES',
-          'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
-          'category': 'Vegetables',
-          'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain.',
-        },
-        {
-          'name': 'Fresh Haas Avocados',
-          'price': '€3.50',
-          'origin': 'Michoacán, MX',
-          'imageUrl': 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=500&auto=format&fit=crop',
-          'category': 'Fruits',
-          'description': 'Sourced directly from the mountains of Michoacán, Haas avocados.',
-        },
-      ]
-    },
-  ];
+  List<Map<String, dynamic>> _allShops = [];
+  late final CustomerStoresRx _storesRx;
+
+  double normalizeLat(dynamic raw) {
+    final val = double.tryParse(raw?.toString() ?? '') ?? 0.0;
+    if (val >= 0.0 && val <= 1.0) return val;
+    return (val.abs() % 1.0) * 0.7 + 0.15;
+  }
+
+  double normalizeLng(dynamic raw) {
+    final val = double.tryParse(raw?.toString() ?? '') ?? 0.0;
+    if (val >= 0.0 && val <= 1.0) return val;
+    return (val.abs() % 1.0) * 0.7 + 0.15;
+  }
 
   List<Map<String, dynamic>> get _filteredShops {
     if (_selectedDistance == '5 km') {
-      return _allShops.where((shop) => shop['distance'] <= 5.0).toList();
+      return _allShops.where((shop) => (shop['distance'] as double) <= 5.0).toList();
     } else if (_selectedDistance == '10 km') {
-      return _allShops.where((shop) => shop['distance'] <= 10.0).toList();
+      return _allShops.where((shop) => (shop['distance'] as double) <= 10.0).toList();
     }
     return _allShops;
   }
@@ -116,7 +45,186 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedShop = _allShops.first;
+    _storesRx = CustomerStoresRx(empty: [], dataFetcher: BehaviorSubject<dynamic>());
+    _storesRx.fetchStores();
+
+    _storesRx.valueStreamData.listen((data) {
+      if (data != null) {
+        List<dynamic> results = [];
+        if (data is List) {
+          results = data;
+        } else if (data is Map) {
+          if (data.containsKey('data') && data['data'] is List) {
+            results = data['data'];
+          } else if (data.containsKey('results') && data['results'] is List) {
+            results = data['results'];
+          } else if (data.containsKey('stores') && data['stores'] is List) {
+            results = data['stores'];
+          } else {
+            for (var val in data.values) {
+              if (val is List) {
+                results = val;
+                break;
+              }
+            }
+          }
+        }
+
+        final List<Map<String, dynamic>> loaded = [];
+        if (results.isEmpty) {
+          // Fallback to local default stores
+          loaded.addAll([
+            {
+              'id': 'fallback-centro',
+              'name': 'El Árbol Centro',
+              'address': 'Calle Sierpes 14, Sevilla',
+              'distance': 1.2,
+              'phone': '+34 954 123 456',
+              'lat': 0.3,
+              'lng': 0.4,
+              'mapLink': 'https://maps.google.com/?q=Calle+Sierpes+14,+Sevilla',
+              'products': [
+                {
+                  'name': 'Organic Heirloom Tomatoes',
+                  'price': '€4.20',
+                  'origin': 'Andalusia, ES',
+                  'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+                  'category': 'Vegetables',
+                  'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain.',
+                },
+                {
+                  'name': 'Sweet Organic Strawberries',
+                  'price': '€5.50',
+                  'origin': 'Huelva, ES',
+                  'imageUrl': 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=500&auto=format&fit=crop',
+                  'category': 'Fruits',
+                  'description': 'Juicy, hand-picked organic strawberries from Huelva.',
+                },
+                {
+                  'name': 'Fresh Goat Cheese',
+                  'price': '€6.80',
+                  'origin': 'Loire Valley, FR',
+                  'imageUrl': 'https://images.unsplash.com/photo-1524351199679-46cddf530c04?w=500&auto=format&fit=crop',
+                  'category': 'Fresh Cheese',
+                  'description': 'A creamy, traditional French chèvre made using raw goat milk.',
+                },
+              ]
+            },
+            {
+              'id': 'fallback-nervion',
+              'name': 'El Árbol Nervión',
+              'address': 'Avenida de la Buhaira 27, Sevilla',
+              'distance': 4.5,
+              'phone': '+34 954 987 654',
+              'lat': 0.6,
+              'lng': 0.5,
+              'mapLink': 'https://maps.google.com/?q=Avenida+de+la+Buhaira+27,+Sevilla',
+              'products': [
+                {
+                  'name': 'Fresh Haas Avocados',
+                  'price': '€3.20',
+                  'origin': 'Michoacán, MX',
+                  'imageUrl': 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=500&auto=format&fit=crop',
+                  'category': 'Fruits',
+                  'description': 'Sourced directly from the mountains of Michoacán, Haas avocados.',
+                },
+                {
+                  'name': 'Artisan Raw Honey',
+                  'price': '€8.90',
+                  'origin': 'Black Forest, DE',
+                  'imageUrl': 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500&auto=format&fit=crop',
+                  'category': 'Grocery',
+                  'description': 'Pure, unpasteurized honey harvested from organic apiaries.',
+                },
+              ]
+            },
+            {
+              'id': 'fallback-triana',
+              'name': 'El Árbol Triana',
+              'address': 'Calle San Jacinto 82, Sevilla',
+              'distance': 8.7,
+              'phone': '+34 954 555 111',
+              'lat': 0.2,
+              'lng': 0.8,
+              'mapLink': 'https://maps.google.com/?q=Calle+San+Jacinto+82,+Sevilla',
+              'products': [
+                {
+                  'name': 'Organic Heirloom Tomatoes',
+                  'price': '€4.50',
+                  'origin': 'Andalusia, ES',
+                  'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+                  'category': 'Vegetables',
+                  'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain.',
+                },
+                {
+                  'name': 'Fresh Haas Avocados',
+                  'price': '€3.50',
+                  'origin': 'Michoacán, MX',
+                  'imageUrl': 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=500&auto=format&fit=crop',
+                  'category': 'Fruits',
+                  'description': 'Sourced directly from the mountains of Michoacán, Haas avocados.',
+                },
+              ]
+            }
+          ]);
+        } else {
+          for (var i = 0; i < results.length; i++) {
+            final item = results[i];
+            loaded.add({
+              'id': item['id'],
+              'name': item['name'] ?? 'Store ${i + 1}',
+              'address': item['address'] ?? item['street'] ?? 'Calle Sierpes 14, Sevilla',
+              'distance': double.tryParse(item['distance']?.toString() ?? '') ?? (1.2 * (i + 1)),
+              'phone': item['phone'] ?? '+34 954 123 456',
+              'lat': double.tryParse(item['lat']?.toString() ?? '') ?? (0.3 + (i * 0.1)),
+              'lng': double.tryParse(item['lng']?.toString() ?? '') ?? (0.4 + (i * 0.1)),
+              'mapLink': item['mapLink'] ?? item['map_url'] ?? '',
+              'products': [
+                {
+                  'name': 'Organic Heirloom Tomatoes',
+                  'price': '€4.20',
+                  'origin': 'Andalusia, ES',
+                  'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+                  'category': 'Vegetables',
+                  'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain.',
+                },
+                {
+                  'name': 'Sweet Organic Strawberries',
+                  'price': '€5.50',
+                  'origin': 'Huelva, ES',
+                  'imageUrl': 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=500&auto=format&fit=crop',
+                  'category': 'Fruits',
+                  'description': 'Juicy, hand-picked organic strawberries from Huelva.',
+                },
+                {
+                  'name': 'Fresh Goat Cheese',
+                  'price': '€6.80',
+                  'origin': 'Loire Valley, FR',
+                  'imageUrl': 'https://images.unsplash.com/photo-1524351199679-46cddf530c04?w=500&auto=format&fit=crop',
+                  'category': 'Fresh Cheese',
+                  'description': 'A creamy, traditional French chèvre made using raw goat milk.',
+                },
+              ]
+            });
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _allShops = loaded;
+            if (_allShops.isNotEmpty) {
+              _selectedShop = _allShops.first;
+            }
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _storesRx.dispose();
+    super.dispose();
   }
 
   @override
@@ -199,8 +307,8 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                   ...shops.map((shop) {
                     final isSelected = _selectedShop == shop;
                     return Positioned(
-                      left: (shop['lng'] as double) * 300.w + 20.w,
-                      top: (shop['lat'] as double) * 200.h + 20.h,
+                      left: normalizeLng(shop['lng']) * 300.w + 20.w,
+                      top: normalizeLat(shop['lat']) * 200.h + 20.h,
                       child: GestureDetector(
                         onTap: () {
                           setState(() {
@@ -249,7 +357,22 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                     bottom: 16.h,
                     right: 16.w,
                     child: FloatingActionButton.small(
-                      onPressed: () {},
+                      onPressed: () async {
+                        if (_selectedShop != null) {
+                          final mapLink = _selectedShop!['mapLink'] ?? '';
+                          final lat = _selectedShop!['lat'];
+                          final lng = _selectedShop!['lng'];
+                          String url = '';
+                          if (lat != null && lng != null) {
+                            url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+                          } else if (mapLink.toString().isNotEmpty) {
+                            url = mapLink.toString();
+                          }
+                          if (url.isNotEmpty) {
+                            await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                          }
+                        }
+                      },
                       backgroundColor: Colors.white,
                       foregroundColor: primaryColor,
                       child: const Icon(Icons.my_location),
@@ -320,6 +443,25 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                               color: primaryColor,
                             ),
                           ),
+                        ),
+                        SizedBox(width: 4.w),
+                        IconButton(
+                          onPressed: () async {
+                            final mapLink = _selectedShop!['mapLink'] ?? '';
+                            final lat = _selectedShop!['lat'];
+                            final lng = _selectedShop!['lng'];
+                            String url = '';
+                            if (lat != null && lng != null) {
+                              url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+                            } else if (mapLink.toString().isNotEmpty) {
+                              url = mapLink.toString();
+                            }
+                            if (url.isNotEmpty) {
+                              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          icon: const Icon(Icons.directions, color: primaryColor),
+                          tooltip: 'Open in Google Maps',
                         ),
                       ],
                     ),

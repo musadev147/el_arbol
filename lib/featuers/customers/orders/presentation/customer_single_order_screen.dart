@@ -5,10 +5,12 @@ import '../data/customer_orders_rx.dart';
 
 class CustomerSingleOrderScreen extends StatefulWidget {
   final String orderId;
+  final Map<String, dynamic>? orderData;
 
   const CustomerSingleOrderScreen({
     super.key,
     required this.orderId,
+    this.orderData,
   });
 
   @override
@@ -22,7 +24,11 @@ class _CustomerSingleOrderScreenState extends State<CustomerSingleOrderScreen> {
   void initState() {
     super.initState();
     _rx = CustomerSingleOrderRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>());
-    _rx.fetchSingleOrder(widget.orderId);
+    if (widget.orderData != null) {
+      _rx.dataFetcher.sink.add(Map<String, dynamic>.from(widget.orderData!));
+    } else {
+      _rx.fetchSingleOrder(widget.orderId);
+    }
   }
 
   @override
@@ -61,6 +67,7 @@ class _CustomerSingleOrderScreenState extends State<CustomerSingleOrderScreen> {
       ),
       body: StreamBuilder(
         stream: _rx.valueStreamData,
+        initialData: widget.orderData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: primaryColor));
@@ -191,6 +198,7 @@ class _CustomerSingleOrderScreenState extends State<CustomerSingleOrderScreen> {
                     ],
                   ),
                 ),
+                SizedBox(height: 20.h),
                 SizedBox(height: 30.h),
               ],
             ),

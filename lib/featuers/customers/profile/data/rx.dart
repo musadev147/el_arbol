@@ -70,12 +70,16 @@ class CustomerProfileRx extends RxResponseInt<Map<String, dynamic>> {
 
   @override
   Future<void> handleSuccessWithReturn(dynamic data) async {
-    dataFetcher.sink.add(data is Map<String, dynamic> ? data : (data is Map ? Map<String, dynamic>.from(data) : {}));
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data is Map<String, dynamic> ? data : (data is Map ? Map<String, dynamic>.from(data) : {}));
+    }
   }
 
   @override
   Future<void> handleErrorWithReturn(dynamic error) async {
-    dataFetcher.sink.addError(error);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
   }
 }
 

@@ -22,7 +22,7 @@ class CustomerOrderApi {
 
   Future<dynamic> getOrderDetails(String id) async {
     try {
-      final response = await postHttp(Endpoints.customerOrderDetails(id), {});
+      final response = await getHttp(Endpoints.customerOrderDetails(id));
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       } else {

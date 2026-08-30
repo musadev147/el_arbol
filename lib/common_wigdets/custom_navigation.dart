@@ -9,6 +9,7 @@ import '../featuers/customers/home/presentation/shop_map_screen.dart';
 import '../featuers/customers/home/presentation/leftover_pack_screen.dart';
 import '../featuers/customers/home/presentation/customer_orders_screen.dart';
 import '../featuers/customers/home/presentation/customer_profile_screen.dart';
+import '../featuers/customers/orders/presentation/customer_cart_screen.dart';
 import '../featuers/customers/message/messages_screen.dart';
 import '../featuers/customers/profile/profile.dart';
 import '../featuers/customers/wallet/tenant_wallet_screen.dart';
@@ -41,7 +42,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
     UserRole.customer: [
       AssetsIcons.homeIcons,
       AssetsIcons.locationIcons,
-      AssetsIcons.offerIcons,
+      AssetsIcons.shoppingIcons,
       AssetsIcons.propertyIcons,
       AssetsIcons.usernavIcons,
     ],
@@ -69,7 +70,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
     UserRole.customer: [
       "Shop",
       "Stores",
-      "Surplus",
+      "Cart",
       "Orders",
       "Profile",
     ],
@@ -97,7 +98,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
     UserRole.customer: [
       const HomeScreen(),
       const ShopMapScreen(),
-      const LeftoverPackScreen(),
+      CustomerCartScreen(cartItems: RxList<Map<String, dynamic>>([])),
       const CustomerOrdersScreen(),
       const CustomerProfileScreen(),
     ],

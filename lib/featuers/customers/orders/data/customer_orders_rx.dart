@@ -203,3 +203,64 @@ class CustomerInvoiceRx extends RxResponseInt<dynamic> {
     }
   }
 }
+
+class CustomerCartRx extends RxResponseInt<dynamic> {
+  final api = CustomerOrdersApi.instance;
+  CustomerCartRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchBasket() async {
+    try {
+      final data = await api.getBasket();
+      await handleSuccessWithReturn(data);
+    } catch (e) {
+      log('CustomerCartRx fetchBasket error: $e');
+      await handleErrorWithReturn(e);
+    }
+  }
+
+  Future<void> addToBasket(String productId, int quantity) async {
+    try {
+      await api.addBasketItem(productId, quantity);
+      await fetchBasket();
+    } catch (e) {
+      log('CustomerCartRx addToBasket error: $e');
+    }
+  }
+
+  Future<void> updateQuantity(String itemId, int quantity) async {
+    try {
+      await api.updateBasketItem(itemId, quantity);
+      await fetchBasket();
+    } catch (e) {
+      log('CustomerCartRx updateQuantity error: $e');
+    }
+  }
+
+  Future<void> removeItem(String itemId) async {
+    try {
+      await api.deleteBasketItem(itemId);
+      await fetchBasket();
+    } catch (e) {
+      log('CustomerCartRx removeItem error: $e');
+    }
+  }
+}
+
+class CustomerStoresRx extends RxResponseInt<dynamic> {
+  final api = CustomerOrdersApi.instance;
+  CustomerStoresRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<void> fetchStores() async {
+    try {
+      final data = await api.getStores();
+      await handleSuccessWithReturn(data);
+    } catch (e) {
+      log('CustomerStoresRx error: $e');
+      await handleErrorWithReturn(e);
+    }
+  }
+}

@@ -83,11 +83,15 @@ class CustomerAddressesRx extends RxResponseInt<List<dynamic>> {
 
   @override
   Future<void> handleSuccessWithReturn(dynamic data) async {
-    dataFetcher.sink.add(data is List ? data : []);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data is List ? data : []);
+    }
   }
 
   @override
   Future<void> handleErrorWithReturn(dynamic error) async {
-    dataFetcher.sink.addError(error);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
   }
 }

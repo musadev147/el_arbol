@@ -17,6 +17,7 @@ import 'package:el_arbol/featuers/customers/addresses/presentation/customer_addr
 import 'package:el_arbol/featuers/customers/orders/presentation/customer_orders_screen.dart' as el_arbol_order;
 import 'package:el_arbol/featuers/customers/wishlist/presentation/customer_wishlist_screen.dart' as el_arbol_wish;
 import 'package:el_arbol/featuers/customers/notifications/presentation/customer_notifications_screen.dart' as el_arbol_notif;
+import 'leftover_pack_screen.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -783,6 +784,13 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     title: const Text('Support Tickets'),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () => Get.to(() => const el_arbol.CustomerSupportTicketsScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.food_bank_outlined, color: primaryColor),
+                    title: const Text('Surplus Leftover Packs'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => Get.to(() => const LeftoverPackScreen()),
                   ),
                   const Divider(height: 1),
                   ListTile(

@@ -388,14 +388,14 @@
                       "name": "User Support Ticket",
                       "item": [
                         {
-                          "name": "Delete Ticket Message",
+                          "name": "Delete Ticket Message (--ok)",
                           "request": {
                             "auth": {
                               "type": "bearer",
                               "bearer": [
                                 {
                                   "key": "token",
-                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NDQwOTg3LCJpYXQiOjE3ODQ0MzczODcsImp0aSI6IjViMmUyYmMyNWIxOTRkODRhMGE1YjA0OWRiNDM4NzMyIiwidXNlcl9pZCI6IjgiLCJuYW1lIjoidGVhbS5pc3NsYmQiLCJlbWFpbCI6InRlYW0uaXNzbGJkQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoidGVhbS5pc3NsYmRAZ21haWwuY29tIiwidXNlcl90eXBlIjoiQURNSU4iLCJhdmF0YXIiOiIifQ.TxcCdZCbXcHmuYXQf9eKVc4fbDkq-EYA2-5R7cEGJns",
+                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTcwNzE0LCJpYXQiOjE3ODc1NjcxMTQsImp0aSI6ImUxY2JhZDk4OTFhMDQ3NjdhYThkMWFkNWZkM2RlYThiIiwidXNlcl9pZCI6IjciLCJuYW1lIjoiTWFoaWR1bCBpc2xhbSIsImVtYWlsIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJfdHlwZSI6IkNVU1RPTUVSIiwiYXZhdGFyIjoiIn0.eepeN7AnJOA5eTFNblj-d0c84_Yz9YpgeFif_YR0Y8E",
                                   "type": "string"
                                 }
                               ]
@@ -407,7 +407,7 @@
                               "raw": "{\r\n  \"message\": \"Can you please give me an update on this project?\"\r\n}\r\n"
                             },
                             "url": {
-                              "raw": "https://apielarbol.icommerce.com.bd/api/auth/tickets/2/messages/8/",
+                              "raw": "https://apielarbol.icommerce.com.bd/api/auth/tickets/8/messages/13/",
                               "protocol": "https",
                               "host": [
                                 "apielarbol",
@@ -419,9 +419,9 @@
                                 "api",
                                 "auth",
                                 "tickets",
-                                "2",
-                                "messages",
                                 "8",
+                                "messages",
+                                "13",
                                 ""
                               ]
                             }
@@ -429,14 +429,14 @@
                           "response": []
                         },
                         {
-                          "name": "Edit Ticket Message",
+                          "name": "Edit Ticket Message (--ok)",
                           "request": {
                             "auth": {
                               "type": "bearer",
                               "bearer": [
                                 {
                                   "key": "token",
-                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NDQwOTg3LCJpYXQiOjE3ODQ0MzczODcsImp0aSI6IjViMmUyYmMyNWIxOTRkODRhMGE1YjA0OWRiNDM4NzMyIiwidXNlcl9pZCI6IjgiLCJuYW1lIjoidGVhbS5pc3NsYmQiLCJlbWFpbCI6InRlYW0uaXNzbGJkQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoidGVhbS5pc3NsYmRAZ21haWwuY29tIiwidXNlcl90eXBlIjoiQURNSU4iLCJhdmF0YXIiOiIifQ.TxcCdZCbXcHmuYXQf9eKVc4fbDkq-EYA2-5R7cEGJns",
+                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTcwNzE0LCJpYXQiOjE3ODc1NjcxMTQsImp0aSI6ImUxY2JhZDk4OTFhMDQ3NjdhYThkMWFkNWZkM2RlYThiIiwidXNlcl9pZCI6IjciLCJuYW1lIjoiTWFoaWR1bCBpc2xhbSIsImVtYWlsIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJfdHlwZSI6IkNVU1RPTUVSIiwiYXZhdGFyIjoiIn0.eepeN7AnJOA5eTFNblj-d0c84_Yz9YpgeFif_YR0Y8E",
                                   "type": "string"
                                 }
                               ]
@@ -453,7 +453,7 @@
                               }
                             },
                             "url": {
-                              "raw": "https://apielarbol.icommerce.com.bd/api/auth/tickets/2/messages/8/",
+                              "raw": "https://apielarbol.icommerce.com.bd/api/auth/tickets/8/messages/13/",
                               "protocol": "https",
                               "host": [
                                 "apielarbol",
@@ -465,9 +465,9 @@
                                 "api",
                                 "auth",
                                 "tickets",
-                                "2",
-                                "messages",
                                 "8",
+                                "messages",
+                                "13",
                                 ""
                               ]
                             }
@@ -475,14 +475,14 @@
                           "response": []
                         },
                         {
-                          "name": "Reply to Ticket",
+                          "name": "Reply to Ticket (--ok)",
                           "request": {
                             "auth": {
                               "type": "bearer",
                               "bearer": [
                                 {
                                   "key": "token",
-                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NDQwOTg3LCJpYXQiOjE3ODQ0MzczODcsImp0aSI6IjViMmUyYmMyNWIxOTRkODRhMGE1YjA0OWRiNDM4NzMyIiwidXNlcl9pZCI6IjgiLCJuYW1lIjoidGVhbS5pc3NsYmQiLCJlbWFpbCI6InRlYW0uaXNzbGJkQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoidGVhbS5pc3NsYmRAZ21haWwuY29tIiwidXNlcl90eXBlIjoiQURNSU4iLCJhdmF0YXIiOiIifQ.TxcCdZCbXcHmuYXQf9eKVc4fbDkq-EYA2-5R7cEGJns",
+                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTcwNzE0LCJpYXQiOjE3ODc1NjcxMTQsImp0aSI6ImUxY2JhZDk4OTFhMDQ3NjdhYThkMWFkNWZkM2RlYThiIiwidXNlcl9pZCI6IjciLCJuYW1lIjoiTWFoaWR1bCBpc2xhbSIsImVtYWlsIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJfdHlwZSI6IkNVU1RPTUVSIiwiYXZhdGFyIjoiIn0.eepeN7AnJOA5eTFNblj-d0c84_Yz9YpgeFif_YR0Y8E",
                                   "type": "string"
                                 }
                               ]
@@ -499,7 +499,7 @@
                               }
                             },
                             "url": {
-                              "raw": "https://apielarbol.icommerce.com.bd/api/auth/tickets/2/reply/",
+                              "raw": "https://apielarbol.icommerce.com.bd/api/auth/tickets/8/reply/",
                               "protocol": "https",
                               "host": [
                                 "apielarbol",
@@ -511,7 +511,7 @@
                                 "api",
                                 "auth",
                                 "tickets",
-                                "2",
+                                "8",
                                 "reply",
                                 ""
                               ]
@@ -520,19 +520,65 @@
                           "response": []
                         },
                         {
-                          "name": "Support Tickets",
+                          "name": "create Support Tickets (--ok)",
                           "request": {
                             "auth": {
                               "type": "bearer",
                               "bearer": [
                                 {
                                   "key": "token",
-                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0MzgxODc3LCJpYXQiOjE3ODQzNzgyNzcsImp0aSI6IjMxZWQ4ODQyYzhiZTQ2ZDk5ODljZDgyY2FiMDRjODgxIiwidXNlcl9pZCI6IjgiLCJuYW1lIjoidGVhbS5pc3NsYmQiLCJlbWFpbCI6InRlYW0uaXNzbGJkQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoidGVhbS5pc3NsYmRAZ21haWwuY29tIiwidXNlcl90eXBlIjoiQURNSU4iLCJhdmF0YXIiOiIifQ.aPHEoweG_f5IxEUrA1ByKqbHpJojXUZSwJAadhGjcIY",
+                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTcwNzE0LCJpYXQiOjE3ODc1NjcxMTQsImp0aSI6ImUxY2JhZDk4OTFhMDQ3NjdhYThkMWFkNWZkM2RlYThiIiwidXNlcl9pZCI6IjciLCJuYW1lIjoiTWFoaWR1bCBpc2xhbSIsImVtYWlsIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJfdHlwZSI6IkNVU1RPTUVSIiwiYXZhdGFyIjoiIn0.eepeN7AnJOA5eTFNblj-d0c84_Yz9YpgeFif_YR0Y8E",
                                   "type": "string"
                                 }
                               ]
                             },
                             "method": "POST",
+                            "header": [],
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\r\n  \"subject\": \"My order is delayed\",\r\n  \"description\": \"I ordered 3 days ago but haven't received any shipping update.\",\r\n  \"category\": \"ORDER\",\r\n  \"priority\": \"HIGH\"\r\n}\r\n",
+                              "options": {
+                                "raw": {
+                                  "language": "json"
+                                }
+                              }
+                            },
+                            "url": {
+                              "raw": "https://apielarbol.icommerce.com.bd/api/auth/tickets/",
+                              "protocol": "https",
+                              "host": [
+                                "apielarbol",
+                                "icommerce",
+                                "com",
+                                "bd"
+                              ],
+                              "path": [
+                                "api",
+                                "auth",
+                                "tickets",
+                                ""
+                              ]
+                            }
+                          },
+                          "response": []
+                        },
+                        {
+                          "name": "All Support Tickets (--ok)",
+                          "protocolProfileBehavior": {
+                            "disableBodyPruning": true
+                          },
+                          "request": {
+                            "auth": {
+                              "type": "bearer",
+                              "bearer": [
+                                {
+                                  "key": "token",
+                                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTcwNzE0LCJpYXQiOjE3ODc1NjcxMTQsImp0aSI6ImUxY2JhZDk4OTFhMDQ3NjdhYThkMWFkNWZkM2RlYThiIiwidXNlcl9pZCI6IjciLCJuYW1lIjoiTWFoaWR1bCBpc2xhbSIsImVtYWlsIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJfdHlwZSI6IkNVU1RPTUVSIiwiYXZhdGFyIjoiIn0.eepeN7AnJOA5eTFNblj-d0c84_Yz9YpgeFif_YR0Y8E",
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "method": "GET",
                             "header": [],
                             "body": {
                               "mode": "raw",
@@ -1223,7 +1269,7 @@
                   ]
                 },
                 {
-                  "name": "Sign In (Login)",
+                  "name": "Sign In (Login) (---ok)",
                   "request": {
                     "auth": {
                       "type": "bearer",
@@ -1239,7 +1285,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n  \"email\": \"info.isslacademy@gmail.com\",\r\n  \"password\": \"info.isslacademy@gmail.com\"\r\n}",
+                      "raw": "{\r\n  \"email\": \"munnahowlader06@gmail.com\",\r\n  \"password\": \"myNewSecurePassword123\"\r\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -1266,14 +1312,14 @@
                   "response": []
                 },
                 {
-                  "name": "Logout",
+                  "name": "Logout (--ok)",
                   "request": {
                     "auth": {
                       "type": "bearer",
                       "bearer": [
                         {
                           "key": "token",
-                          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgzOTQ0MzgxLCJpYXQiOjE3ODM5NDA3ODEsImp0aSI6ImQ3YTE4OGJkY2YwNDQzNDE4Y2U3NTZkNTk5NjYyMDFhIiwidXNlcl9pZCI6IjIiLCJuYW1lIjoidGVhbS5pc3NsYmQiLCJlbWFpbCI6InRlYW0uaXNzbGJkQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoidGVhbS5pc3NsYmRAZ21haWwuY29tIiwidXNlcl90eXBlIjoiQ1VTVE9NRVIiLCJhdmF0YXIiOiIifQ.bT1d9qJ6hhpTgZlFxSbkT4GlbF-Fmq3pls8H5YFoeBE",
+                          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTY3NTgwLCJpYXQiOjE3ODc1NjM5ODEsImp0aSI6IjdiNjg0YTYwN2YyNjQzNDA5NTQwNjA5YTRhNjkwYjBkIiwidXNlcl9pZCI6IjE1IiwibmFtZSI6IklTU0wgVGVhbSBNZW1iZXIiLCJlbWFpbCI6ImluZm8uaXNzbGFjYWRlbXlAZ21haWwuY29tIiwidXNlcm5hbWUiOiJpbmZvLmlzc2xhY2FkZW15QGdtYWlsLmNvbSIsInVzZXJfdHlwZSI6IkNVU1RPTUVSIiwiYXZhdGFyIjoiIn0.mDxS7XovnDadPm-z7THDrCMJlcSZ73A2TScIwV12ud4",
                           "type": "string"
                         }
                       ]
@@ -1344,14 +1390,14 @@
                   "response": []
                 },
                 {
-                  "name": "Send Forgot Password OTP",
+                  "name": "Send Forgot Password OTP (--ok)",
                   "request": {
                     "auth": {
                       "type": "bearer",
                       "bearer": [
                         {
                           "key": "token",
-                          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgzOTQ0MzgxLCJpYXQiOjE3ODM5NDA3ODEsImp0aSI6ImQ3YTE4OGJkY2YwNDQzNDE4Y2U3NTZkNTk5NjYyMDFhIiwidXNlcl9pZCI6IjIiLCJuYW1lIjoidGVhbS5pc3NsYmQiLCJlbWFpbCI6InRlYW0uaXNzbGJkQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoidGVhbS5pc3NsYmRAZ21haWwuY29tIiwidXNlcl90eXBlIjoiQ1VTVE9NRVIiLCJhdmF0YXIiOiIifQ.bT1d9qJ6hhpTgZlFxSbkT4GlbF-Fmq3pls8H5YFoeBE",
+                          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTY5NDQ3LCJpYXQiOjE3ODc1NjU4NDcsImp0aSI6ImY4MDMyMzRjNGUzMjRjNWY4NjZjYjU1NmI0Njc4MGMwIiwidXNlcl9pZCI6IjciLCJuYW1lIjoiTWFoaWR1bCBpc2xhbSIsImVtYWlsIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoibXVubmFob3dsYWRlcjA2QGdtYWlsLmNvbSIsInVzZXJfdHlwZSI6IkNVU1RPTUVSIiwiYXZhdGFyIjoiIn0.uGc2Sk4ueOuOvdAKp0f7PbvgErHhbrEbCPCebJWvTEA",
                           "type": "string"
                         }
                       ]
@@ -1360,7 +1406,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n  \"email\": \"info.isslacademy@gmail.com\"\r\n}",
+                      "raw": "{\r\n  \"email\": \"munnahowlader06@gmail.com\"\r\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -1388,13 +1434,13 @@
                   "response": []
                 },
                 {
-                  "name": "Verify OTP & Reset Password",
+                  "name": "Verify OTP & Reset Password  (--ok)",
                   "request": {
                     "method": "POST",
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n  \"email\": \"team.isslbd@gmail.com\",\r\n  \"otp\": \"228486\",\r\n  \"password\": \"myNewSecurePassword123\"\r\n}\r\n",
+                      "raw": "{\r\n  \"email\": \"munnahowlader06@gmail.com\",\r\n  \"otp\": \"178525\",\r\n  \"password\": \"myNewSecurePassword123\"\r\n}\r\n",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -1402,15 +1448,14 @@
                       }
                     },
                     "url": {
-                      "raw": "http://127.0.0.1:8000/api/auth/password-reset/verify/",
-                      "protocol": "http",
+                      "raw": "https://apielarbol.icommerce.com.bd/api/auth/password-reset/verify/",
+                      "protocol": "https",
                       "host": [
-                        "127",
-                        "0",
-                        "0",
-                        "1"
+                        "apielarbol",
+                        "icommerce",
+                        "com",
+                        "bd"
                       ],
-                      "port": "8000",
                       "path": [
                         "api",
                         "auth",
@@ -1423,7 +1468,7 @@
                   "response": []
                 },
                 {
-                  "name": "Change Password (when logged in)",
+                  "name": "Change Password (--ok)",
                   "request": {
                     "auth": {
                       "type": "bearer",
@@ -1466,7 +1511,7 @@
                   "response": []
                 },
                 {
-                  "name": "Sign Up (Register)",
+                  "name": "Sign Up (Register) (--ok)",
                   "request": {
                     "method": "POST",
                     "header": [],
@@ -1504,17 +1549,17 @@
               "name": "Wholesale Authentication",
               "item": [
                 {
-                  "name": "support ticket",
+                  "name": "support ticket (--solved)",
                   "item": [
                     {
-                      "name": "Create Ticket",
+                      "name": "Create Ticket  (--Solved)",
                       "request": {
                         "auth": {
                           "type": "bearer",
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjgwMDgxLCJpYXQiOjE3ODYyNzY0ODEsImp0aSI6ImZkNDYzMjhhNGE5ZjQ1MTZhYTI4ZjZlOWY5NTU5ZjczIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.sU4CESRCTj1ucyiZcl_6wVo4k9QLiMTEBY58O93Z6H0",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTUyNTQxLCJpYXQiOjE3ODc1NDg5NDEsImp0aSI6IjRhNWVmMjBjMzI1NjRlYzJiNjBlMDFmMGQ4MWJiNWE1IiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.8yOj0EVZ2uCtT2lQLBG6S1jfO_vrafpJX2RQB2Bjwro",
                               "type": "string"
                             }
                           ]
@@ -1550,7 +1595,7 @@
                       "response": []
                     },
                     {
-                      "name": "GET Ticket",
+                      "name": "GET Ticket (--Solved)",
                       "protocolProfileBehavior": {
                         "disableBodyPruning": true
                       },
@@ -1560,7 +1605,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjgwMDgxLCJpYXQiOjE3ODYyNzY0ODEsImp0aSI6ImZkNDYzMjhhNGE5ZjQ1MTZhYTI4ZjZlOWY5NTU5ZjczIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.sU4CESRCTj1ucyiZcl_6wVo4k9QLiMTEBY58O93Z6H0",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTU2MTkxLCJpYXQiOjE3ODc1NTI1OTEsImp0aSI6ImJhYzlhYzcwMWExODRlZjU5OTc0Nzg5OTdjMzFiZjJjIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.FzbWHulNE-a99y6OMhcOz8PaMwYVlzUqfwc5834LCEs",
                               "type": "string"
                             }
                           ]
@@ -1601,7 +1646,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjY3NzcwLCJpYXQiOjE3ODYyNjQxNzAsImp0aSI6IjRkNWUxZmJlODBjYjQ1MDU4OTcyYzI0OTg4NGFmZTVkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.YNxjBqHA0uTS6YQrF-bd2Z4xLoxSaF5octn2_bYKF9Q",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTU2MTkxLCJpYXQiOjE3ODc1NTI1OTEsImp0aSI6ImJhYzlhYzcwMWExODRlZjU5OTc0Nzg5OTdjMzFiZjJjIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.FzbWHulNE-a99y6OMhcOz8PaMwYVlzUqfwc5834LCEs",
                               "type": "string"
                             }
                           ]
@@ -1613,7 +1658,7 @@
                           "raw": ""
                         },
                         "url": {
-                          "raw": "https://apielarbol.icommerce.com.bd/api/wholesale/tickets/3/",
+                          "raw": "https://apielarbol.icommerce.com.bd/api/wholesale/tickets/5/",
                           "protocol": "https",
                           "host": [
                             "apielarbol",
@@ -1625,7 +1670,7 @@
                             "api",
                             "wholesale",
                             "tickets",
-                            "3",
+                            "5",
                             ""
                           ]
                         }
@@ -1633,14 +1678,14 @@
                       "response": []
                     },
                     {
-                      "name": "Create Reply",
+                      "name": "Create Reply (--solved)",
                       "request": {
                         "auth": {
                           "type": "bearer",
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjY3NzcwLCJpYXQiOjE3ODYyNjQxNzAsImp0aSI6IjRkNWUxZmJlODBjYjQ1MDU4OTcyYzI0OTg4NGFmZTVkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.YNxjBqHA0uTS6YQrF-bd2Z4xLoxSaF5octn2_bYKF9Q",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTU3ODA0LCJpYXQiOjE3ODc1NTQyMDQsImp0aSI6IjRmNDZjNzg1YzM5MjQzMjJiOWE5NjE3MWU5YmU2YjdkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.CdtsP-6hBPMiioBaehhurAqBl8DEe80tz2YCSNWEm8s",
                               "type": "string"
                             }
                           ]
@@ -1657,7 +1702,7 @@
                           }
                         },
                         "url": {
-                          "raw": "https://apielarbol.icommerce.com.bd/api/wholesale/tickets/3/reply/",
+                          "raw": "https://apielarbol.icommerce.com.bd/api/wholesale/tickets/5/reply/",
                           "protocol": "https",
                           "host": [
                             "apielarbol",
@@ -1669,7 +1714,7 @@
                             "api",
                             "wholesale",
                             "tickets",
-                            "3",
+                            "5",
                             "reply",
                             ""
                           ]
@@ -1685,7 +1730,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjY3NzcwLCJpYXQiOjE3ODYyNjQxNzAsImp0aSI6IjRkNWUxZmJlODBjYjQ1MDU4OTcyYzI0OTg4NGFmZTVkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.YNxjBqHA0uTS6YQrF-bd2Z4xLoxSaF5octn2_bYKF9Q",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTU3ODA0LCJpYXQiOjE3ODc1NTQyMDQsImp0aSI6IjRmNDZjNzg1YzM5MjQzMjJiOWE5NjE3MWU5YmU2YjdkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.CdtsP-6hBPMiioBaehhurAqBl8DEe80tz2YCSNWEm8s",
                               "type": "string"
                             }
                           ]
@@ -1697,7 +1742,7 @@
                           "raw": "{\r\n  \"is_typing\": true\r\n}\r\n"
                         },
                         "url": {
-                          "raw": "https://apielarbol.icommerce.com.bd/api/wholesale/tickets/3/typing/",
+                          "raw": "https://apielarbol.icommerce.com.bd/api/wholesale/tickets/5/typing/",
                           "protocol": "https",
                           "host": [
                             "apielarbol",
@@ -1709,7 +1754,7 @@
                             "api",
                             "wholesale",
                             "tickets",
-                            "3",
+                            "5",
                             "typing",
                             ""
                           ]
@@ -1720,7 +1765,7 @@
                   ]
                 },
                 {
-                  "name": "Notifications API",
+                  "name": "Notifications API (--ok)",
                   "item": [
                     {
                       "name": "GET Notification",
@@ -1733,7 +1778,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjgwMDgxLCJpYXQiOjE3ODYyNzY0ODEsImp0aSI6ImZkNDYzMjhhNGE5ZjQ1MTZhYTI4ZjZlOWY5NTU5ZjczIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.sU4CESRCTj1ucyiZcl_6wVo4k9QLiMTEBY58O93Z6H0",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTU3ODA0LCJpYXQiOjE3ODc1NTQyMDQsImp0aSI6IjRmNDZjNzg1YzM5MjQzMjJiOWE5NjE3MWU5YmU2YjdkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.CdtsP-6hBPMiioBaehhurAqBl8DEe80tz2YCSNWEm8s",
                               "type": "string"
                             }
                           ]
@@ -1774,7 +1819,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjY3NzcwLCJpYXQiOjE3ODYyNjQxNzAsImp0aSI6IjRkNWUxZmJlODBjYjQ1MDU4OTcyYzI0OTg4NGFmZTVkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.YNxjBqHA0uTS6YQrF-bd2Z4xLoxSaF5octn2_bYKF9Q",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTU3ODA0LCJpYXQiOjE3ODc1NTQyMDQsImp0aSI6IjRmNDZjNzg1YzM5MjQzMjJiOWE5NjE3MWU5YmU2YjdkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.CdtsP-6hBPMiioBaehhurAqBl8DEe80tz2YCSNWEm8s",
                               "type": "string"
                             }
                           ]
@@ -1818,7 +1863,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjY3NzcwLCJpYXQiOjE3ODYyNjQxNzAsImp0aSI6IjRkNWUxZmJlODBjYjQ1MDU4OTcyYzI0OTg4NGFmZTVkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.YNxjBqHA0uTS6YQrF-bd2Z4xLoxSaF5octn2_bYKF9Q",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTU3ODA0LCJpYXQiOjE3ODc1NTQyMDQsImp0aSI6IjRmNDZjNzg1YzM5MjQzMjJiOWE5NjE3MWU5YmU2YjdkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.CdtsP-6hBPMiioBaehhurAqBl8DEe80tz2YCSNWEm8s",
                               "type": "string"
                             }
                           ]
@@ -1853,7 +1898,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjY3NzcwLCJpYXQiOjE3ODYyNjQxNzAsImp0aSI6IjRkNWUxZmJlODBjYjQ1MDU4OTcyYzI0OTg4NGFmZTVkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.YNxjBqHA0uTS6YQrF-bd2Z4xLoxSaF5octn2_bYKF9Q",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTU3ODA0LCJpYXQiOjE3ODc1NTQyMDQsImp0aSI6IjRmNDZjNzg1YzM5MjQzMjJiOWE5NjE3MWU5YmU2YjdkIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.CdtsP-6hBPMiioBaehhurAqBl8DEe80tz2YCSNWEm8s",
                               "type": "string"
                             }
                           ]
@@ -1884,7 +1929,7 @@
                   ]
                 },
                 {
-                  "name": "Daily Reports APIs",
+                  "name": "Daily Reports APIs (--ok)",
                   "item": [
                     {
                       "name": "GET daily reports",
@@ -1973,7 +2018,7 @@
                   ]
                 },
                 {
-                  "name": "Others",
+                  "name": "Others (--ok)",
                   "item": [
                     {
                       "name": "GET Status",
@@ -1986,7 +2031,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjYyMDIzLCJpYXQiOjE3ODYyNTg0MjMsImp0aSI6IjdiZTU4MzQ4NzFhMjQ2ZjVhZWJiZmMyMGY5ZDRiMDAyIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.KYLUOk5_t3mr-Ais2TyUajjp947fLuwL73jAaBKOXXI",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTYwOTkyLCJpYXQiOjE3ODc1NTczOTIsImp0aSI6IjMwZjYwM2NiMTgyZjRhMmViZjg1ZTg0M2FhNzU3YjAzIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.Hf0oDNJsCI9sKRIM3iyuw7gvr2Vk1ebthKHF8hekVLU",
                               "type": "string"
                             }
                           ]
@@ -2032,7 +2077,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjYyMDIzLCJpYXQiOjE3ODYyNTg0MjMsImp0aSI6IjdiZTU4MzQ4NzFhMjQ2ZjVhZWJiZmMyMGY5ZDRiMDAyIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.KYLUOk5_t3mr-Ais2TyUajjp947fLuwL73jAaBKOXXI",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTYwOTkyLCJpYXQiOjE3ODc1NTczOTIsImp0aSI6IjMwZjYwM2NiMTgyZjRhMmViZjg1ZTg0M2FhNzU3YjAzIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.Hf0oDNJsCI9sKRIM3iyuw7gvr2Vk1ebthKHF8hekVLU",
                               "type": "string"
                             }
                           ]
@@ -2065,17 +2110,17 @@
                   ]
                 },
                 {
-                  "name": "Wholesale User Profile Management & Auth APIs",
+                  "name": "Wholesale User Profile Management & Auth APIs (--ok)",
                   "item": [
                     {
-                      "name": "Profile Image Update",
+                      "name": "Profile Image Update (--ok)",
                       "request": {
                         "auth": {
                           "type": "bearer",
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjU5ODA4LCJpYXQiOjE3ODYyNTYyMDgsImp0aSI6IjNkOTI1MjMyZjExMTRjMWE5NGFiOGI2MzBiNGI2MDM4IiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6ZmFsc2UsInN0YXR1cyI6InBlbmRpbmcifQ.OKKVaNeewWG8sWZz7XbDOUUPwNEH-lZcUUItwzgsBow",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTY3MDc1LCJpYXQiOjE3ODc1NjM0NzUsImp0aSI6ImZmYmNhZjA2MzkxMTQxOWNhYzAxODEyZTRlODIxNmM4IiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.5H0XOkwVI0x0G4xIHx5_zyFNw_PR0iOna-AQSccGF5A",
                               "type": "string"
                             }
                           ]
@@ -2089,7 +2134,10 @@
                               "key": "profile_image",
                               "type": "file",
                               "uuid": "a1bb5bfc-5639-47f4-9f4e-ffc2e3665763",
-                              "src": "/C:/Users/USER/OneDrive/Pictures/AC cleaning.webp"
+                              "src": [
+                                "postman-cloud:///1f17d124-de25-4d40-b83b-1ef63c0cf310",
+                                "/C:/Users/USER/OneDrive/Pictures/AC cleaning.webp"
+                              ]
                             }
                           ]
                         },
@@ -2114,14 +2162,14 @@
                       "response": []
                     },
                     {
-                      "name": "Forgot Password - Send OTP",
+                      "name": "Forgot Password - Send OTP (--ok)",
                       "request": {
                         "auth": {
                           "type": "bearer",
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjU5ODA4LCJpYXQiOjE3ODYyNTYyMDgsImp0aSI6IjNkOTI1MjMyZjExMTRjMWE5NGFiOGI2MzBiNGI2MDM4IiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6ZmFsc2UsInN0YXR1cyI6InBlbmRpbmcifQ.OKKVaNeewWG8sWZz7XbDOUUPwNEH-lZcUUItwzgsBow",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTY1NDEwLCJpYXQiOjE3ODc1NjE4MTAsImp0aSI6ImYwZGFhMjJlZWI2YTQzZTY5MmViMjdmNzI4YjMxZjNhIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.-dfr-FwtN9eiAWciQN1qKKhfzEk8Brdnyueafy0ds4Y",
                               "type": "string"
                             }
                           ]
@@ -2159,14 +2207,14 @@
                       "response": []
                     },
                     {
-                      "name": "Change Password (Logged In User)",
+                      "name": "Change Password (--ok)",
                       "request": {
                         "auth": {
                           "type": "bearer",
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjYyMDIzLCJpYXQiOjE3ODYyNTg0MjMsImp0aSI6IjdiZTU4MzQ4NzFhMjQ2ZjVhZWJiZmMyMGY5ZDRiMDAyIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.KYLUOk5_t3mr-Ais2TyUajjp947fLuwL73jAaBKOXXI",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTY2NTY4LCJpYXQiOjE3ODc1NjI5NjgsImp0aSI6IjEyY2FlM2MzMWJkMjQ3Njk5YTNiOTliOTEwM2FjM2Y4IiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.yh8KD-c-mZGB8G1EWCt3efO1Clep9NsvUZo6Yfb1TFc",
                               "type": "string"
                             }
                           ]
@@ -2203,13 +2251,13 @@
                       "response": []
                     },
                     {
-                      "name": "Verify OTP & Reset",
+                      "name": "Verify OTP & Reset (--ok)",
                       "request": {
                         "method": "POST",
                         "header": [],
                         "body": {
                           "mode": "raw",
-                          "raw": "{\r\n  \"email\": \"info.isslacademy@gmail.com\",\r\n  \"otp\": \"365994\",\r\n  \"password\": \"Munna@#$89\"\r\n}",
+                          "raw": "{\r\n  \"email\": \"info.isslacademy@gmail.com\",\r\n  \"otp\": \"560771\",\r\n  \"password\": \"Munna@#$89\"\r\n}",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -2283,14 +2331,14 @@
                       "response": []
                     },
                     {
-                      "name": "Wholesale Profile Update",
+                      "name": "Wholesale Profile Update (--ok)",
                       "request": {
                         "auth": {
                           "type": "bearer",
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjYyMDIzLCJpYXQiOjE3ODYyNTg0MjMsImp0aSI6IjdiZTU4MzQ4NzFhMjQ2ZjVhZWJiZmMyMGY5ZDRiMDAyIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.KYLUOk5_t3mr-Ais2TyUajjp947fLuwL73jAaBKOXXI",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTY3MDc1LCJpYXQiOjE3ODc1NjM0NzUsImp0aSI6ImZmYmNhZjA2MzkxMTQxOWNhYzAxODEyZTRlODIxNmM4IiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.5H0XOkwVI0x0G4xIHx5_zyFNw_PR0iOna-AQSccGF5A",
                               "type": "string"
                             }
                           ]
@@ -2299,7 +2347,7 @@
                         "header": [],
                         "body": {
                           "mode": "raw",
-                          "raw": "{\r\n  \"contact_name\": \"Mr. John Doe\",\r\n  \"phone\": \"+8801711223344\",\r\n  \"postcode\": \"1215\",\r\n  \"monthly_volume\": \"3000_7000\"\r\n}\r\n",
+                          "raw": "{\r\n  \"contact_name\": \"Mr. MUnna \",\r\n  \"phone\": \"+8801711223344\",\r\n  \"postcode\": \"1215\",\r\n  \"monthly_volume\": \"3000_7000\"\r\n}\r\n",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -2326,7 +2374,7 @@
                       "response": []
                     },
                     {
-                      "name": "Wholesale Sign In",
+                      "name": "Wholesale Sign In (--ok)",
                       "request": {
                         "auth": {
                           "type": "bearer",
@@ -2370,7 +2418,7 @@
                       "response": []
                     },
                     {
-                      "name": "Get Profile",
+                      "name": "Get Profile (--ok)",
                       "protocolProfileBehavior": {
                         "disableBodyPruning": true
                       },
@@ -2380,7 +2428,7 @@
                           "bearer": [
                             {
                               "key": "token",
-                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MjU5ODA4LCJpYXQiOjE3ODYyNTYyMDgsImp0aSI6IjNkOTI1MjMyZjExMTRjMWE5NGFiOGI2MzBiNGI2MDM4IiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6ZmFsc2UsInN0YXR1cyI6InBlbmRpbmcifQ.OKKVaNeewWG8sWZz7XbDOUUPwNEH-lZcUUItwzgsBow",
+                              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3NTY1NDEwLCJpYXQiOjE3ODc1NjE4MTAsImp0aSI6ImYwZGFhMjJlZWI2YTQzZTY5MmViMjdmNzI4YjMxZjNhIiwidXNlcl9pZCI6IjE2MGY3ZjY4LWU1MzMtNGI4Ni1hNjA4LTZkZDI5ODk2NGJhZiIsImVtYWlsIjoiaW5mby5pc3NsYWNhZGVteUBnbWFpbC5jb20iLCJidXNpbmVzc19uYW1lIjoiVGVzdCBGcmVzaCBGb29kcyBMdGQuIiwiaXNfd2hvbGVzYWxlIjp0cnVlLCJpc19hcHByb3ZlZCI6dHJ1ZSwic3RhdHVzIjoiYXBwcm92ZWQifQ.-dfr-FwtN9eiAWciQN1qKKhfzEk8Brdnyueafy0ds4Y",
                               "type": "string"
                             }
                           ]
@@ -2411,13 +2459,13 @@
                       "response": []
                     },
                     {
-                      "name": "Wholesale Sign Up",
+                      "name": "Wholesale Sign Up (--ok)",
                       "request": {
                         "method": "POST",
                         "header": [],
                         "body": {
                           "mode": "raw",
-                          "raw": "{\r\n    \"email\": \"info.isslacademy@gmail.com\",\r\n    \"password\": \"info.isslacademy@gmail.com\",\r\n    \"business_name\": \"Test Fresh Foods Ltd.\",\r\n    \"contact_name\": \"Rahim Uddin\",\r\n    \"trade_license_number\": \"TL-998877/2026\",\r\n    \"phone\": \"+880171155223344\",\r\n    \"postcode\": \"1212\",\r\n    \"business_type\": \"restaurant\",\r\n    \"monthly_volume\": \"1000_3000\"\r\n}\r\n",
+                          "raw": "{\r\n    \"email\": \"infooo.isslacademy@gmail.com\",\r\n    \"password\": \"infooo.isslacademy@gmail.com\",\r\n    \"business_name\": \"Test Fresh Foods Ltd.\",\r\n    \"contact_name\": \"Rahim Uddin\",\r\n    \"trade_license_number\": \"TL-998877/2026\",\r\n    \"phone\": \"+880171155223344\",\r\n    \"postcode\": \"1212\",\r\n    \"business_type\": \"restaurant\",\r\n    \"monthly_volume\": \"1000_3000\"\r\n}\r\n",
                           "options": {
                             "raw": {
                               "language": "json"
@@ -3686,14 +3734,6 @@
                     }
                   },
                   "response": []
-                },
-                {
-                  "name": "New Request",
-                  "request": {
-                    "method": "GET",
-                    "header": []
-                  },
-                  "response": []
                 }
               ]
             },
@@ -4363,7 +4403,7 @@
           "name": "Authentication",
           "item": [
             {
-              "name": "Login",
+              "name": "Staff Login",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -4413,7 +4453,453 @@
       "name": "Order   API",
       "item": [
         {
-          "name": "Order Create(cash)",
+          "name": "Basket / Cart APIs",
+          "item": [
+            {
+              "name": "Get Current Basket (--ok)",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Session-ID",
+                    "value": "f004ecba-9f8c-400b-809c-f8bb39d99483",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/basket/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "basket",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Add Item to Basket (--ok)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"product_id\": \"aeaf5b32-247b-4a56-adf2-c62f820fcbc3\",\r\n  \"quantity\": 1\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/basket/items/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "basket",
+                    "items",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Item Quantity (--ok)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "f004ecba-9f8c-400b-809c-f8bb39d99483",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"quantity\": 3\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/basket/items/2/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "basket",
+                    "items",
+                    "2",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Item from Basket (--ok)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "f004ecba-9f8c-400b-809c-f8bb39d99483",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/basket/items/2/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "basket",
+                    "items",
+                    "2",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Checkout",
+          "item": [
+            {
+              "name": "Set Delivery Address (--ok)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "477028ff-8ec3-4e9a-9133-f50043214d51",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"full_name\": \"Julian Vane\",\r\n  \"email_address\": \"your@email.com\",\r\n  \"phone_number\": \"+44 7700 900077\",\r\n  \"street_address\": \"142 High Meadow Road\",\r\n  \"city\": \"Dublin\",\r\n  \"postcode\": \"D01 F5P2\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/checkout/delivery-address/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "checkout",
+                    "delivery-address",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Apply Promo/Coupon Code",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "477028ff-8ec3-4e9a-9133-f50043214d51",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"coupon_code\": \"SUMMER20\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/checkout/apply-coupon/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "checkout",
+                    "apply-coupon",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Set Payment Method (--ok)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "477028ff-8ec3-4e9a-9133-f50043214d51",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"payment_method\": \"card\" \r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/checkout/payment-method/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "checkout",
+                    "payment-method",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Checkout Summary (--ok)",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "477028ff-8ec3-4e9a-9133-f50043214d51",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/checkout/summary/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "checkout",
+                    "summary",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Confirm & Place Order (--ok)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "477028ff-8ec3-4e9a-9133-f50043214d51",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/checkout/confirm/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "checkout",
+                    "confirm",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Cancel / Clear Checkout (Optional) (--ok)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "477028ff-8ec3-4e9a-9133-f50043214d51",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/checkout/cancel/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "checkout",
+                    "cancel",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Set Delivery Window (Date & Slot) (--ok)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-session-id",
+                    "value": "477028ff-8ec3-4e9a-9133-f50043214d51",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"delivery_date\": \"2026-08-25\",\r\n  \"delivery_slot_label\": \"Morning (9 AM - 12 PM)\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://apielarbol.icommerce.com.bd/api/orders/checkout/delivery-address/",
+                  "protocol": "https",
+                  "host": [
+                    "apielarbol",
+                    "icommerce",
+                    "com",
+                    "bd"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "checkout",
+                    "delivery-address",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Order Create(cash) (--ok)",
           "request": {
             "method": "POST",
             "header": [],
@@ -4445,7 +4931,7 @@
           "response": []
         },
         {
-          "name": "Coupon Discount",
+          "name": "Coupon Discount (--ok)",
           "request": {
             "auth": {
               "type": "bearer",
@@ -4489,13 +4975,13 @@
           "response": []
         },
         {
-          "name": "Order Create(Debit/Credit Card)",
+          "name": "Order Create(Debit/Credit Card) (--ok)",
           "request": {
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"customer_name\": \"Jane Smith\",\r\n    \"customer_email\": \"jane@example.com\",\r\n    \"customer_phone\": \"+8801800000000\",\r\n    \"street_address\": \"456 Tech Park\",\r\n    \"city\": \"Sylhet\",\r\n    \"postcode\": \"3100\",\r\n    \"payment_method\": \"card\",\r\n    \"card_number\": \"4111222233334444\",\r\n    \"card_expiry\": \"12/28\",\r\n    \"card_cvv\": \"123\",\r\n    \"coupon_code\": \"SAVE40\",\r\n    \"delivery_date\": \"2026-08-15\",\r\n    \"delivery_slot_label\": \"Morning (9 AM - 12 PM)\",\r\n    \"items\": [\r\n        {\r\n            \"item_type\": \"product\",\r\n            \"product\": \"aeaf5b32-247b-4a56-adf2-c62f820fcbc3\",\r\n            \"quantity\": 4\r\n        }\r\n    ]\r\n}\r\n",
+              "raw": "{\r\n    \"customer_name\": \"Jane Smith\",\r\n    \"customer_email\": \"jane@example.com\",\r\n    \"customer_phone\": \"+8801800000000\",\r\n    \"street_address\": \"456 Tech Park\",\r\n    \"city\": \"Sylhet\",\r\n    \"postcode\": \"3100\",\r\n    \"payment_method\": \"card\",\r\n    \"card_number\": \"4111222233334444\",\r\n    \"card_expiry\": \"12/28\",\r\n    \"card_cvv\": \"123\",\r\n    \"coupon_code\": \"\",\r\n    \"delivery_date\": \"2026-08-15\",\r\n    \"delivery_slot_label\": \"Morning (9 AM - 12 PM)\",\r\n    \"items\": [\r\n        {\r\n            \"item_type\": \"product\",\r\n            \"product\": \"aeaf5b32-247b-4a56-adf2-c62f820fcbc3\",\r\n            \"quantity\": 4\r\n        }\r\n    ]\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"

@@ -36,7 +36,9 @@ class GetProductRx extends RxResponseInt<GetProductModel> {
 
   @override
   handleSuccessWithReturn(GetProductModel data) {
-    dataFetcher.sink.add(data);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data);
+    }
     return data;
   }
 
@@ -53,7 +55,9 @@ class GetProductRx extends RxResponseInt<GetProductModel> {
     }
 
     AppToast.error(message);
-    dataFetcher.sink.addError(error);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
   }
 }
 
@@ -81,7 +85,9 @@ class GetCategoryRx extends RxResponseInt<GetCategoryModel> {
 
   @override
   handleSuccessWithReturn(GetCategoryModel data) {
-    dataFetcher.sink.add(data);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data);
+    }
     return data;
   }
 
@@ -94,7 +100,9 @@ class GetCategoryRx extends RxResponseInt<GetCategoryModel> {
     }
 
     AppToast.error(message);
-    dataFetcher.sink.addError(error);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
   }
 }
 
@@ -123,7 +131,9 @@ class GetLeftoverStoreRx extends RxResponseInt<List<LeftoverStoreModel>> {
 
   @override
   handleSuccessWithReturn(List<LeftoverStoreModel> data) {
-    dataFetcher.sink.add(data);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data);
+    }
     return data;
   }
 
@@ -139,6 +149,8 @@ class GetLeftoverStoreRx extends RxResponseInt<List<LeftoverStoreModel>> {
     }
 
     AppToast.error(message);
-    dataFetcher.sink.addError(error);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
   }
 }
