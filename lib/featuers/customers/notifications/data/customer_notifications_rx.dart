@@ -5,7 +5,7 @@ import '../../../../../common_wigdets/app_toast.dart';
 import 'customer_notifications_api.dart';
 import 'dart:developer';
 
-class CustomerNotificationsRx extends RxResponseInt<dynamic> {
+class CustomerNotificationsRx extends RxResponseInt<List<dynamic>> {
   final api = CustomerNotificationsApi.instance;
 
   CustomerNotificationsRx({
@@ -13,15 +13,25 @@ class CustomerNotificationsRx extends RxResponseInt<dynamic> {
     required super.dataFetcher,
   });
 
-  ValueStream<dynamic> get valueStreamData => dataFetcher.stream;
+  ValueStream<List<dynamic>> get valueStreamData => dataFetcher.stream;
 
   Future<void> fetchNotifications() async {
     try {
       final data = await api.fetchNotifications();
-      handleSuccessWithReturn(data);
+      List<dynamic> list = [];
+      if (data is List) {
+        list = data;
+      } else if (data is Map) {
+        if (data.containsKey('results')) {
+          list = data['results'] as List? ?? [];
+        } else if (data.containsKey('data')) {
+          list = data['data'] as List? ?? [];
+        }
+      }
+      await handleSuccessWithReturn(list);
     } catch (e) {
       log('CustomerNotificationsRx fetch error: $e');
-      handleErrorWithReturn(e);
+      await handleErrorWithReturn(e);
     }
   }
 
@@ -37,6 +47,20 @@ class CustomerNotificationsRx extends RxResponseInt<dynamic> {
       return false;
     } finally {
       EasyLoading.dismiss();
+    }
+  }
+
+  @override
+  Future<void> handleSuccessWithReturn(dynamic data) async {
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data is List ? data : []);
+    }
+  }
+
+  @override
+  Future<void> handleErrorWithReturn(dynamic error) async {
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
     }
   }
 }

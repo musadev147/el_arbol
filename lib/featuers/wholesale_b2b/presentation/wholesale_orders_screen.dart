@@ -106,7 +106,7 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
                   )
                 ],
               );
-            }).toList()
+            })
           ],
         ),
       ),
@@ -167,70 +167,75 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
               orders = _mockOrders;
             }
 
-            return ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-              itemCount: orders.length,
-              itemBuilder: (context, index) {
-                final order = orders[index] as Map<String, dynamic>;
-                final id = order['id']?.toString() ?? '';
-                final status = order['status']?.toString() ?? 'Pending';
-                final statusColor = _getStatusColor(status);
+            return RefreshIndicator(
+              color: primaryColor,
+              onRefresh: () async {
+                await _rx.fetchOrders();
+              },
+              child: ListView.builder(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                itemCount: orders.length,
+                itemBuilder: (context, index) {
+                  final order = orders[index] as Map<String, dynamic>;
+                  final id = order['id']?.toString() ?? '';
+                  final status = order['status']?.toString() ?? 'Pending';
+                  final statusColor = _getStatusColor(status);
 
-                final createdDateStr = order['created_at']?.toString() ?? '';
-                DateTime parsedDate;
-                try {
-                  parsedDate = DateTime.parse(createdDateStr).toLocal();
-                } catch (_) {
-                  parsedDate = DateTime.now();
-                }
+                  final createdDateStr = order['created_at']?.toString() ?? '';
+                  DateTime parsedDate;
+                  try {
+                    parsedDate = DateTime.parse(createdDateStr).toLocal();
+                  } catch (_) {
+                    parsedDate = DateTime.now();
+                  }
 
-                final double total = double.tryParse(order['total']?.toString() ?? '0.0') ?? 0.0;
-                final double adjustments = double.tryParse(order['adjustments']?.toString() ?? '0.0') ?? 0.0;
-                final double refunds = double.tryParse(order['refunds']?.toString() ?? '0.0') ?? 0.0;
+                  final double total = double.tryParse(order['total']?.toString() ?? '0.0') ?? 0.0;
+                  final double adjustments = double.tryParse(order['adjustments']?.toString() ?? '0.0') ?? 0.0;
+                  final double refunds = double.tryParse(order['refunds']?.toString() ?? '0.0') ?? 0.0;
 
-                final itemsCount = order['items_count'] is int 
-                    ? order['items_count'] 
-                    : (order['items'] is List ? (order['items'] as List).length : 1);
+                  final itemsCount = order['items_count'] is int 
+                      ? order['items_count'] 
+                      : (order['items'] is List ? (order['items'] as List).length : 1);
 
-                return Container(
-                  margin: EdgeInsets.only(bottom: 12.h),
-                  padding: EdgeInsets.all(16.r),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(color: Colors.grey.shade100),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Order #$id',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            child: Text(
-                              status,
+                  return Container(
+                    margin: EdgeInsets.only(bottom: 12.h),
+                    padding: EdgeInsets.all(16.r),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Order #$id',
                               style: TextStyle(
-                                color: statusColor,
-                                fontSize: 11.sp,
+                                fontFamily: 'Poppins',
+                                fontSize: 15.sp,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          )
-                        ],
-                      ),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
                       SizedBox(height: 6.h),
                       Text(
                         'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(parsedDate)}  •  $itemsCount items bulk catalog order',
@@ -303,10 +308,11 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
                   ),
                 );
               },
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
 }

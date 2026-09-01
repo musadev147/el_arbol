@@ -192,12 +192,16 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                       return GestureDetector(
                         onTap: () {
                           Get.to(() => ProductDetailsScreen(
+                                id: product.id,
                                 name: product.name ?? '',
                                 origin: product.origin ?? 'Spain Sourced',
                                 price: displayPrice,
                                 imageUrl: imageUrl,
                                 category: product.category?.name ?? '',
                                 description: product.description ?? 'Premium organic B2B crop supply. Sourced directly from certified sustainable farms.',
+                                isWholesale: true,
+                                wholesaleUnit: product.wholesaleUnit ?? product.unit ?? 'unit',
+                                minPurchase: product.minimumPurchase ?? 1,
                               ));
                         },
                         child: Container(
@@ -243,7 +247,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                     if (isRunout)
                                       Container(
                                         decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.55),
+                                          color: Colors.black.withValues(alpha: 0.55),
                                           borderRadius: BorderRadius.vertical(top: Radius.circular(14.r)),
                                         ),
                                         alignment: Alignment.center,
@@ -309,19 +313,31 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                         if (!isRunout)
                                           GestureDetector(
                                             onTap: () {
+                                              final minQty = product.minimumPurchase ?? 1;
                                               WholesaleCartState.addToCart(
-                                                product.name ?? '',
-                                                wholesalePriceVal,
-                                                product.wholesaleUnit ?? product.unit ?? 'unit',
-                                                1.0,
+                                                id: product.id ?? '',
+                                                name: product.name ?? '',
+                                                price: wholesalePriceVal,
+                                                unit: product.wholesaleUnit ?? product.unit ?? 'unit',
+                                                imageUrl: imageUrl,
+                                                minPurchase: minQty,
+                                                stock: product.stock,
+                                                qty: minQty.toDouble(),
                                               );
                                               Get.snackbar(
                                                 'Added to Cart',
                                                 '${product.name} added to wholesale cart.',
                                                 backgroundColor: primaryColor,
                                                 colorText: Colors.white,
-                                                duration: const Duration(seconds: 1),
+                                                duration: const Duration(seconds: 2),
                                                 snackPosition: SnackPosition.BOTTOM,
+                                                mainButton: TextButton(
+                                                  onPressed: () => Get.to(() => const WholesaleCartScreen()),
+                                                  child: const Text(
+                                                    'VIEW CART',
+                                                    style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ),
                                               );
                                             },
                                             child: Container(
@@ -350,12 +366,16 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Get.toNamed(Routes.WHOLESALE_ADD_PRODUCT);
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Get.toNamed(Routes.WHOLESALE_ADD_PRODUCT);
+          if (result == true) {
+            _productRx.fetchProducts();
+          }
         },
         backgroundColor: primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Add Product', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

@@ -145,10 +145,12 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
 
   Future<void> updateShippingFee() async {
     if (checkoutType == 'Delivery' && selectedShippingMethodId != null) {
-      final List<dynamic> addresses = _addressesRx.valueStreamData.value ?? [];
+      final List<dynamic> addresses = (_addressesRx.valueStreamData.valueOrNull is List)
+          ? (_addressesRx.valueStreamData.valueOrNull as List)
+          : [];
       final addr = addresses.firstWhere((a) => a['id'] == selectedAddressId, orElse: () => null);
 
-      final dynamic methodData = _shippingMethodsRx.valueStreamData.value;
+      final dynamic methodData = _shippingMethodsRx.valueStreamData.valueOrNull;
       List<dynamic> methods = [];
       if (methodData is List) {
         methods = methodData;
@@ -159,7 +161,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
 
       final postcode = addr != null ? (addr['postcode'] ?? addr['zip_code'] ?? '') : postcodeController.text;
 
-      final basketData = _cartRx.valueStreamData.value;
+      final basketData = _cartRx.valueStreamData.valueOrNull;
       final List<dynamic> items = (basketData != null && basketData is Map) ? (basketData['items'] as List? ?? []) : [];
 
       if (postcode.isNotEmpty && method != null && items.isNotEmpty) {
@@ -198,7 +200,9 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
       checkingOut = true;
     });
 
-    final List<dynamic> addresses = _addressesRx.valueStreamData.value ?? [];
+    final List<dynamic> addresses = (_addressesRx.valueStreamData.valueOrNull is List)
+        ? (_addressesRx.valueStreamData.valueOrNull as List)
+        : [];
     final addr = addresses.firstWhere((a) => a['id'] == selectedAddressId, orElse: () => null);
 
     final orderPayload = {
@@ -229,7 +233,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
 
     final createSuccess = await _createOrderRx.createOrder(orderPayload);
     if (createSuccess) {
-      final createdOrderData = _createOrderRx.valueStreamData.value;
+      final createdOrderData = _createOrderRx.valueStreamData.valueOrNull;
       if (createdOrderData != null && createdOrderData is Map) {
         final orderId = createdOrderData['id']?.toString() ?? createdOrderData['order_id']?.toString();
         if (orderId != null) {

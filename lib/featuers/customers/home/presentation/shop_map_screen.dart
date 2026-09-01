@@ -484,6 +484,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                           return InkWell(
                             onTap: () {
                               Get.to(() => ProductDetailsScreen(
+                                    id: product['id']?.toString(),
                                     name: product['name'],
                                     origin: product['origin'],
                                     price: product['price'],

@@ -13,6 +13,7 @@ import '../../wishlist/presentation/data/rx.dart';
 import 'model/post_wishlist_model.dart' show PostCreateWishlistModel;
 import '../../../../route/app_pages.dart';
 import '../../orders/data/customer_orders_rx.dart';
+import '../../orders/data/customer_orders_api.dart';
 import '../../addresses/data/customer_addresses_rx.dart';
 import '../../orders/presentation/customer_cart_screen.dart';
 
@@ -362,8 +363,14 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       _cartItems.add({'product': prod, 'quantity': 1});
     }
+
+    final prodId = prod['id']?.toString();
+    if (prodId != null && prodId.isNotEmpty) {
+      CustomerOrdersApi.instance.addBasketItem(prodId, 1).catchError((_) => null);
+    }
+
     Fluttertoast.showToast(
-      msg: "${prod['name']} added to cart!",
+      msg: "${prod['name']} added to basket!",
       backgroundColor: const Color(0xFF00694C),
       textColor: Colors.white,
     );
@@ -1020,7 +1027,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               
                               final createSuccess = await _createOrderRx.createOrder(orderPayload);
                               if (createSuccess) {
-                                final createdOrderData = _createOrderRx.valueStreamData.value;
+                                final createdOrderData = _createOrderRx.valueStreamData.valueOrNull;
                                 if (createdOrderData != null && createdOrderData is Map) {
                                   final orderId = createdOrderData['id']?.toString() ?? createdOrderData['order_id']?.toString();
                                   if (orderId != null) {

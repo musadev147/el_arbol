@@ -13,7 +13,7 @@ class CustomerNotificationsScreen extends StatefulWidget {
 class _CustomerNotificationsScreenState extends State<CustomerNotificationsScreen> {
   final CustomerNotificationsRx _rx = CustomerNotificationsRx(
     empty: [],
-    dataFetcher: BehaviorSubject<dynamic>(),
+    dataFetcher: BehaviorSubject<List<dynamic>>(),
   );
 
   @override
@@ -60,10 +60,10 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
         backgroundColor: primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          StreamBuilder<dynamic>(
+          StreamBuilder<List<dynamic>>(
             stream: _rx.valueStreamData,
             builder: (context, snapshot) {
-              final notifications = snapshot.data as List? ?? [];
+              final notifications = snapshot.data ?? [];
               if (notifications.isEmpty) return const SizedBox.shrink();
               return IconButton(
                 icon: const Icon(Icons.delete_sweep, color: Colors.white),
@@ -74,14 +74,14 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
           ),
         ],
       ),
-      body: StreamBuilder<dynamic>(
+      body: StreamBuilder<List<dynamic>>(
         stream: _rx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: primaryColor));
           }
 
-          final notifications = snapshot.data as List? ?? [];
+          final notifications = snapshot.data ?? [];
 
           if (notifications.isEmpty) {
             return Center(

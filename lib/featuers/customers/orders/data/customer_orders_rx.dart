@@ -220,12 +220,22 @@ class CustomerCartRx extends RxResponseInt<dynamic> {
     }
   }
 
-  Future<void> addToBasket(String productId, int quantity) async {
+  Future<bool> addToBasket(String productId, int quantity) async {
     try {
+      await EasyLoading.show(status: 'Adding to basket...');
       await api.addBasketItem(productId, quantity);
       await fetchBasket();
+      EasyLoading.showSuccess('Added to basket!');
+      return true;
     } catch (e) {
       log('CustomerCartRx addToBasket error: $e');
+      String message = "Failed to add to basket";
+      if (e is DioException && e.response?.data is Map) {
+        final data = e.response!.data as Map;
+        message = data["message"]?.toString() ?? data["detail"]?.toString() ?? message;
+      }
+      EasyLoading.showError(message);
+      return false;
     }
   }
 

@@ -378,7 +378,7 @@ class WholesaleCreateProductRx extends RxResponseInt<void> {
     return;
   }
 
-  Future<bool> createProduct(Map<String, dynamic> payload) async {
+  Future<bool> createProduct(dynamic payload) async {
     try {
       await EasyLoading.show(status: 'Creating Product...');
       await api.createProduct(payload);
@@ -389,7 +389,25 @@ class WholesaleCreateProductRx extends RxResponseInt<void> {
       String message = "Failed to create product";
       if (e is DioException) {
         if (e.response?.data is Map) {
-          message = e.response?.data["message"] ?? message;
+          final data = e.response!.data as Map;
+          if (data.containsKey("errors")) {
+            final errs = data["errors"];
+            if (errs is List && errs.isNotEmpty) {
+              message = errs.map((it) => it.toString()).join("\n");
+            } else if (errs is Map && errs.isNotEmpty) {
+              message = errs.entries.map((entry) => "${entry.key}: ${entry.value}").join("\n");
+            } else {
+              message = errs.toString();
+            }
+          } else if (data.containsKey("error")) {
+            message = data["error"].toString();
+          } else if (data.containsKey("message")) {
+            message = data["message"].toString();
+          } else if (data.containsKey("detail")) {
+            message = data["detail"].toString();
+          } else {
+            message = data.entries.map((entry) => "${entry.key}: ${entry.value}").join(", ");
+          }
         }
       }
       AppToast.error(message);
@@ -397,6 +415,64 @@ class WholesaleCreateProductRx extends RxResponseInt<void> {
     } finally {
       EasyLoading.dismiss();
     }
+  }
+}
+
+class WholesaleCheckoutOrderRx extends RxResponseInt<dynamic> {
+  final api = WholesaleApi.instance;
+  WholesaleCheckoutOrderRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<dynamic> createOrder(Map<String, dynamic> payload) async {
+    try {
+      await EasyLoading.show(status: 'Submitting wholesale order...');
+      final response = await api.createOrder(payload);
+      await handleSuccessWithReturn(response);
+      AppToast.success("Wholesale Order Placed Successfully!");
+      return response;
+    } catch (e) {
+      log('WholesaleCheckoutOrderRx error: $e');
+      String message = "Failed to submit wholesale order";
+      if (e is DioException) {
+        if (e.response?.data is Map) {
+          final data = e.response!.data as Map;
+          if (data.containsKey("errors")) {
+            final errs = data["errors"];
+            if (errs is List && errs.isNotEmpty) {
+              message = errs.map((it) => it.toString()).join("\n");
+            } else if (errs is Map && errs.isNotEmpty) {
+              message = errs.entries.map((entry) => "${entry.key}: ${entry.value}").join("\n");
+            } else {
+              message = errs.toString();
+            }
+          } else if (data.containsKey("error")) {
+            message = data["error"].toString();
+          } else if (data.containsKey("message")) {
+            message = data["message"].toString();
+          } else if (data.containsKey("detail")) {
+            message = data["detail"].toString();
+          } else {
+            message = data.entries.map((entry) => "${entry.key}: ${entry.value}").join(", ");
+          }
+        }
+      }
+      AppToast.error(message);
+      await handleErrorWithReturn(e);
+      return null;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  @override
+  Future<void> handleSuccessWithReturn(dynamic data) async {
+    dataFetcher.sink.add(data);
+  }
+
+  @override
+  Future<void> handleErrorWithReturn(dynamic error) async {
+    dataFetcher.sink.addError(error);
   }
 }
 
