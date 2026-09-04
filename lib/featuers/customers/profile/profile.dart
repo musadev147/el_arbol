@@ -22,6 +22,8 @@ import 'package:el_arbol/featuers/customers/notifications/presentation/customer_
 import '../../wholesale_b2b/data/wholesale_api.dart';
 import 'data/rx.dart';
 
+import 'package:el_arbol/featuers/customers/notifications/data/customer_notifications_rx.dart';
+
 class ProfileScreen extends StatefulWidget {
   final UserRole? role;
   const ProfileScreen({super.key, this.role});
@@ -37,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _businessEmail = 'purchasing@valenciafood.com';
   String _contactPhone = '+34 961 234 567';
   String? _profileImageUrl;
+  File? _localProfileImage;
 
   // Personal details state variables
   String _personalPhone = '+34 622 334 455';
@@ -65,6 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Customer specific
   late CustomerProfileRx _customerProfileRx;
   final CustomerChangePasswordRx _changePasswordRx = CustomerChangePasswordRx(empty: null, dataFetcher: BehaviorSubject<void>());
+  final CustomerNotificationsRx _notificationsRx = CustomerNotificationsRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>());
 
   // Staff specific
   late UpdateStaffProfileRx _staffProfileRx;
@@ -72,23 +76,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _notificationsRx.fetchNotifications();
     if (widget.role == UserRole.wholesale) {
       _wholesaleProfileRx = WholesaleProfileRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>());
       _wholesaleProfileRx.fetchProfile();
       
       _wholesaleProfileRx.valueStreamData.listen((data) {
         if (data != null && mounted) {
+          final profileData = (data['data'] is Map) 
+              ? data['data'] 
+              : (data['user'] is Map ? data['user'] : data);
+
           setState(() {
-            _businessName = data['business_name'] ?? _businessName;
-            _cif = data['cif'] ?? _cif;
-            _contactPerson = data['contact_person'] ?? _contactPerson;
-            _businessEmail = data['email'] ?? _businessEmail;
-            _contactPhone = data['contact_phone'] ?? _contactPhone;
-            if (data['avatar'] != null) {
-              String avatar = data['avatar'];
-              _profileImageUrl = avatar.contains('?') 
-                  ? '$avatar&v=${DateTime.now().millisecondsSinceEpoch}' 
-                  : '$avatar?v=${DateTime.now().millisecondsSinceEpoch}';
+            _businessName = profileData['business_name'] ?? profileData['company_name'] ?? _businessName;
+            _cif = profileData['trade_license_number'] ?? profileData['tax_id'] ?? profileData['cif'] ?? _cif;
+            _contactPerson = profileData['contact_name'] ?? profileData['contact_person'] ?? _contactPerson;
+            _businessEmail = profileData['email'] ?? _businessEmail;
+            _contactPhone = profileData['phone'] ?? profileData['contact_phone'] ?? _contactPhone;
+            _personalPhone = profileData['phone'] ?? _personalPhone;
+
+            final rawImage = profileData['profile_image_url'] ?? 
+                             profileData['profile_image'] ?? 
+                             profileData['image'] ?? 
+                             profileData['avatar'] ?? 
+                             profileData['photo'];
+
+            if (rawImage != null && rawImage.toString().trim().isNotEmpty) {
+              String avatar = rawImage.toString().trim();
+              if (!avatar.startsWith('http://') && !avatar.startsWith('https://')) {
+                const base = 'https://apielarbol.icommerce.com.bd';
+                if (avatar.startsWith('/')) {
+                  avatar = '$base$avatar';
+                } else {
+                  avatar = '$base/$avatar';
+                }
+              }
+              _profileImageUrl = avatar;
             }
           });
         }
@@ -99,19 +122,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       _customerProfileRx.valueStreamData.listen((data) {
         if (data != null && mounted) {
+          final profileData = (data['data'] is Map) 
+              ? data['data'] 
+              : (data['user'] is Map ? data['user'] : data);
+
           setState(() {
-            _personalPhone = data['phone'] ?? _personalPhone;
-            _personalGender = data['gender'] ?? _personalGender;
-            if (data['dob'] != null) {
+            _personalPhone = profileData['phone'] ?? _personalPhone;
+            _personalGender = profileData['gender'] ?? _personalGender;
+            if (profileData['dob'] != null) {
               try {
-                _personalDob = DateTime.parse(data['dob']);
+                _personalDob = DateTime.parse(profileData['dob'].toString());
               } catch (_) {}
             }
-            if (data['avatar'] != null) {
-              String avatar = data['avatar'];
-              _profileImageUrl = avatar.contains('?') 
-                  ? '$avatar&v=${DateTime.now().millisecondsSinceEpoch}' 
-                  : '$avatar?v=${DateTime.now().millisecondsSinceEpoch}';
+            final rawImage = profileData['resolvedAvatar'] ?? 
+                             profileData['avatar'] ?? 
+                             profileData['image'] ?? 
+                             profileData['profile_image'] ?? 
+                             profileData['profile_image_url'] ?? 
+                             profileData['photo'];
+
+            if (rawImage != null && rawImage.toString().trim().isNotEmpty) {
+              String avatar = rawImage.toString().trim();
+              if (!avatar.startsWith('http://') && !avatar.startsWith('https://')) {
+                const base = 'https://apielarbol.icommerce.com.bd';
+                if (avatar.startsWith('/')) {
+                  avatar = '$base$avatar';
+                } else {
+                  avatar = '$base/$avatar';
+                }
+              }
+              _profileImageUrl = avatar;
             }
           });
         }
@@ -129,9 +169,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _memberId = data['staff_id'] ?? _memberId;
             if (data['photo'] != null) {
               String avatar = data['photo'];
-              _profileImageUrl = avatar.contains('?') 
-                  ? '$avatar&v=${DateTime.now().millisecondsSinceEpoch}' 
-                  : '$avatar?v=${DateTime.now().millisecondsSinceEpoch}';
+              if (!avatar.startsWith('http://') && !avatar.startsWith('https://')) {
+                const base = 'https://apielarbol.icommerce.com.bd';
+                if (avatar.startsWith('/')) {
+                  avatar = '$base$avatar';
+                } else {
+                  avatar = '$base/$avatar';
+                }
+              }
+              _profileImageUrl = avatar;
             } else {
               _profileImageUrl = null;
             }
@@ -239,9 +285,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () async {
                     if (widget.role == UserRole.wholesale) {
                       final success = await _wholesaleProfileRx.updateProfile({
-                        "business_name": nameController.text,
-                        "contact_person": contactController.text,
-                        "contact_phone": phoneController.text,
+                        "business_name": nameController.text.trim(),
+                        "contact_name": contactController.text.trim(),
+                        "contact_person": contactController.text.trim(),
+                        "phone": phoneController.text.trim(),
+                        "contact_phone": phoneController.text.trim(),
                       });
                       if (success) {
                         Fluttertoast.showToast(msg: 'Business details updated successfully!');
@@ -249,9 +297,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       }
                     } else {
                       setState(() {
-                        _businessName = nameController.text;
-                        _contactPerson = contactController.text;
-                        _contactPhone = phoneController.text;
+                        _businessName = nameController.text.trim();
+                        _contactPerson = contactController.text.trim();
+                        _contactPhone = phoneController.text.trim();
                       });
                       Fluttertoast.showToast(msg: 'Business details updated successfully!');
                       Navigator.pop(context);
@@ -529,28 +577,67 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _changeProfileImage() async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    
-    if (image != null) {
-      if (widget.role == UserRole.customer) {
-        final success = await _customerProfileRx.updateAvatar(File(image.path));
-        if (success) {
-          // Success handled by Rx toast
-        }
-      } else if (widget.role == UserRole.wholesale) {
-        final success = await _wholesaleProfileRx.updateAvatar(File(image.path));
-        if (success) {
-          // Success handled by Rx toast
-        }
-      } else {
-        // Mock fallback
-        setState(() {
-          // just mock it with a local path visually or don't set it to null
-          // _profileImageUrl = null;
-        });
-        Fluttertoast.showToast(msg: 'Avatar update is mocked for this role');
-      }
-    }
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(20.r),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Update Profile Photo',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF00694C)),
+                title: const Text('Choose from Gallery'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                  if (image != null) {
+                    setState(() {
+                      _localProfileImage = File(image.path);
+                    });
+                    if (widget.role == UserRole.customer) {
+                      await _customerProfileRx.updateAvatar(File(image.path));
+                    } else if (widget.role == UserRole.wholesale) {
+                      await _wholesaleProfileRx.updateAvatar(File(image.path));
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF00694C)),
+                title: const Text('Take Photo (Camera)'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final XFile? image = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+                  if (image != null) {
+                    setState(() {
+                      _localProfileImage = File(image.path);
+                    });
+                    if (widget.role == UserRole.customer) {
+                      await _customerProfileRx.updateAvatar(File(image.path));
+                    } else if (widget.role == UserRole.wholesale) {
+                      await _wholesaleProfileRx.updateAvatar(File(image.path));
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _editPersonalInfo() {
@@ -717,21 +804,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Stack(
                           alignment: Alignment.bottomRight,
                           children: [
-                            CircleAvatar(
-                              radius: 36.r,
-                              backgroundColor: primaryColor.withOpacity(0.1),
-                              backgroundImage: _profileImageUrl != null
-                                  ? NetworkImage(_profileImageUrl!)
-                                  : null,
-                              child: _profileImageUrl == null
-                                  ? Icon(
-                                      currentRole == UserRole.wholesale
-                                          ? Icons.business_center
-                                          : Icons.badge,
-                                      color: primaryColor,
-                                      size: 36.r,
-                                    )
-                                  : null,
+                            Container(
+                              width: 72.r,
+                              height: 72.r,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: primaryColor.withOpacity(0.1),
+                              ),
+                              child: ClipOval(
+                                child: _localProfileImage != null
+                                    ? Image.file(_localProfileImage!, fit: BoxFit.cover, width: 72.r, height: 72.r)
+                                    : (_profileImageUrl != null && _profileImageUrl!.isNotEmpty)
+                                        ? CachedNetworkImage(
+                                            imageUrl: _profileImageUrl!,
+                                            fit: BoxFit.cover,
+                                            width: 72.r,
+                                            height: 72.r,
+                                            memCacheWidth: 200,
+                                            memCacheHeight: 200,
+                                            fadeInDuration: const Duration(milliseconds: 100),
+                                            fadeOutDuration: const Duration(milliseconds: 100),
+                                            placeholder: (context, url) => const Center(
+                                              child: SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                                              ),
+                                            ),
+                                            errorWidget: (context, url, error) => Icon(
+                                              currentRole == UserRole.wholesale
+                                                  ? Icons.business_center
+                                                  : (currentRole == UserRole.customer ? Icons.person : Icons.badge),
+                                              color: primaryColor,
+                                              size: 36.r,
+                                            ),
+                                          )
+                                        : Icon(
+                                            currentRole == UserRole.wholesale
+                                                ? Icons.business_center
+                                                : (currentRole == UserRole.customer ? Icons.person : Icons.badge),
+                                            color: primaryColor,
+                                            size: 36.r,
+                                          ),
+                              ),
                             ),
                             Container(
                               padding: EdgeInsets.all(4.r),
@@ -801,7 +916,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               SizedBox(height: 20.h),
 
-              if (currentRole != UserRole.staff && currentRole != UserRole.employeeSelfService) ...[
+              if (currentRole == UserRole.customer) ...[
                 // Personal Details Card
                 Text(
                   'Personal Information',
@@ -889,6 +1004,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const Divider(height: 1),
                       ListTile(
+                        leading: const Icon(Icons.support_agent, color: primaryColor),
+                        title: const Text('Support Tickets'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        onTap: () => Get.toNamed(Routes.WHOLESALE_SUPPORT_TICKETS_SCREEN),
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
                         leading: const Icon(Icons.privacy_tip_outlined, color: primaryColor),
                         title: const Text('Privacy Policy'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 14),
@@ -909,99 +1031,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: _showB2bFAQ,
                       ),
                     ],
-                  ),
-                ),
-                SizedBox(height: 20.h),
-
-                // Saved Warehouse Addresses
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Registered Warehouses', style: TextStyle(fontFamily: 'Poppins', fontSize: 13.sp, fontWeight: FontWeight.bold)),
-                    TextButton.icon(
-                      onPressed: _addAddress,
-                      icon: const Icon(Icons.add, size: 14),
-                      label: const Text('Add'),
-                      style: TextButton.styleFrom(foregroundColor: primaryColor),
-                    ),
-                  ],
-                ),
-                Material(
-                  color: Colors.white,
-                  clipBehavior: Clip.antiAlias,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.r),
-                    side: BorderSide(color: Colors.grey.shade100),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.r),
-                    child: _addresses.isEmpty
-                        ? const Center(child: Text('No warehouse locations linked.'))
-                        : Column(
-                            children: _addresses.map((address) {
-                              return ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: const Icon(Icons.location_on, color: primaryColor),
-                                title: Text(address, style: TextStyle(fontSize: 12.sp)),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () {
-                                    setState(() {
-                                      _addresses.remove(address);
-                                    });
-                                    Fluttertoast.showToast(msg: 'Warehouse location removed.');
-                                  },
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                  ),
-                ),
-                SizedBox(height: 20.h),
-
-                // Corporate Billing Cards
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Corporate Billing Cards', style: TextStyle(fontFamily: 'Poppins', fontSize: 13.sp, fontWeight: FontWeight.bold)),
-                    TextButton.icon(
-                      onPressed: _addPaymentCard,
-                      icon: const Icon(Icons.add, size: 14),
-                      label: const Text('Add'),
-                      style: TextButton.styleFrom(foregroundColor: primaryColor),
-                    ),
-                  ],
-                ),
-                Material(
-                  color: Colors.white,
-                  clipBehavior: Clip.antiAlias,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.r),
-                    side: BorderSide(color: Colors.grey.shade100),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.r),
-                    child: _savedCards.isEmpty
-                        ? const Center(child: Text('No linked B2B payment cards.'))
-                        : Column(
-                            children: _savedCards.map((card) {
-                              return ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: const Icon(Icons.credit_card, color: Colors.blue),
-                                title: Text('${card['brand']} ending in ${card['last4']}'),
-                                subtitle: Text('Expires ${card['expiry']}'),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () {
-                                    setState(() {
-                                      _savedCards.remove(card);
-                                    });
-                                    Fluttertoast.showToast(msg: 'Corporate card removed.');
-                                  },
-                                ),
-                              );
-                            }).toList(),
-                          ),
                   ),
                 ),
               ] else if (currentRole == UserRole.customer) ...[
@@ -1050,8 +1079,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ListTile(
                         leading: const Icon(Icons.notifications_none, color: primaryColor),
                         title: const Text('Notifications'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                        onTap: () => Get.to(() => const el_arbol_notif.CustomerNotificationsScreen()),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            StreamBuilder<List<dynamic>>(
+                              stream: _notificationsRx.valueStreamData,
+                              builder: (context, snapshot) {
+                                final notifs = snapshot.data ?? [];
+                                if (notifs.isEmpty) return const SizedBox.shrink();
+                                return Container(
+                                  margin: EdgeInsets.only(right: 8.w),
+                                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(10.r),
+                                  ),
+                                  child: Text(
+                                    '${notifs.length}',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const Icon(Icons.arrow_forward_ios, size: 14),
+                          ],
+                        ),
+                        onTap: () async {
+                          await Get.to(() => const el_arbol_notif.CustomerNotificationsScreen());
+                          _notificationsRx.fetchNotifications();
+                        },
                       ),
                       const Divider(height: 1),
                       ListTile(

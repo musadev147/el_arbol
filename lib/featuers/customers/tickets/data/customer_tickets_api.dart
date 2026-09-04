@@ -73,6 +73,19 @@ class CustomerTicketsApi {
     }
   }
 
+  Future<dynamic> deleteTicket(String ticketId) async {
+    try {
+      final response = await deleteHttp("auth/tickets/$ticketId/");
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+        return response.data;
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<dynamic> sendTypingIndicator(String ticketId, Map<String, dynamic> data) async {
     try {
       final response = await postHttp(Endpoints.customerTicketTyping(ticketId), data);

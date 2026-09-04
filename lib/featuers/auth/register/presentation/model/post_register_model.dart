@@ -1,11 +1,13 @@
 class PostRegisterModel {
+  String? message;
   String? access;
   String? refresh;
   User? user;
 
-  PostRegisterModel({this.access, this.refresh, this.user});
+  PostRegisterModel({this.message, this.access, this.refresh, this.user});
 
   PostRegisterModel.fromJson(Map<String, dynamic> json) {
+    message = json['message'];
     access = json['access'];
     refresh = json['refresh'];
     user = json['user'] != null ? User.fromJson(json['user']) : null;
@@ -13,6 +15,7 @@ class PostRegisterModel {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
+    data['message'] = message;
     data['access'] = access;
     data['refresh'] = refresh;
     if (user != null) {

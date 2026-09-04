@@ -162,6 +162,13 @@ class _WishlistScreenState extends State<WishlistScreen> {
     final double discountPrice = double.tryParse(product.discountPrice ?? '') ?? 0.0;
     final double finalPrice = (discountPrice > 0) ? discountPrice : originalPrice;
     final bool onSale = discountPrice > 0;
+    
+    final List<String> extractedImages = [];
+    if (product.thumbnailUrl != null) extractedImages.add(product.thumbnailUrl!);
+    if (product.additionalImages != null) {
+      extractedImages.addAll(
+          product.additionalImages!.map((i) => i.image).whereType<String>());
+    }
 
     return GestureDetector(
       onTap: () {
@@ -171,6 +178,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               origin: product.origin ?? 'Unknown',
               price: '€${finalPrice.toStringAsFixed(2)}',
               imageUrl: product.thumbnailUrl ?? 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+              images: extractedImages,
               description: product.description ?? '',
               category: product.category?.name ?? 'All',
             ));

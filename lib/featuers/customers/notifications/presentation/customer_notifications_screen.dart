@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 import '../data/customer_notifications_rx.dart';
 
 class CustomerNotificationsScreen extends StatefulWidget {
@@ -56,7 +57,21 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Notifications', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+        title: StreamBuilder<List<dynamic>>(
+          stream: _rx.valueStreamData,
+          builder: (context, snapshot) {
+            final count = snapshot.data?.length ?? 0;
+            return Text(
+              count > 0 ? 'Notifications ($count)' : 'Notifications',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.white,
+              ),
+            );
+          },
+        ),
         backgroundColor: primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -78,7 +93,7 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
         stream: _rx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+            return const CustomAppLoading(message: 'Loading notifications...');
           }
 
           final notifications = snapshot.data ?? [];
@@ -127,13 +142,24 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(notif['title'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                          Text(notif['title'] ?? notif['subject'] ?? 'Notification', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
                           SizedBox(height: 4.h),
-                          Text(notif['body'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp)),
+                          Text(notif['body'] ?? notif['message'] ?? notif['description'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp)),
                           SizedBox(height: 8.h),
-                          Text(notif['created_at'] ?? notif['date'] ?? '', style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp)),
+                          Text(notif['created_at'] ?? notif['date'] ?? notif['timestamp'] ?? '', style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp)),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                      onPressed: () async {
+                        final id = notif['id']?.toString();
+                        if (id != null) {
+                          await _rx.bulkDeleteNotifications([id]);
+                          _rx.fetchNotifications();
+                        }
+                      },
+                      tooltip: 'Delete notification',
                     ),
                   ],
                 ),

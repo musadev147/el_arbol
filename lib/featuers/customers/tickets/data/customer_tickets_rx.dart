@@ -19,8 +19,14 @@ class CustomerTicketsRx extends RxResponseInt<List<dynamic>> {
       List<dynamic> list = [];
       if (data is List) {
         list = data;
-      } else if (data is Map && data.containsKey('results')) {
-        list = data['results'];
+      } else if (data is Map) {
+        if (data['results'] is List) {
+          list = data['results'];
+        } else if (data['data'] is List) {
+          list = data['data'];
+        } else if (data['tickets'] is List) {
+          list = data['tickets'];
+        }
       }
       await handleSuccessWithReturn(list);
     } catch (e) {
@@ -29,25 +35,55 @@ class CustomerTicketsRx extends RxResponseInt<List<dynamic>> {
     }
   }
 
-  Future<bool> createTicket(String subject, String description, {String category = 'GENERAL', String priority = 'LOW'}) async {
+  Future<bool> createTicket(String subject, String description, {String category = 'ORDER', String priority = 'HIGH'}) async {
     try {
       await EasyLoading.show(status: 'Creating Ticket...');
-      await api.createTicket({
-        "subject": subject, 
-        "description": description,
+      final payload = {
+        "subject": subject.trim(),
+        "title": subject.trim(),
+        "description": description.trim(),
+        "message": description.trim(),
         "category": category,
         "priority": priority,
-      });
+      };
+      await api.createTicket(payload);
       AppToast.success("Ticket Created Successfully!");
-      fetchTickets();
+      await fetchTickets();
       return true;
     } catch (e) {
       log('CustomerTicketsRx createTicket error: $e');
       String message = "Failed to create ticket";
-      if (e is DioException) {
+      if (e is DioException && e.response?.data != null) {
         if (e.response?.data is Map) {
-          message = e.response?.data["message"] ?? message;
+          final map = e.response!.data as Map;
+          message = map["message"]?.toString() ?? 
+                    map["detail"]?.toString() ?? 
+                    map["error"]?.toString() ?? 
+                    (map.values.isNotEmpty ? map.values.first.toString() : message);
+        } else if (e.response?.data is String) {
+          message = e.response!.data.toString();
         }
+      }
+      AppToast.error(message);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  Future<bool> deleteTicket(String ticketId) async {
+    try {
+      await EasyLoading.show(status: 'Deleting Ticket...');
+      await api.deleteTicket(ticketId);
+      AppToast.success("Ticket deleted successfully!");
+      await fetchTickets();
+      return true;
+    } catch (e) {
+      log('CustomerTicketsRx deleteTicket error: $e');
+      String message = "Failed to delete ticket";
+      if (e is DioException && e.response?.data is Map) {
+        final map = e.response!.data as Map;
+        message = map["message"]?.toString() ?? map["detail"]?.toString() ?? message;
       }
       AppToast.error(message);
       return false;

@@ -160,13 +160,27 @@ class WholesaleApi {
   Future<Map<String, dynamic>> createTicket(Map<String, dynamic> data) async {
     try {
       final response = await postHttp(Endpoints.wholesaleTickets(), data);
-      if (response.statusCode == 201) {
-        return response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data is Map<String, dynamic> ? response.data : Map<String, dynamic>.from(response.data);
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
     } catch (e) {
       log('Wholesale createTicket error: $e');
+      rethrow;
+    }
+  }
+
+  Future<dynamic> deleteTicket(String id) async {
+    try {
+      final response = await deleteHttp(Endpoints.wholesaleSingleTicket(id));
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+        return response.data;
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      log('Wholesale deleteTicket error: $e');
       rethrow;
     }
   }
@@ -191,8 +205,8 @@ class WholesaleApi {
         Endpoints.wholesaleTicketReply(id),
         {"message": message},
       );
-      if (response.statusCode == 201) {
-        return response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data is Map<String, dynamic> ? response.data : Map<String, dynamic>.from(response.data);
       } else {
         throw DataSource.DEFAULT.getFailure();
       }

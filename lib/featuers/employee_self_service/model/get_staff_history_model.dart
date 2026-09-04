@@ -39,6 +39,7 @@ class Shifts {
   String? endTime;
   String? status;
   double? hours;
+  String? breakTime;
 
   Shifts({
     this.id,
@@ -50,6 +51,7 @@ class Shifts {
     this.endTime,
     this.status,
     this.hours,
+    this.breakTime,
   });
 
   Shifts.fromJson(Map<String, dynamic> json) {
@@ -61,6 +63,7 @@ class Shifts {
     startTime = json['start_time'];
     endTime = json['end_time'];
     status = json['status'];
+    breakTime = json['break_time']?.toString() ?? json['break']?.toString() ?? (json['break_minutes'] != null ? '${json['break_minutes']}m break' : null);
     if (json['hours'] != null) {
       hours = (json['hours'] as num).toDouble();
     }
@@ -76,6 +79,7 @@ class Shifts {
     data['start_time'] = startTime;
     data['end_time'] = endTime;
     data['status'] = status;
+    data['break_time'] = breakTime;
     data['hours'] = hours;
     return data;
   }

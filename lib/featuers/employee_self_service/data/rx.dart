@@ -1,4 +1,6 @@
 import 'dart:developer';
+import 'package:dio/dio.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../networks/rx_base.dart';
 import '../model/staff_dashboard_model.dart';
@@ -191,7 +193,17 @@ class StaffDayOffRequestsRx extends RxResponseInt<dynamic> {
   Future<void> fetchDayOffRequests() async {
     try {
       final data = await api.getDayOffRequests();
-      handleSuccessWithReturn(data);
+      List<dynamic> list = [];
+      if (data is List) {
+        list = data;
+      } else if (data is Map) {
+        if (data['results'] is List) {
+          list = data['results'];
+        } else if (data['data'] is List) {
+          list = data['data'];
+        }
+      }
+      handleSuccessWithReturn(list);
     } catch (error) {
       log("Fetch day off requests error: $error");
       handleErrorWithReturn(error);
@@ -200,12 +212,23 @@ class StaffDayOffRequestsRx extends RxResponseInt<dynamic> {
 
   Future<bool> createRequest(String date, String reason) async {
     try {
-      final data = await api.createDayOffRequest(date, reason);
-      handleSuccessWithReturn(data);
+      await EasyLoading.show(status: 'Submitting request...');
+      await api.createDayOffRequest(date, reason);
+      EasyLoading.showSuccess('Request submitted successfully');
+      await fetchDayOffRequests();
       return true;
     } catch (error) {
       log("Create day off request error: $error");
-      handleErrorWithReturn(error);
+      String msg = 'Failed to submit request';
+      if (error is DioException && error.response?.data != null) {
+        final d = error.response!.data;
+        if (d is Map && d['message'] != null) {
+          msg = d['message'].toString();
+        } else if (d is Map && d['detail'] != null) {
+          msg = d['detail'].toString();
+        }
+      }
+      EasyLoading.showError(msg);
       return false;
     }
   }
@@ -222,23 +245,28 @@ class StaffDayOffRequestsRx extends RxResponseInt<dynamic> {
 
   Future<bool> updateRequest(String id, String date, String reason) async {
     try {
-      final data = await api.updateDayOffRequest(id, date, reason);
-      handleSuccessWithReturn(data);
+      await EasyLoading.show(status: 'Updating request...');
+      await api.updateDayOffRequest(id, date, reason);
+      EasyLoading.showSuccess('Request updated successfully');
+      await fetchDayOffRequests();
       return true;
     } catch (error) {
       log("Update day off request error: $error");
-      handleErrorWithReturn(error);
+      EasyLoading.showError('Failed to update request');
       return false;
     }
   }
 
   Future<bool> deleteRequest(String id) async {
     try {
+      await EasyLoading.show(status: 'Cancelling request...');
       await api.deleteDayOffRequest(id);
+      EasyLoading.showSuccess('Request cancelled');
+      await fetchDayOffRequests();
       return true;
     } catch (error) {
       log("Delete day off request error: $error");
-      handleErrorWithReturn(error);
+      EasyLoading.showError('Failed to cancel request');
       return false;
     }
   }

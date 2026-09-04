@@ -38,30 +38,30 @@ class _CustomNavigationState extends State<CustomNavigation> {
 
 
 
-  late final Map<UserRole, List<String>> roleIcons = {
+  late final Map<UserRole, List<dynamic>> roleIcons = {
     UserRole.customer: [
       AssetsIcons.homeIcons,
-      AssetsIcons.locationIcons,
+      Icons.storefront_rounded,
       AssetsIcons.shoppingIcons,
-      AssetsIcons.propertyIcons,
+      Icons.receipt_long_rounded,
       AssetsIcons.usernavIcons,
     ],
     UserRole.wholesale: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
-      AssetsIcons.propertyIcons,
+      Icons.receipt_long_rounded,
       AssetsIcons.usernavIcons,
     ],
     UserRole.employeeSelfService: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
-      AssetsIcons.propertyIcons,
+      Icons.price_change_outlined,
       AssetsIcons.usernavIcons,
     ],
     UserRole.staff: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
-      AssetsIcons.propertyIcons,
+      Icons.price_change_outlined,
       AssetsIcons.usernavIcons,
     ],
   };
@@ -130,11 +130,11 @@ class _CustomNavigationState extends State<CustomNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    final role = widget.role ?? UserRole.wholesale;
+    final role = widget.role ?? UserRole.customer;
 
-    final icons = roleIcons[role]!;
-    final labels = roleLabels[role]!;
-    final screens = roleScreens[role]!;
+    final icons = roleIcons[role] ?? roleIcons[UserRole.customer]!;
+    final labels = roleLabels[role] ?? roleLabels[UserRole.customer]!;
+    final screens = roleScreens[role] ?? roleScreens[UserRole.customer]!;
 
     if (_selectedIndex.value >= screens.length) {
       _selectedIndex.value = 0;
@@ -230,14 +230,14 @@ class _CustomNavigationState extends State<CustomNavigation> {
         child:Scaffold(
       body: screens[_selectedIndex.value],
       bottomNavigationBar: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
         decoration: BoxDecoration(
           color: AppColors.cFFFFFF,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(24.r),
             topRight: Radius.circular(24.r),
           ),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 10,
@@ -245,37 +245,56 @@ class _CustomNavigationState extends State<CustomNavigation> {
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(icons.length, (index) {
-            final isSelected = _selectedIndex.value == index;
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(icons.length, (index) {
+              final isSelected = _selectedIndex.value == index;
+              final iconItem = icons[index];
 
-            return GestureDetector(
-              onTap: () => _selectedIndex.value = index,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    icons[index],
-                    width: 26.w,
-                    height: 26.h,
-                    color: isSelected
-                        ? const Color(0xFF00694C)
-                        : AppColors.c87878A,
-                  ),
-                  if (isSelected)
-                    Text(
-                      labels[index],
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF00694C),
+              return InkWell(
+                onTap: () => _selectedIndex.value = index,
+                borderRadius: BorderRadius.circular(12.r),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (iconItem is IconData)
+                        Icon(
+                          iconItem,
+                          size: 24.sp,
+                          color: isSelected
+                              ? const Color(0xFF00694C)
+                              : AppColors.c87878A,
+                        )
+                      else
+                        Image.asset(
+                          iconItem.toString(),
+                          width: 24.w,
+                          height: 24.h,
+                          color: isSelected
+                              ? const Color(0xFF00694C)
+                              : AppColors.c87878A,
+                        ),
+                      SizedBox(height: 3.h),
+                      Text(
+                        labels[index],
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? const Color(0xFF00694C)
+                              : AppColors.c87878A,
+                        ),
                       ),
-                    ),
-                ],
-              ),
-            );
-          }),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     )

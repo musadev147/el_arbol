@@ -210,18 +210,44 @@ class WholesaleTicketsRx extends RxResponseInt<Map<String, dynamic>> {
   Future<bool> createTicket(Map<String, dynamic> payload) async {
     try {
       await EasyLoading.show(status: 'Creating Ticket...');
-      final data = await api.createTicket(payload);
-      // Optional: you can fetch again or append to stream, but for now we just return true.
+      await api.createTicket(payload);
       AppToast.success("Ticket Created Successfully!");
-      fetchTickets();
+      await fetchTickets();
       return true;
     } catch (e) {
       log('WholesaleTicketsRx createTicket error: $e');
       String message = "Failed to create ticket";
-      if (e is DioException) {
-        if (e.response?.data is Map) {
-          message = e.response?.data["message"] ?? message;
+      if (e is DioException && e.response?.data != null) {
+        final resData = e.response!.data;
+        if (resData is Map) {
+          message = resData["message"]?.toString() ?? 
+                    resData["detail"]?.toString() ?? 
+                    resData["error"]?.toString() ?? 
+                    (resData.values.isNotEmpty ? resData.values.first.toString() : message);
+        } else if (resData is String) {
+          message = resData;
         }
+      }
+      AppToast.error(message);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  Future<bool> deleteTicket(String ticketId) async {
+    try {
+      await EasyLoading.show(status: 'Deleting Ticket...');
+      await api.deleteTicket(ticketId);
+      AppToast.success("Ticket deleted successfully!");
+      await fetchTickets();
+      return true;
+    } catch (e) {
+      log('WholesaleTicketsRx deleteTicket error: $e');
+      String message = "Failed to delete ticket";
+      if (e is DioException && e.response?.data is Map) {
+        final map = e.response!.data as Map;
+        message = map["message"]?.toString() ?? map["detail"]?.toString() ?? message;
       }
       AppToast.error(message);
       return false;

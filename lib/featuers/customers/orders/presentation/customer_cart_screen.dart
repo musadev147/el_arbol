@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:el_arbol/common_wigdets/custom_navigation.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
+import 'package:el_arbol/common_wigdets/user_role.dart';
 import '../data/customer_orders_rx.dart';
 import 'customer_checkout_screen.dart';
 
@@ -35,6 +38,14 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
     super.dispose();
   }
 
+  void _handleBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      Get.offAll(() => const CustomNavigation(role: UserRole.customer, selectedIndex: 0));
+    }
+  }
+
   double getSubtotal(List<dynamic> items) {
     double sum = 0.0;
     for (var item in items) {
@@ -65,7 +76,7 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF151E13)),
-          onPressed: () => Get.back(),
+          onPressed: _handleBack,
         ),
         actions: [
           IconButton(
@@ -78,7 +89,7 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
         stream: _cartRx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+            return const CustomAppLoading(message: 'Loading your basket...');
           }
 
           final basketData = snapshot.data;
@@ -113,7 +124,7 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
                   ),
                   SizedBox(height: 24.h),
                   ElevatedButton(
-                    onPressed: () => Get.back(),
+                    onPressed: _handleBack,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       shape: RoundedRectangleBorder(

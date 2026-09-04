@@ -19,11 +19,14 @@ class ProductDetailsScreen extends StatefulWidget {
   final String origin;
   final String price;
   final String imageUrl;
+  final List<String>? images;
   final String description;
   final String category;
   final bool isWholesale;
   final String? wholesaleUnit;
   final int? minPurchase;
+  final bool isStaff;
+  final bool showBasket;
 
   const ProductDetailsScreen({
     super.key,
@@ -32,11 +35,14 @@ class ProductDetailsScreen extends StatefulWidget {
     required this.origin,
     required this.price,
     required this.imageUrl,
+    this.images,
     this.description = 'This artisan product is sourced directly from local farms. Produced with organic and sustainable methods, ensuring the highest quality, flavor, and freshness.',
     this.category = 'Fresh Produce',
     this.isWholesale = false,
     this.wholesaleUnit,
     this.minPurchase,
+    this.isStaff = false,
+    this.showBasket = true,
   });
 
   @override
@@ -47,6 +53,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   int _quantity = 1;
   bool _isAddingToBasket = false;
   late final WishlistRx? _wishlistRx;
+  
+  final PageController _pageController = PageController();
+  int _currentImageIndex = 0;
+  List<String> _allImages = [];
 
   @override
   void initState() {
@@ -59,6 +69,32 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     } catch (_) {
       _wishlistRx = null;
     }
+    
+    _buildImagesList();
+  }
+  
+  void _buildImagesList() {
+    final list = <String>[];
+    if (widget.images != null && widget.images!.isNotEmpty) {
+      for (var img in widget.images!) {
+        if (img.trim().isNotEmpty && !list.contains(img.trim())) {
+          list.add(img.trim());
+        }
+      }
+    }
+    if (widget.imageUrl.trim().isNotEmpty && !list.contains(widget.imageUrl.trim())) {
+      list.insert(0, widget.imageUrl.trim());
+    }
+    if (list.isEmpty) {
+      list.add(widget.imageUrl);
+    }
+    _allImages = list;
+  }
+  
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -71,7 +107,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         slivers: [
           // Premium Sliver App Bar with Image
           SliverAppBar(
-            expandedHeight: 350.h,
+            expandedHeight: _allImages.length > 1 ? 400.h : 350.h,
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: Padding(
@@ -85,13 +121,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
             ),
             actions: [
-              if (widget.id != null && _wishlistRx != null)
+              if (!widget.isStaff && widget.id != null && _wishlistRx != null)
                 Padding(
                   padding: EdgeInsets.only(right: 16.w, top: 8.h),
                   child: StreamBuilder<List<PostCreateWishlistModel>>(
-                    stream: _wishlistRx.valueStreamData,
+                    stream: _wishlistRx!.valueStreamData,
                     builder: (context, snapshot) {
-                      final isWish = _wishlistRx.isWishlisted(widget.id);
+                      final isWish = _wishlistRx!.isWishlisted(widget.id);
 
                       return CircleAvatar(
                         backgroundColor: Colors.white,
@@ -102,9 +138,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           ),
                           onPressed: () {
                             if (isWish) {
-                              _wishlistRx.removeItem(widget.id!);
+                              _wishlistRx!.removeItem(widget.id!);
                             } else {
-                              _wishlistRx.addItem(widget.id!);
+                              _wishlistRx!.addItem(widget.id!);
                             }
                           },
                         ),
@@ -114,17 +150,107 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: CachedNetworkImage(
-                imageUrl: widget.imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey.shade200,
-                  child: const Center(child: CircularProgressIndicator(color: primaryBrandColor)),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey.shade100,
-                  child: const Icon(Icons.grass, size: 60, color: primaryBrandColor),
-                ),
+              background: Stack(
+                children: [
+                  PageView.builder(
+                    controller: _pageController,
+                    itemCount: _allImages.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentImageIndex = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      return CachedNetworkImage(
+                        imageUrl: _allImages[index],
+                        fit: BoxFit.cover,
+                        memCacheWidth: 800,
+                        memCacheHeight: 800,
+                        maxWidthDiskCache: 1200,
+                        maxHeightDiskCache: 1200,
+                        fadeInDuration: const Duration(milliseconds: 100),
+                        fadeOutDuration: const Duration(milliseconds: 100),
+                        placeholder: (context, url) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Center(child: CircularProgressIndicator(color: primaryBrandColor)),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.grey.shade100,
+                          child: const Icon(Icons.grass, size: 60, color: primaryBrandColor),
+                        ),
+                      );
+                    },
+                  ),
+                  if (_allImages.length > 1)
+                    Positioned(
+                      bottom: 80.h, // Space for thumbnail strip
+                      right: 16.w,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(20.r),
+                        ),
+                        child: Text(
+                          '${_currentImageIndex + 1} / ${_allImages.length}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_allImages.length > 1)
+                    Positioned(
+                      bottom: 16.h,
+                      left: 0,
+                      right: 0,
+                      child: SizedBox(
+                        height: 50.h,
+                        child: ListView.separated(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _allImages.length,
+                          separatorBuilder: (context, _) => SizedBox(width: 8.w),
+                          itemBuilder: (context, index) {
+                            final isSelected = index == _currentImageIndex;
+                            return GestureDetector(
+                              onTap: () {
+                                _pageController.animateToPage(
+                                  index,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: 50.w,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  border: Border.all(
+                                    color: isSelected ? primaryBrandColor : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6.r),
+                                  child: CachedNetworkImage(
+                                    imageUrl: _allImages[index],
+                                    fit: BoxFit.cover,
+                                    memCacheWidth: 150,
+                                    memCacheHeight: 150,
+                                    fadeInDuration: const Duration(milliseconds: 100),
+                                    fadeOutDuration: const Duration(milliseconds: 100),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -227,175 +353,177 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       height: 1.5,
                     ),
                   ),
-                  SizedBox(height: 24.h),
+                  if (!widget.isStaff && widget.showBasket) ...[
+                    SizedBox(height: 24.h),
 
-                  // Quantity Selector Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Quantity',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF151E13),
+                    // Quantity Selector Section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Quantity',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF151E13),
+                          ),
                         ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                if (_quantity > 1) {
-                                  setState(() {
-                                    _quantity--;
-                                  });
-                                }
-                              },
-                              icon: const Icon(Icons.remove, color: Color(0xFF151E13)),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8.w),
-                              child: Text(
-                                '$_quantity',
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF151E13),
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _quantity++;
-                                });
-                              },
-                              icon: const Icon(Icons.add, color: Color(0xFF151E13)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 32.h),
-
-                  // Add To Basket Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56.h,
-                    child: ElevatedButton(
-                      onPressed: _isAddingToBasket
-                          ? null
-                          : () async {
-                              setState(() {
-                                _isAddingToBasket = true;
-                              });
-
-                              bool success = false;
-                              String errorMsg = '';
-
-                              // 1. If product has ID, invoke the backend Basket API
-                              if (widget.id != null && widget.id!.isNotEmpty) {
-                                try {
-                                  await EasyLoading.show(status: 'Adding to basket...');
-                                  await CustomerOrdersApi.instance.addBasketItem(widget.id!, _quantity);
-                                  success = true;
-                                } catch (e) {
-                                  if (e is DioException && e.response?.data is Map) {
-                                    final data = e.response!.data as Map;
-                                    errorMsg = data['message']?.toString() ?? data['detail']?.toString() ?? '';
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                onPressed: () {
+                                  if (_quantity > 1) {
+                                    setState(() {
+                                      _quantity--;
+                                    });
                                   }
-                                } finally {
-                                  EasyLoading.dismiss();
-                                }
-                              } else {
-                                // If id was not provided, still allow adding
-                                success = true;
-                              }
-
-                              // 2. If Wholesale product / mode
-                              if (widget.isWholesale) {
-                                final double? priceVal = double.tryParse(widget.price.replaceAll(RegExp(r'[^0-9.]'), ''));
-                                WholesaleCartState.addToCart(
-                                  id: widget.id ?? '',
-                                  name: widget.name,
-                                  price: priceVal ?? 0.0,
-                                  unit: widget.wholesaleUnit ?? 'unit',
-                                  imageUrl: widget.imageUrl,
-                                  minPurchase: widget.minPurchase ?? 1,
-                                  qty: _quantity.toDouble(),
-                                );
-                                success = true;
-                              }
-
-                              setState(() {
-                                _isAddingToBasket = false;
-                              });
-
-                              if (success) {
-                                Get.back();
-                                Get.snackbar(
-                                  'Added to Basket',
-                                  '${widget.name} ($_quantity) added to your basket.',
-                                  backgroundColor: primaryBrandColor,
-                                  colorText: Colors.white,
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  margin: EdgeInsets.all(16.w),
-                                  duration: const Duration(seconds: 3),
-                                  mainButton: TextButton(
-                                    onPressed: () {
-                                      if (widget.isWholesale) {
-                                        Get.to(() => const WholesaleCartScreen());
-                                      } else {
-                                        Get.to(() => CustomerCartScreen(cartItems: RxList<Map<String, dynamic>>([])));
-                                      }
-                                    },
-                                    child: const Text(
-                                      'VIEW BASKET',
-                                      style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                AppToast.error(errorMsg.isNotEmpty ? errorMsg : "Failed to add to basket. Please try again.");
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBrandColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: _isAddingToBasket
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.shopping_basket, color: Colors.white),
-                                SizedBox(width: 12.w),
-                                Text(
-                                  'Add to Basket',
+                                },
+                                icon: const Icon(Icons.remove, color: Color(0xFF151E13)),
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w),
+                                child: Text(
+                                  '$_quantity',
                                   style: TextStyle(
                                     fontSize: 16.sp,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: const Color(0xFF151E13),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _quantity++;
+                                  });
+                                },
+                                icon: const Icon(Icons.add, color: Color(0xFF151E13)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                    SizedBox(height: 32.h),
+
+                    // Add To Basket Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56.h,
+                      child: ElevatedButton(
+                        onPressed: _isAddingToBasket
+                            ? null
+                            : () async {
+                                setState(() {
+                                  _isAddingToBasket = true;
+                                });
+
+                                bool success = false;
+                                String errorMsg = '';
+
+                                // 1. If product has ID, invoke the backend Basket API
+                                if (widget.id != null && widget.id!.isNotEmpty) {
+                                  try {
+                                    await EasyLoading.show(status: 'Adding to basket...');
+                                    await CustomerOrdersApi.instance.addBasketItem(widget.id!, _quantity);
+                                    success = true;
+                                  } catch (e) {
+                                    if (e is DioException && e.response?.data is Map) {
+                                      final data = e.response!.data as Map;
+                                      errorMsg = data['message']?.toString() ?? data['detail']?.toString() ?? '';
+                                    }
+                                  } finally {
+                                    EasyLoading.dismiss();
+                                  }
+                                } else {
+                                  // If id was not provided, still allow adding
+                                  success = true;
+                                }
+
+                                // 2. If Wholesale product / mode
+                                if (widget.isWholesale) {
+                                  final double? priceVal = double.tryParse(widget.price.replaceAll(RegExp(r'[^0-9.]'), ''));
+                                  WholesaleCartState.addToCart(
+                                    id: widget.id ?? '',
+                                    name: widget.name,
+                                    price: priceVal ?? 0.0,
+                                    unit: widget.wholesaleUnit ?? 'unit',
+                                    imageUrl: widget.imageUrl,
+                                    minPurchase: widget.minPurchase ?? 1,
+                                    qty: _quantity.toDouble(),
+                                  );
+                                  success = true;
+                                }
+
+                                setState(() {
+                                  _isAddingToBasket = false;
+                                });
+
+                                if (success) {
+                                  Get.back();
+                                  Get.snackbar(
+                                    'Added to Basket',
+                                    '${widget.name} ($_quantity) added to your basket.',
+                                    backgroundColor: primaryBrandColor,
+                                    colorText: Colors.white,
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    margin: EdgeInsets.all(16.w),
+                                    duration: const Duration(seconds: 3),
+                                    mainButton: TextButton(
+                                      onPressed: () {
+                                        if (widget.isWholesale) {
+                                          Get.to(() => const WholesaleCartScreen());
+                                        } else {
+                                          Get.to(() => CustomerCartScreen(cartItems: RxList<Map<String, dynamic>>([])));
+                                        }
+                                      },
+                                      child: const Text(
+                                        'VIEW BASKET',
+                                        style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  AppToast.error(errorMsg.isNotEmpty ? errorMsg : "Failed to add to basket. Please try again.");
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryBrandColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16.r),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: _isAddingToBasket
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.shopping_basket, color: Colors.white),
+                                  SizedBox(width: 12.w),
+                                  Text(
+                                    'Add to Basket',
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
                   SizedBox(height: 40.h),
                 ],
               ),

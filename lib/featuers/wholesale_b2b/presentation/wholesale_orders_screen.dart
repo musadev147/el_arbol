@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/no_internet_or_data_widget.dart';
 import '../../customers/orders/data/customer_orders_rx.dart';
 
 class WholesaleOrdersScreen extends StatefulWidget {
@@ -113,27 +115,6 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
     );
   }
 
-  final List<Map<String, dynamic>> _mockOrders = [
-    {
-      'id': 'WHS-40812',
-      'created_at': DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
-      'total': '350.00',
-      'status': 'Confirmed',
-      'items_count': 5,
-      'adjustments': '-25.00',
-      'refunds': '0.0',
-    },
-    {
-      'id': 'WHS-39908',
-      'created_at': DateTime.now().subtract(const Duration(days: 6)).toIso8601String(),
-      'total': '580.00',
-      'status': 'Delivered',
-      'items_count': 12,
-      'adjustments': '0.0',
-      'refunds': '50.0',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF00694C);
@@ -151,20 +132,37 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF151E13)),
+            onPressed: () => _rx.fetchOrders(),
+          ),
+        ],
       ),
       body: SafeArea(
         child: StreamBuilder<dynamic>(
           stream: _rx.valueStreamData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: primaryColor));
+              return const CustomAppLoading(message: 'Loading wholesale orders...');
             }
 
-            List<dynamic> orders = snapshot.data ?? [];
+            if (snapshot.hasError) {
+              return NoInternetOrDataWidget(
+                title: 'Failed to Load Orders',
+                message: 'Could not fetch wholesale orders. Please check your internet connection.',
+                onRetry: () => _rx.fetchOrders(),
+              );
+            }
 
-            // Graceful fallback if backend API returns 500 or is empty
-            if (snapshot.hasError || orders.isEmpty) {
-              orders = _mockOrders;
+            final List<dynamic> orders = (snapshot.data is List) ? (snapshot.data as List) : [];
+
+            if (orders.isEmpty) {
+              return NoInternetOrDataWidget(
+                title: 'No Wholesale Orders',
+                message: 'You have not placed any wholesale orders yet.',
+                onRetry: () => _rx.fetchOrders(),
+              );
             }
 
             return RefreshIndicator(

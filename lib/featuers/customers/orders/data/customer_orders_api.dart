@@ -13,12 +13,18 @@ class CustomerOrdersApi {
       final response = await getHttp(Endpoints.customerOrders());
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
-      } else {
-        throw DataSource.DEFAULT.getFailure();
       }
-    } catch (e) {
-      rethrow;
+    } catch (_) {
+      try {
+        final fallback = await getHttp("auth/orders/");
+        if (fallback.statusCode == 200 || fallback.statusCode == 201) {
+          return fallback.data;
+        }
+      } catch (e2) {
+        rethrow;
+      }
     }
+    throw DataSource.DEFAULT.getFailure();
   }
 
   Future<dynamic> getOrderDetails(String id) async {
@@ -26,12 +32,18 @@ class CustomerOrdersApi {
       final response = await getHttp(Endpoints.customerOrderDetails(id));
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
-      } else {
-        throw DataSource.DEFAULT.getFailure();
       }
-    } catch (e) {
-      rethrow;
+    } catch (_) {
+      try {
+        final fallback = await getHttp("auth/orders/$id/");
+        if (fallback.statusCode == 200 || fallback.statusCode == 201) {
+          return fallback.data;
+        }
+      } catch (e2) {
+        rethrow;
+      }
     }
+    throw DataSource.DEFAULT.getFailure();
   }
 
   Future<dynamic> createOrder(Map<String, dynamic> data) async {

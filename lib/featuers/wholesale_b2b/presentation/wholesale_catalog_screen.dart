@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 import 'wholesale_cart_state.dart';
 import 'wholesale_cart_screen.dart';
 import '../../customers/home/presentation/product_details_screen.dart';
@@ -63,33 +64,50 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Color(0xFF151E13)),
+            icon: const Icon(
+              Icons.notifications_outlined,
+              color: Color(0xFF151E13),
+            ),
             onPressed: () => Get.toNamed(Routes.WHOLESALE_NOTIFICATIONS_SCREEN),
           ),
           Stack(
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF151E13)),
+                icon: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: Color(0xFF151E13),
+                ),
                 onPressed: () => Get.to(() => const WholesaleCartScreen()),
               ),
               Obx(() {
-                if (WholesaleCartState.cartItems.isEmpty) return const SizedBox();
+                if (WholesaleCartState.cartItems.isEmpty)
+                  return const SizedBox();
                 return Positioned(
                   right: 6.w,
                   top: 6.h,
                   child: Container(
                     padding: EdgeInsets.all(4.r),
-                    decoration: const BoxDecoration(color: primaryColor, shape: BoxShape.circle),
-                    constraints: BoxConstraints(minWidth: 16.w, minHeight: 16.h),
+                    decoration: const BoxDecoration(
+                      color: primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: BoxConstraints(
+                      minWidth: 16.w,
+                      minHeight: 16.h,
+                    ),
                     child: Text(
                       '${WholesaleCartState.cartItems.length}',
-                      style: TextStyle(color: Colors.white, fontSize: 9.sp, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 );
-              })
+              }),
             ],
           ),
           SizedBox(width: 8.w),
@@ -132,11 +150,13 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                 stream: _productRx.valueStreamData,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: primaryColor));
+                    return const CustomAppLoading(message: 'Loading catalog products...');
                   }
 
                   if (snapshot.hasError) {
-                    return const Center(child: Text('Failed to load products list'));
+                    return const Center(
+                      child: Text('Failed to load products list'),
+                    );
                   }
 
                   final GetProductModel? model = snapshot.data;
@@ -155,7 +175,8 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                   final filteredProducts = products.where((p) {
                     final name = (p.name ?? '').toLowerCase();
                     final catName = (p.category?.name ?? '').toLowerCase();
-                    return name.contains(_searchQuery) || catName.contains(_searchQuery);
+                    return name.contains(_searchQuery) ||
+                        catName.contains(_searchQuery);
                   }).toList();
 
                   if (filteredProducts.isEmpty) {
@@ -168,7 +189,10 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                   }
 
                   return GridView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 10.h,
+                    ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       crossAxisSpacing: 14.w,
@@ -178,31 +202,49 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                     itemCount: filteredProducts.length,
                     itemBuilder: (context, index) {
                       final product = filteredProducts[index];
-                      final wholesalePriceVal = product.wholesalePrice != null 
-                          ? double.tryParse(product.wholesalePrice!) 
+                      final wholesalePriceVal = product.wholesalePrice != null
+                          ? double.tryParse(product.wholesalePrice!)
                           : null;
                       final isRunout = wholesalePriceVal == null;
 
-                      final displayPrice = isRunout 
-                          ? 'Runout' 
+                      final displayPrice = isRunout
+                          ? 'Runout'
                           : '€ ${wholesalePriceVal.toStringAsFixed(2)} / ${product.wholesaleUnit ?? product.unit ?? 'unit'}';
 
                       final imageUrl = product.thumbnailUrl ?? '';
+                      final List<String> extractedImages = [];
+                      if (product.thumbnailUrl != null)
+                        extractedImages.add(product.thumbnailUrl!);
+                      if (product.additionalImages != null) {
+                        extractedImages.addAll(
+                          product.additionalImages!
+                              .map((i) => i.image)
+                              .whereType<String>(),
+                        );
+                      }
 
                       return GestureDetector(
                         onTap: () {
-                          Get.to(() => ProductDetailsScreen(
-                                id: product.id,
-                                name: product.name ?? '',
-                                origin: product.origin ?? 'Spain Sourced',
-                                price: displayPrice,
-                                imageUrl: imageUrl,
-                                category: product.category?.name ?? '',
-                                description: product.description ?? 'Premium organic B2B crop supply. Sourced directly from certified sustainable farms.',
-                                isWholesale: true,
-                                wholesaleUnit: product.wholesaleUnit ?? product.unit ?? 'unit',
-                                minPurchase: product.minimumPurchase ?? 1,
-                              ));
+                          Get.to(
+                            () => ProductDetailsScreen(
+                              id: product.id,
+                              name: product.name ?? '',
+                              origin: product.origin ?? 'Spain Sourced',
+                              price: displayPrice,
+                              imageUrl: imageUrl,
+                              images: extractedImages,
+                              category: product.category?.name ?? '',
+                              description:
+                                  product.description ??
+                                  'Premium organic B2B crop supply. Sourced directly from certified sustainable farms.',
+                              isWholesale: true,
+                              wholesaleUnit:
+                                  product.wholesaleUnit ??
+                                  product.unit ??
+                                  'unit',
+                              minPurchase: product.minimumPurchase ?? 1,
+                            ),
+                          );
                         },
                         child: Container(
                           decoration: BoxDecoration(
@@ -219,43 +261,80 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                   fit: StackFit.expand,
                                   children: [
                                     ClipRRect(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(14.r)),
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(14.r),
+                                      ),
                                       child: imageUrl.isNotEmpty
                                           ? CachedNetworkImage(
                                               imageUrl: imageUrl,
                                               fit: BoxFit.cover,
-                                              placeholder: (context, url) => Container(
-                                                color: Colors.grey.shade100,
-                                                child: const Center(
-                                                  child: SizedBox(
-                                                    width: 20,
-                                                    height: 20,
-                                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00694C)),
+                                              memCacheWidth: 300,
+                                              memCacheHeight: 300,
+                                              maxWidthDiskCache: 600,
+                                              maxHeightDiskCache: 600,
+                                              fadeInDuration: const Duration(milliseconds: 100),
+                                              fadeOutDuration: const Duration(milliseconds: 100),
+                                              placeholder: (context, url) =>
+                                                  Container(
+                                                    color: Colors.grey.shade100,
+                                                    child: const Center(
+                                                      child: SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                              color: Color(
+                                                                0xFF00694C,
+                                                              ),
+                                                            ),
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
-                                              ),
-                                              errorWidget: (context, url, error) => Container(
-                                                color: Colors.grey.shade100,
-                                                child: const Icon(Icons.grass, color: Color(0xFF00694C), size: 30),
-                                              ),
+                                              errorWidget:
+                                                  (
+                                                    context,
+                                                    url,
+                                                    error,
+                                                  ) => Container(
+                                                    color: Colors.grey.shade100,
+                                                    child: const Icon(
+                                                      Icons.grass,
+                                                      color: Color(0xFF00694C),
+                                                      size: 30,
+                                                    ),
+                                                  ),
                                             )
                                           : Container(
                                               color: Colors.grey.shade100,
-                                              child: const Icon(Icons.grass, color: Color(0xFF00694C), size: 30),
+                                              child: const Icon(
+                                                Icons.grass,
+                                                color: Color(0xFF00694C),
+                                                size: 30,
+                                              ),
                                             ),
                                     ),
                                     if (isRunout)
                                       Container(
                                         decoration: BoxDecoration(
-                                          color: Colors.black.withValues(alpha: 0.55),
-                                          borderRadius: BorderRadius.vertical(top: Radius.circular(14.r)),
+                                          color: Colors.black.withValues(
+                                            alpha: 0.55,
+                                          ),
+                                          borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(14.r),
+                                          ),
                                         ),
                                         alignment: Alignment.center,
                                         child: Container(
-                                          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 14.w,
+                                            vertical: 6.h,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: Colors.redAccent,
-                                            borderRadius: BorderRadius.circular(20.r),
+                                            borderRadius: BorderRadius.circular(
+                                              20.r,
+                                            ),
                                           ),
                                           child: Text(
                                             'Runout',
@@ -292,11 +371,15 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                     SizedBox(height: 2.h),
                                     Text(
                                       product.category?.name ?? '',
-                                      style: TextStyle(fontSize: 11.sp, color: Colors.grey),
+                                      style: TextStyle(
+                                        fontSize: 11.sp,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                     SizedBox(height: 6.h),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Text(
@@ -304,7 +387,9 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                             style: TextStyle(
                                               fontSize: 11.sp,
                                               fontWeight: FontWeight.bold,
-                                              color: isRunout ? Colors.grey : primaryColor,
+                                              color: isRunout
+                                                  ? Colors.grey
+                                                  : primaryColor,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -313,12 +398,16 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                         if (!isRunout)
                                           GestureDetector(
                                             onTap: () {
-                                              final minQty = product.minimumPurchase ?? 1;
+                                              final minQty =
+                                                  product.minimumPurchase ?? 1;
                                               WholesaleCartState.addToCart(
                                                 id: product.id ?? '',
                                                 name: product.name ?? '',
                                                 price: wholesalePriceVal,
-                                                unit: product.wholesaleUnit ?? product.unit ?? 'unit',
+                                                unit:
+                                                    product.wholesaleUnit ??
+                                                    product.unit ??
+                                                    'unit',
                                                 imageUrl: imageUrl,
                                                 minPurchase: minQty,
                                                 stock: product.stock,
@@ -329,13 +418,23 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                                 '${product.name} added to wholesale cart.',
                                                 backgroundColor: primaryColor,
                                                 colorText: Colors.white,
-                                                duration: const Duration(seconds: 2),
-                                                snackPosition: SnackPosition.BOTTOM,
+                                                duration: const Duration(
+                                                  seconds: 2,
+                                                ),
+                                                snackPosition:
+                                                    SnackPosition.BOTTOM,
                                                 mainButton: TextButton(
-                                                  onPressed: () => Get.to(() => const WholesaleCartScreen()),
+                                                  onPressed: () => Get.to(
+                                                    () =>
+                                                        const WholesaleCartScreen(),
+                                                  ),
                                                   child: const Text(
                                                     'VIEW CART',
-                                                    style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold),
+                                                    style: TextStyle(
+                                                      color: Colors.amberAccent,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
                                                   ),
                                                 ),
                                               );
@@ -346,14 +445,18 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                                 color: primaryColor,
                                                 shape: BoxShape.circle,
                                               ),
-                                              child: const Icon(Icons.add, color: Colors.white, size: 14),
+                                              child: const Icon(
+                                                Icons.add,
+                                                color: Colors.white,
+                                                size: 14,
+                                              ),
                                             ),
-                                          )
+                                          ),
                                       ],
-                                    )
+                                    ),
                                   ],
                                 ),
-                              )
+                              ),
                             ],
                           ),
                         ),
@@ -365,17 +468,6 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Get.toNamed(Routes.WHOLESALE_ADD_PRODUCT);
-          if (result == true) {
-            _productRx.fetchProducts();
-          }
-        },
-        backgroundColor: primaryColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Product', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

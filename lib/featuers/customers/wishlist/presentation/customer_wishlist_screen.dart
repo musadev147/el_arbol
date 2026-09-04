@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 import '../data/customer_wishlist_rx.dart';
 
 class CustomerWishlistScreen extends StatefulWidget {
@@ -71,7 +72,7 @@ class _CustomerWishlistScreenState extends State<CustomerWishlistScreen> {
         stream: _rx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+            return const CustomAppLoading(message: 'Loading wishlist...');
           }
           final data = snapshot.data;
           if (data == null) {

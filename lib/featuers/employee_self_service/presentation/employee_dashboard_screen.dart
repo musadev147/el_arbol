@@ -9,6 +9,7 @@ import 'notifications_inbox_screen.dart';
 import 'price_list_screen.dart';
 import 'update_staff_profile_screen.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 import '../data/rx.dart';
 import '../model/staff_dashboard_model.dart';
 import 'package:el_arbol/route/app_pages.dart';
@@ -175,14 +176,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                 stream: _dashboardRx.valueStreamData,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Container(
+                    return SizedBox(
                       height: 180.h,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: const Center(child: CircularProgressIndicator(color: primaryColor)),
+                      child: const CustomAppLoading(message: 'Loading dashboard...'),
                     );
                   }
 

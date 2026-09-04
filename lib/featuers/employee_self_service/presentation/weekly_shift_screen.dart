@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/no_internet_or_data_widget.dart';
 import '../data/rx.dart';
 import '../model/get_staff_history_model.dart';
 
@@ -59,11 +61,15 @@ class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
           stream: _historyRx.valueStreamData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: primaryColor));
+              return const CustomAppLoading(message: 'Loading shifts...');
             }
 
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data?.shifts == null) {
-              return const Center(child: Text("Could not load shift history"));
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data?.shifts == null || snapshot.data!.shifts!.isEmpty) {
+              return NoInternetOrDataWidget(
+                title: 'No Shifts Found',
+                message: 'Could not load shift history. Please check your internet connection or try again.',
+                onRetry: () => _historyRx.fetchHistoryData(),
+              );
             }
 
             final data = snapshot.data!;
@@ -207,10 +213,10 @@ class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
                                             style: TextStyle(color: Colors.grey.shade600, fontSize: 12.sp),
                                           ),
                                           SizedBox(height: 4.h),
-                                          Text(
-                                            'Shift: ${shift.startTime ?? ''} - ${shift.endTime ?? ''}',
-                                            style: TextStyle(color: Colors.grey, fontSize: 11.sp),
-                                          )
+                                           Text(
+                                             'Shift: ${shift.startTime ?? ''} - ${shift.endTime ?? ''}${shift.breakTime != null ? '  •  Break: ${shift.breakTime}' : ''}',
+                                             style: TextStyle(color: Colors.grey, fontSize: 11.sp),
+                                           )
                                         ]
                                       ],
                                     ),

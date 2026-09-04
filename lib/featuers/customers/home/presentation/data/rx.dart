@@ -23,14 +23,11 @@ class GetProductRx extends RxResponseInt<GetProductModel> {
   /// Fetches products from the remote server.
   Future<void> fetchProducts() async {
     try {
-      await EasyLoading.show(status: "Loading products...");
       final data = await api.getProductsData();
       await handleSuccessWithReturn(data);
     } catch (error) {
       log("Fetch products error: $error");
       await handleErrorWithReturn(error);
-    } finally {
-      EasyLoading.dismiss();
     }
   }
 
@@ -118,14 +115,11 @@ class GetLeftoverStoreRx extends RxResponseInt<List<LeftoverStoreModel>> {
 
   Future<void> fetchLeftoverStores() async {
     try {
-      await EasyLoading.show(status: "Loading surplus packs...");
       final data = await api.getLeftoverStores();
       await handleSuccessWithReturn(data);
     } catch (error) {
       log("Fetch leftover stores error: $error");
       await handleErrorWithReturn(error);
-    } finally {
-      EasyLoading.dismiss();
     }
   }
 

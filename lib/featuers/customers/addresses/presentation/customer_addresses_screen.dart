@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 import 'package:get/get.dart';
 import '../data/customer_addresses_rx.dart';
 import 'customer_address_form_screen.dart';
@@ -51,7 +52,7 @@ class _CustomerAddressesScreenState extends State<CustomerAddressesScreen> {
         stream: _rx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+            return const CustomAppLoading(message: 'Loading addresses...');
           }
           final data = snapshot.data;
           if (data == null) {

@@ -208,12 +208,20 @@ class _HomeScreenState extends State<HomeScreen> {
       final double finalPrice = (discountPrice > 0) ? discountPrice : originalPrice;
       final bool onSale = discountPrice > 0;
 
+      final List<String> extractedImages = [];
+      if (p.thumbnailUrl != null) extractedImages.add(p.thumbnailUrl!);
+      if (p.additionalImages != null) {
+        extractedImages.addAll(
+            p.additionalImages!.map((i) => i.image).whereType<String>());
+      }
+
       return {
         'id': p.id ?? '',
         'name': p.name ?? '',
         'origin': p.origin ?? 'Unknown',
         'price': finalPrice,
         'imageUrl': p.thumbnailUrl ?? 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+        'images': extractedImages,
         'description': p.description ?? '',
         'category': p.category?.name ?? 'All',
         'subcategory': p.subCategory?.name ?? 'All',
@@ -732,7 +740,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           stream: _shippingMethodsRx.valueStreamData,
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator());
+                              return const Center(child: CircularProgressIndicator(color: Color(0xFF00694C)));
                             }
                             
                             List<dynamic> methods = [];
@@ -1346,6 +1354,7 @@ class _HomeScreenState extends State<HomeScreen> {
               origin: prod['origin'],
               price: '€${(prod['price'] as double).toStringAsFixed(2)}',
               imageUrl: prod['imageUrl'],
+              images: prod['images'] as List<String>?,
               description: prod['description'],
               category: prod['category'],
             ));
@@ -1376,6 +1385,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: double.infinity,
                       height: double.infinity,
                       fit: BoxFit.cover,
+                      memCacheWidth: 300,
+                      memCacheHeight: 300,
+                      maxWidthDiskCache: 600,
+                      maxHeightDiskCache: 600,
+                      fadeInDuration: const Duration(milliseconds: 100),
+                      fadeOutDuration: const Duration(milliseconds: 100),
                       errorWidget: (context, url, error) => Container(
                         color: Colors.grey.shade100,
                         child: Icon(Icons.grass, color: primaryColor, size: 36.r),

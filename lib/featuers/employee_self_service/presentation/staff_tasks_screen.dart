@@ -5,6 +5,7 @@ import 'package:el_arbol/featuers/employee_self_service/data/rx.dart';
 import 'package:el_arbol/featuers/employee_self_service/model/staff_dashboard_model.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
 
 class StaffTasksScreen extends StatefulWidget {
@@ -92,7 +93,7 @@ class _StaffTasksScreenState extends State<StaffTasksScreen> {
               stream: _tasksRx.valueStreamData,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const CustomAppLoading(message: 'Loading daily tasks...');
                 }
                 final data = snapshot.data;
                 if (data == null) {

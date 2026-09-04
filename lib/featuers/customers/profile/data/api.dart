@@ -40,14 +40,26 @@ class CustomerProfileApi {
       String fileName = image.path.split('/').last;
       FormData formData = FormData.fromMap({
         "image": await MultipartFile.fromFile(image.path, filename: fileName),
+        "avatar": await MultipartFile.fromFile(image.path, filename: fileName),
       });
 
-      final response = await postHttp(Endpoints.customerAvatar(), formData);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return response.data;
-      } else {
-        throw DataSource.DEFAULT.getFailure();
+      try {
+        final response = await postHttp(Endpoints.customerAvatar(), formData);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return response.data;
+        }
+      } catch (e) {
+        // Fallback endpoint if primary fails
+        FormData fallbackData = FormData.fromMap({
+          "image": await MultipartFile.fromFile(image.path, filename: fileName),
+          "avatar": await MultipartFile.fromFile(image.path, filename: fileName),
+        });
+        final response = await postHttp(Endpoints.updateAvater(), fallbackData);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return response.data;
+        }
       }
+      throw DataSource.DEFAULT.getFailure();
     } catch (e) {
       rethrow;
     }

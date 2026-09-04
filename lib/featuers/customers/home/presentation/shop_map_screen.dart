@@ -16,6 +16,7 @@ class ShopMapScreen extends StatefulWidget {
 
 class _ShopMapScreenState extends State<ShopMapScreen> {
   String _selectedDistance = 'All';
+  String _viewMode = 'list'; // 'list' or 'map'
   Map<String, dynamic>? _selectedShop;
 
   List<Map<String, dynamic>> _allShops = [];
@@ -35,9 +36,9 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
 
   List<Map<String, dynamic>> get _filteredShops {
     if (_selectedDistance == '5 km') {
-      return _allShops.where((shop) => (shop['distance'] as double) <= 5.0).toList();
+      return _allShops.where((shop) => ((shop['distance'] as num?)?.toDouble() ?? 0.0) <= 5.0).toList();
     } else if (_selectedDistance == '10 km') {
-      return _allShops.where((shop) => (shop['distance'] as double) <= 10.0).toList();
+      return _allShops.where((shop) => ((shop['distance'] as num?)?.toDouble() ?? 0.0) <= 10.0).toList();
     }
     return _allShops;
   }
@@ -80,6 +81,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
               'address': 'Calle Sierpes 14, Sevilla',
               'distance': 1.2,
               'phone': '+34 954 123 456',
+              'status': 'Open • Closes 21:00',
               'lat': 0.3,
               'lng': 0.4,
               'mapLink': 'https://maps.google.com/?q=Calle+Sierpes+14,+Sevilla',
@@ -116,6 +118,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
               'address': 'Avenida de la Buhaira 27, Sevilla',
               'distance': 4.5,
               'phone': '+34 954 987 654',
+              'status': 'Open • Closes 21:30',
               'lat': 0.6,
               'lng': 0.5,
               'mapLink': 'https://maps.google.com/?q=Avenida+de+la+Buhaira+27,+Sevilla',
@@ -144,6 +147,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
               'address': 'Calle San Jacinto 82, Sevilla',
               'distance': 8.7,
               'phone': '+34 954 555 111',
+              'status': 'Open • Closes 21:00',
               'lat': 0.2,
               'lng': 0.8,
               'mapLink': 'https://maps.google.com/?q=Calle+San+Jacinto+82,+Sevilla',
@@ -165,7 +169,65 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                   'description': 'Sourced directly from the mountains of Michoacán, Haas avocados.',
                 },
               ]
-            }
+            },
+            {
+              'id': 'fallback-macarena',
+              'name': 'El Árbol Macarena',
+              'address': 'Calle Resolana 34, Sevilla',
+              'distance': 3.1,
+              'phone': '+34 954 332 211',
+              'status': 'Open • Closes 21:00',
+              'lat': 0.8,
+              'lng': 0.3,
+              'mapLink': 'https://maps.google.com/?q=Calle+Resolana+34,+Sevilla',
+              'products': [
+                {
+                  'name': 'Sweet Organic Strawberries',
+                  'price': '€5.50',
+                  'origin': 'Huelva, ES',
+                  'imageUrl': 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=500&auto=format&fit=crop',
+                  'category': 'Fruits',
+                  'description': 'Juicy, hand-picked organic strawberries from Huelva.',
+                },
+                {
+                  'name': 'Artisan Raw Honey',
+                  'price': '€8.90',
+                  'origin': 'Black Forest, DE',
+                  'imageUrl': 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=500&auto=format&fit=crop',
+                  'category': 'Grocery',
+                  'description': 'Pure, unpasteurized honey harvested from organic apiaries.',
+                },
+              ]
+            },
+            {
+              'id': 'fallback-remedios',
+              'name': 'El Árbol Los Remedios',
+              'address': 'Calle Asunción 45, Sevilla',
+              'distance': 6.2,
+              'phone': '+34 954 667 889',
+              'status': 'Open • Closes 21:30',
+              'lat': 0.4,
+              'lng': 0.7,
+              'mapLink': 'https://maps.google.com/?q=Calle+Asuncion+45,+Sevilla',
+              'products': [
+                {
+                  'name': 'Fresh Goat Cheese',
+                  'price': '€6.80',
+                  'origin': 'Loire Valley, FR',
+                  'imageUrl': 'https://images.unsplash.com/photo-1524351199679-46cddf530c04?w=500&auto=format&fit=crop',
+                  'category': 'Fresh Cheese',
+                  'description': 'A creamy, traditional French chèvre made using raw goat milk.',
+                },
+                {
+                  'name': 'Organic Heirloom Tomatoes',
+                  'price': '€4.20',
+                  'origin': 'Andalusia, ES',
+                  'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+                  'category': 'Vegetables',
+                  'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain.',
+                },
+              ]
+            },
           ]);
         } else {
           for (var i = 0; i < results.length; i++) {
@@ -176,6 +238,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
               'address': item['address'] ?? item['street'] ?? 'Calle Sierpes 14, Sevilla',
               'distance': double.tryParse(item['distance']?.toString() ?? '') ?? (1.2 * (i + 1)),
               'phone': item['phone'] ?? '+34 954 123 456',
+              'status': item['status'] ?? 'Open • Closes 21:00',
               'lat': double.tryParse(item['lat']?.toString() ?? '') ?? (0.3 + (i * 0.1)),
               'lng': double.tryParse(item['lng']?.toString() ?? '') ?? (0.4 + (i * 0.1)),
               'mapLink': item['mapLink'] ?? item['map_url'] ?? '',
@@ -187,22 +250,6 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                   'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
                   'category': 'Vegetables',
                   'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain.',
-                },
-                {
-                  'name': 'Sweet Organic Strawberries',
-                  'price': '€5.50',
-                  'origin': 'Huelva, ES',
-                  'imageUrl': 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=500&auto=format&fit=crop',
-                  'category': 'Fruits',
-                  'description': 'Juicy, hand-picked organic strawberries from Huelva.',
-                },
-                {
-                  'name': 'Fresh Goat Cheese',
-                  'price': '€6.80',
-                  'origin': 'Loire Valley, FR',
-                  'imageUrl': 'https://images.unsplash.com/photo-1524351199679-46cddf530c04?w=500&auto=format&fit=crop',
-                  'category': 'Fresh Cheese',
-                  'description': 'A creamy, traditional French chèvre made using raw goat milk.',
                 },
               ]
             });
@@ -227,6 +274,23 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
     super.dispose();
   }
 
+  Future<void> _launchDirections(Map<String, dynamic> shop) async {
+    final mapLink = shop['mapLink'] ?? '';
+    final lat = shop['lat'];
+    final lng = shop['lng'];
+    String url = '';
+    if (lat != null && lng != null) {
+      url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    } else if (mapLink.toString().isNotEmpty) {
+      url = mapLink.toString();
+    } else {
+      url = 'https://maps.google.com/?q=${Uri.encodeComponent(shop['address'] ?? shop['name'])}';
+    }
+    if (url.isNotEmpty) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF00694C);
@@ -236,7 +300,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
       backgroundColor: const Color(0xFFFAFAF8),
       appBar: AppBar(
         title: const Text(
-          'Find Stores',
+          'Our Stores',
           style: TextStyle(
             color: Color(0xFF151E13),
             fontFamily: 'Poppins',
@@ -245,342 +309,669 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF151E13)),
+            onPressed: () => _storesRx.fetchStores(),
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Distance Filters
+          // View Mode Switcher + Distance Filter
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
             child: Row(
-              children: ['5 km', '10 km', 'All'].map((dist) {
-                final isSelected = _selectedDistance == dist;
-                return Container(
-                  margin: EdgeInsets.only(right: 8.w),
-                  child: ChoiceChip(
-                    label: Text(
-                      dist,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    selected: isSelected,
-                    selectedColor: primaryColor,
-                    backgroundColor: Colors.white,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _selectedDistance = dist;
-                          if (!shops.contains(_selectedShop)) {
-                            _selectedShop = shops.isNotEmpty ? shops.first : null;
-                          }
-                        });
-                      }
-                    },
+              children: [
+                // View Mode Toggle
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
-                );
-              }).toList(),
-            ),
-          ),
-
-          // Map view mock
-          Expanded(
-            flex: 3,
-            child: Container(
-              margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE3ECD5),
-                borderRadius: BorderRadius.circular(20.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                  )
-                ],
-              ),
-              child: Stack(
-                children: [
-                  CustomPaint(
-                    size: Size.infinite,
-                    painter: MapBackgroundPainter(),
-                  ),
-                  ...shops.map((shop) {
-                    final isSelected = _selectedShop == shop;
-                    return Positioned(
-                      left: normalizeLng(shop['lng']) * 300.w + 20.w,
-                      top: normalizeLat(shop['lat']) * 200.h + 20.h,
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedShop = shop;
-                          });
-                        },
-                        child: AnimatedScale(
-                          scale: isSelected ? 1.3 : 1.0,
-                          duration: const Duration(milliseconds: 200),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _viewMode = 'list'),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: _viewMode == 'list' ? primaryColor : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Row(
                             children: [
-                              Container(
-                                padding: EdgeInsets.all(4.r),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8.r),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                    )
-                                  ],
+                              Icon(Icons.list, size: 16.sp, color: _viewMode == 'list' ? Colors.white : Colors.black87),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'List (${shops.length})',
+                                style: TextStyle(
+                                  color: _viewMode == 'list' ? Colors.white : Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.sp,
                                 ),
-                                child: Text(
-                                  shop['name'],
-                                  style: TextStyle(
-                                    fontSize: 8.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryColor,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                Icons.location_on,
-                                color: isSelected ? Colors.red : primaryColor,
-                                size: 32.r,
                               ),
                             ],
                           ),
                         ),
                       ),
-                    );
-                  }).toList(),
-                  Positioned(
-                    bottom: 16.h,
-                    right: 16.w,
-                    child: FloatingActionButton.small(
-                      onPressed: () async {
-                        if (_selectedShop != null) {
-                          final mapLink = _selectedShop!['mapLink'] ?? '';
-                          final lat = _selectedShop!['lat'];
-                          final lng = _selectedShop!['lng'];
-                          String url = '';
-                          if (lat != null && lng != null) {
-                            url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
-                          } else if (mapLink.toString().isNotEmpty) {
-                            url = mapLink.toString();
-                          }
-                          if (url.isNotEmpty) {
-                            await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                          }
-                        }
-                      },
-                      backgroundColor: Colors.white,
-                      foregroundColor: primaryColor,
-                      child: const Icon(Icons.my_location),
+                      GestureDetector(
+                        onTap: () => setState(() => _viewMode = 'map'),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: _viewMode == 'map' ? primaryColor : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.map_outlined, size: 16.sp, color: _viewMode == 'map' ? Colors.white : Colors.black87),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'Map',
+                                style: TextStyle(
+                                  color: _viewMode == 'map' ? Colors.white : Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                // Distance chips
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['All', '5 km', '10 km'].map((dist) {
+                        final isSelected = _selectedDistance == dist;
+                        return Container(
+                          margin: EdgeInsets.only(right: 6.w),
+                          child: ChoiceChip(
+                            label: Text(
+                              dist,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : primaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.sp,
+                              ),
+                            ),
+                            selected: isSelected,
+                            selectedColor: primaryColor,
+                            backgroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() {
+                                  _selectedDistance = dist;
+                                  if (!shops.contains(_selectedShop)) {
+                                    _selectedShop = shops.isNotEmpty ? shops.first : null;
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
 
-          // Selected Shop Detail & Inventory
-          if (_selectedShop != null)
-            Expanded(
-              flex: 4,
-              child: Container(
-                margin: EdgeInsets.all(16.r),
+          // Body depending on ViewMode
+          Expanded(
+            child: _viewMode == 'list'
+                ? _buildStoresListView(shops, primaryColor)
+                : _buildMapView(shops, primaryColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStoresListView(List<Map<String, dynamic>> shops, Color primaryColor) {
+    if (shops.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.storefront_outlined, size: 64.r, color: Colors.grey.shade400),
+            SizedBox(height: 12.h),
+            Text('No stores found in this area', style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: EdgeInsets.all(16.r),
+      itemCount: shops.length,
+      separatorBuilder: (context, index) => SizedBox(height: 16.h),
+      itemBuilder: (context, index) {
+        final shop = shops[index];
+        final products = (shop['products'] as List? ?? []);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
                 padding: EdgeInsets.all(16.r),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                    )
-                  ],
-                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Container(
+                          padding: EdgeInsets.all(10.r),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(Icons.storefront_rounded, color: primaryColor, size: 24.sp),
+                        ),
+                        SizedBox(width: 12.w),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _selectedShop!['name'],
+                                shop['name'] ?? 'Store',
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
-                                  fontSize: 16.sp,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 15.sp,
                                   color: const Color(0xFF151E13),
                                 ),
                               ),
-                              Text(
-                                _selectedShop!['address'],
-                                style: TextStyle(
-                                  fontSize: 11.sp,
-                                  color: const Color(0xFF6D7A73),
-                                ),
+                              SizedBox(height: 2.h),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on_outlined, size: 14.sp, color: Colors.grey.shade600),
+                                  SizedBox(width: 2.w),
+                                  Expanded(
+                                    child: Text(
+                                      shop['address'] ?? '',
+                                      style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                           decoration: BoxDecoration(
                             color: primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10.r),
+                            borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: Text(
-                            '${_selectedShop!['distance']} km',
+                            '${shop['distance']} km',
                             style: TextStyle(
-                              fontSize: 12.sp,
+                              fontSize: 11.sp,
                               fontWeight: FontWeight.bold,
                               color: primaryColor,
                             ),
                           ),
                         ),
-                        SizedBox(width: 4.w),
-                        IconButton(
-                          onPressed: () async {
-                            final mapLink = _selectedShop!['mapLink'] ?? '';
-                            final lat = _selectedShop!['lat'];
-                            final lng = _selectedShop!['lng'];
-                            String url = '';
-                            if (lat != null && lng != null) {
-                              url = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
-                            } else if (mapLink.toString().isNotEmpty) {
-                              url = mapLink.toString();
-                            }
-                            if (url.isNotEmpty) {
-                              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                            }
-                          },
-                          icon: const Icon(Icons.directions, color: primaryColor),
-                          tooltip: 'Open in Google Maps',
-                        ),
                       ],
                     ),
-                    const Divider(height: 20),
-                    Text(
-                      "Available Products & Live Prices",
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF151E13),
-                      ),
+                    SizedBox(height: 12.h),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6.r),
+                          ),
+                          child: Text(
+                            shop['status'] ?? 'Open Now • Closes 21:00',
+                            style: TextStyle(fontSize: 11.sp, color: Colors.green.shade800, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const Spacer(),
+                        if (shop['phone'] != null)
+                          Text(
+                            shop['phone'],
+                            style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
+                          ),
+                      ],
                     ),
-                    SizedBox(height: 8.h),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: (_selectedShop!['products'] as List).length,
-                        itemBuilder: (context, index) {
-                          final product = _selectedShop!['products'][index];
-                          return InkWell(
-                            onTap: () {
-                              Get.to(() => ProductDetailsScreen(
-                                    id: product['id']?.toString(),
-                                    name: product['name'],
-                                    origin: product['origin'],
-                                    price: product['price'],
-                                    imageUrl: product['imageUrl'],
-                                    description: product['description'],
-                                    category: product['category'],
-                                  ));
-                            },
-                            child: Container(
-                              margin: EdgeInsets.only(bottom: 8.h),
-                              padding: EdgeInsets.all(8.r),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade100),
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              child: Row(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8.r),
-                                    child: CachedNetworkImage(
-                                      imageUrl: product['imageUrl'],
-                                      width: 48.w,
-                                      height: 48.w,
-                                      fit: BoxFit.cover,
-                                      placeholder: (context, url) => Container(
-                                        color: Colors.grey.shade100,
-                                        width: 48.w,
-                                        height: 48.w,
-                                        child: const Center(
-                                          child: SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00694C)),
-                                          ),
-                                        ),
-                                      ),
-                                      errorWidget: (context, url, error) => Container(
-                                        color: Colors.grey.shade100,
-                                        width: 48.w,
-                                        height: 48.w,
-                                        child: const Icon(Icons.grass, color: Color(0xFF00694C), size: 24),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 12.w),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          product['name'],
-                                          style: TextStyle(
-                                            fontSize: 13.sp,
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF151E13),
-                                          ),
-                                        ),
-                                        Text(
-                                          product['category'],
-                                          style: TextStyle(
-                                            fontSize: 10.sp,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Text(
-                                    product['price'],
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.amber.shade800,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
-                                ],
-                              ),
+                    SizedBox(height: 12.h),
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: primaryColor,
+                              side: BorderSide(color: primaryColor),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                              padding: EdgeInsets.symmetric(vertical: 8.h),
                             ),
-                          );
-                        },
-                      ),
+                            onPressed: () {
+                              setState(() {
+                                _selectedShop = shop;
+                                _viewMode = 'map';
+                              });
+                            },
+                            icon: const Icon(Icons.map_outlined, size: 16),
+                            label: const Text('View on Map', style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                              padding: EdgeInsets.symmetric(vertical: 8.h),
+                            ),
+                            onPressed: () => _launchDirections(shop),
+                            icon: const Icon(Icons.directions, size: 16),
+                            label: const Text('Directions', style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-            )
-          else
-            const Expanded(
-              child: Center(
-                child: Text('No shops found within the selected distance.'),
+
+              // Available Store Products Strip
+              if (products.isNotEmpty) ...[
+                const Divider(height: 1),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.r, 12.r, 16.r, 8.r),
+                  child: Text(
+                    'Available In Store (${products.length})',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF151E13),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 110.h,
+                  child: ListView.separated(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: products.length,
+                    separatorBuilder: (context, index) => SizedBox(width: 10.w),
+                    itemBuilder: (context, pIndex) {
+                      final p = products[pIndex];
+                      return GestureDetector(
+                        onTap: () {
+                          Get.to(() => ProductDetailsScreen(
+                                id: p['id']?.toString(),
+                                name: p['name'],
+                                origin: p['origin'],
+                                price: p['price'],
+                                imageUrl: p['imageUrl'],
+                                description: p['description'],
+                                category: p['category'],
+                              ));
+                        },
+                        child: Container(
+                          width: 160.w,
+                          padding: EdgeInsets.all(8.r),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FBF8),
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6.r),
+                                child: CachedNetworkImage(
+                                  imageUrl: p['imageUrl'] ?? '',
+                                  width: 44.w,
+                                  height: 44.w,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => Container(
+                                    color: Colors.grey.shade100,
+                                    width: 44.w,
+                                    height: 44.w,
+                                    child: Icon(Icons.grass, color: primaryColor),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      p['name'] ?? '',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.sp),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    SizedBox(height: 2.h),
+                                    Text(
+                                      p['price'] ?? '',
+                                      style: TextStyle(
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 8.h),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMapView(List<Map<String, dynamic>> shops, Color primaryColor) {
+    return Column(
+      children: [
+        // Map view mock
+        Expanded(
+          flex: 3,
+          child: Container(
+            margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3ECD5),
+              borderRadius: BorderRadius.circular(20.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                )
+              ],
+            ),
+            child: Stack(
+              children: [
+                CustomPaint(
+                  size: Size.infinite,
+                  painter: MapBackgroundPainter(),
+                ),
+                ...shops.map((shop) {
+                  final isSelected = _selectedShop == shop;
+                  return Positioned(
+                    left: normalizeLng(shop['lng']) * 300.w + 20.w,
+                    top: normalizeLat(shop['lat']) * 200.h + 20.h,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedShop = shop;
+                        });
+                      },
+                      child: AnimatedScale(
+                        scale: isSelected ? 1.3 : 1.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(4.r),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8.r),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 4,
+                                  )
+                                ],
+                              ),
+                              child: Text(
+                                shop['name'],
+                                style: TextStyle(
+                                  fontSize: 8.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.location_on,
+                              color: isSelected ? Colors.red : primaryColor,
+                              size: 32.r,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+                Positioned(
+                  bottom: 16.h,
+                  right: 16.w,
+                  child: FloatingActionButton.small(
+                    onPressed: () {
+                      if (_selectedShop != null) {
+                        _launchDirections(_selectedShop!);
+                      }
+                    },
+                    backgroundColor: Colors.white,
+                    foregroundColor: primaryColor,
+                    child: const Icon(Icons.my_location),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Selected Shop Detail & Inventory
+        if (_selectedShop != null)
+          Expanded(
+            flex: 4,
+            child: Container(
+              margin: EdgeInsets.all(16.r),
+              padding: EdgeInsets.all(16.r),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                  )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedShop!['name'],
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF151E13),
+                              ),
+                            ),
+                            Text(
+                              _selectedShop!['address'],
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: const Color(0xFF6D7A73),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: Text(
+                          '${_selectedShop!['distance']} km',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 4.w),
+                      IconButton(
+                        onPressed: () => _launchDirections(_selectedShop!),
+                        icon: Icon(Icons.directions, color: primaryColor),
+                        tooltip: 'Open in Google Maps',
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  Text(
+                    "Available Products & Live Prices",
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF151E13),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: (_selectedShop!['products'] as List).length,
+                      itemBuilder: (context, index) {
+                        final product = _selectedShop!['products'][index];
+                        return InkWell(
+                          onTap: () {
+                            Get.to(() => ProductDetailsScreen(
+                                  id: product['id']?.toString(),
+                                  name: product['name'],
+                                  origin: product['origin'],
+                                  price: product['price'],
+                                  imageUrl: product['imageUrl'],
+                                  description: product['description'],
+                                  category: product['category'],
+                                ));
+                          },
+                          child: Container(
+                            margin: EdgeInsets.only(bottom: 8.h),
+                            padding: EdgeInsets.all(8.r),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade100),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  child: CachedNetworkImage(
+                                    imageUrl: product['imageUrl'],
+                                    width: 48.w,
+                                    height: 48.w,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(
+                                      color: Colors.grey.shade100,
+                                      width: 48.w,
+                                      height: 48.w,
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00694C)),
+                                        ),
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) => const Icon(Icons.grass, color: Color(0xFF00694C)),
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        product['name'],
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13.sp,
+                                          color: const Color(0xFF151E13),
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        product['origin'] ?? product['category'] ?? '',
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color: const Color(0xFF6D7A73),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  product['price'],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14.sp,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

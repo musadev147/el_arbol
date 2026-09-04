@@ -513,7 +513,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                                   stream: _storesRx.valueStreamData,
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState == ConnectionState.waiting) {
-                                      return const Center(child: CircularProgressIndicator());
+                                      return const Center(child: CircularProgressIndicator(color: primaryColor));
                                     }
 
                                     List<dynamic> stores = [];
@@ -663,7 +663,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                                       stream: _shippingMethodsRx.valueStreamData,
                                       builder: (context, snapshot) {
                                         if (snapshot.connectionState == ConnectionState.waiting) {
-                                          return const Center(child: CircularProgressIndicator());
+                                          return const Center(child: CircularProgressIndicator(color: primaryColor));
                                         }
 
                                         List<dynamic> methods = [];

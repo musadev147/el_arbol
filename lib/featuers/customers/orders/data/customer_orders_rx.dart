@@ -18,8 +18,14 @@ class CustomerOrdersRx extends RxResponseInt<List<dynamic>> {
       List<dynamic> list = [];
       if (data is List) {
         list = data;
-      } else if (data is Map && data.containsKey('results')) {
-        list = data['results'];
+      } else if (data is Map) {
+        if (data.containsKey('results') && data['results'] is List) {
+          list = data['results'];
+        } else if (data.containsKey('data') && data['data'] is List) {
+          list = data['data'];
+        } else if (data.containsKey('orders') && data['orders'] is List) {
+          list = data['orders'];
+        }
       }
       await handleSuccessWithReturn(list);
     } catch (e) {
@@ -30,12 +36,16 @@ class CustomerOrdersRx extends RxResponseInt<List<dynamic>> {
 
   @override
   Future<void> handleSuccessWithReturn(dynamic data) async {
-    dataFetcher.sink.add(data is List ? data : []);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data is List ? data : []);
+    }
   }
 
   @override
   Future<void> handleErrorWithReturn(dynamic error) async {
-    dataFetcher.sink.addError(error);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
   }
 }
 
@@ -52,6 +62,13 @@ class CustomerSingleOrderRx extends RxResponseInt<Map<String, dynamic>> {
       Map<String, dynamic> map = {};
       if (data is Map<String, dynamic>) {
         map = data;
+      } else if (data is Map) {
+        map = Map<String, dynamic>.from(data);
+      }
+      if (map.containsKey('data') && map['data'] is Map) {
+        map = Map<String, dynamic>.from(map['data']);
+      } else if (map.containsKey('order') && map['order'] is Map) {
+        map = Map<String, dynamic>.from(map['order']);
       }
       await handleSuccessWithReturn(map);
     } catch (e) {
