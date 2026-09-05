@@ -74,9 +74,9 @@ class _StaffOrderHistoryScreenState extends State<StaffOrderHistoryScreen> {
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index];
-              final orderId = order['id']?.toString() ?? '#';
-              final status = order['status'] ?? 'UNKNOWN';
-              final total = order['total']?.toString() ?? '0.00';
+              final displayId = order['order_number'] ?? order['id']?.toString() ?? '#';
+              final status = order['status'] ?? 'COMPLETED';
+              final total = order['total_amount'] ?? order['total'] ?? '0.00';
               final date = order['created_at']?.toString() ?? '';
               
               return Container(
@@ -101,19 +101,20 @@ class _StaffOrderHistoryScreenState extends State<StaffOrderHistoryScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Order #$orderId',
+                          'Order #$displayId',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
                         ),
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: Colors.green.shade50,
                             borderRadius: BorderRadius.circular(20.r),
+                            border: Border.all(color: Colors.green.shade200),
                           ),
                           child: Text(
-                            status,
+                            status.toString().toUpperCase(),
                             style: TextStyle(
-                              color: Colors.grey.shade800,
+                              color: Colors.green.shade800,
                               fontSize: 10.sp,
                               fontWeight: FontWeight.bold,
                             ),
@@ -125,7 +126,7 @@ class _StaffOrderHistoryScreenState extends State<StaffOrderHistoryScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total: \$Total $total', style: TextStyle(color: Colors.grey.shade800, fontSize: 14.sp)),
+                        Text('Total: €$total', style: TextStyle(color: const Color(0xFF00694C), fontSize: 14.sp, fontWeight: FontWeight.bold)),
                         if (date.isNotEmpty)
                            Text(
                              date.length > 10 ? date.substring(0, 10) : date,

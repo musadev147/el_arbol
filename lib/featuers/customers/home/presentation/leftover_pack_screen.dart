@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
 import 'data/rx.dart';
 import 'model/leftover_store_model.dart';
+import '../../orders/data/customer_orders_rx.dart';
+import '../../orders/presentation/customer_cart_screen.dart';
+import '../../orders/presentation/customer_checkout_screen.dart';
 
 class LeftoverPackScreen extends StatefulWidget {
   const LeftoverPackScreen({super.key});
@@ -33,75 +36,317 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
     super.dispose();
   }
 
-  void _reservePack(LeftoverPack pack) {
-    final stock = pack.stock ?? 0;
-    if (stock <= 0) return;
+  void _reservePack(LeftoverPack pack, LeftoverStoreModel store) {
+    final maxStock = pack.stock ?? 1;
+    if (maxStock <= 0) return;
 
-    final price = pack.price ?? 0.0;
+    final double price = pack.price ?? 0.0;
+    final double originalPrice = pack.originalPrice ?? 0.0;
+    int quantity = 1;
 
-    // Show simulated payment dialog first
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
-        bool processing = false;
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-              title: const Text('Stripe Secure Checkout'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Reserve leftover pack "${pack.name}" for €${price.toStringAsFixed(2)}'),
-                  SizedBox(height: 16.h),
-                  if (processing)
-                    const CircularProgressIndicator(color: Color(0xFF00694C))
-                  else ...[
-                    Row(
-                      children: [
-                        const Icon(Icons.credit_card, color: Colors.blue),
-                        SizedBox(width: 10.w),
-                        const Text('•••• •••• •••• 4242'),
-                      ],
-                    ),
-                    SizedBox(height: 10.h),
-                    Text(
-                      'Pickup only, no delivery is available for Leftover Packs.',
-                      style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
-                    ),
-                  ]
+          builder: (context, setModalState) {
+            final double totalPrice = price * quantity;
+
+            return Container(
+              padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 24.h),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 16,
+                    offset: const Offset(0, -4),
+                  ),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: processing ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: processing
-                      ? null
-                      : () {
-                          setDialogState(() {
-                            processing = true;
-                          });
-                          Future.delayed(const Duration(seconds: 2), () {
-                            Navigator.pop(context);
-                            setState(() {
-                              pack.stock = (pack.stock ?? 1) - 1;
-                              _reservedPackIds.add(pack.id ?? 0);
-                              _reservationCodes[pack.id ?? 0] = 'ARBOL-SURPLUS-${1000 + (pack.id ?? 0)}';
-                            });
-                            Fluttertoast.showToast(
-                              msg: "Leftover Pack Reserved Successfully!",
-                              backgroundColor: const Color(0xFF00694C),
-                              textColor: Colors.white,
-                            );
-                          });
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Drag handle
+                    Center(
+                      child: Container(
+                        width: 48.w,
+                        height: 5.h,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+
+                    // Header: Store info & Close button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00694C).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6.r),
+                                ),
+                                child: Text(
+                                  'Surplus Food • Store Pickup Only',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF00694C),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: 8.h),
+                              Text(
+                                pack.name ?? 'Surplus Food Pack',
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF151E13),
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(Icons.storefront, size: 16.r, color: Colors.grey.shade600),
+                        SizedBox(width: 6.w),
+                        Expanded(
+                          child: Text(
+                            '${store.name ?? 'Store'} • ${store.address ?? ''}',
+                            style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    if (pack.description != null && pack.description!.isNotEmpty) ...[
+                      SizedBox(height: 12.h),
+                      Text(
+                        pack.description!,
+                        style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700, height: 1.4),
+                      ),
+                    ],
+
+                    SizedBox(height: 16.h),
+                    const Divider(height: 1, color: Color(0xFFF0F1F3)),
+                    SizedBox(height: 16.h),
+
+                    // Price & Stock
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Price',
+                              style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                            ),
+                            SizedBox(height: 4.h),
+                            Row(
+                              children: [
+                                Text(
+                                  '€${price.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 20.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber.shade800,
+                                    fontFamily: 'Poppins',
+                                  ),
+                                ),
+                                if (originalPrice > 0) ...[
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    '€${originalPrice.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                      color: Colors.grey,
+                                      fontSize: 13.sp,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Text(
+                            '$maxStock left in store',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF00694C),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 20.h),
+
+                    // Quantity selector
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Quantity',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF151E13),
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove, size: 18),
+                                onPressed: quantity > 1
+                                    ? () => setModalState(() => quantity--)
+                                    : null,
+                                constraints: BoxConstraints(minWidth: 36.w, minHeight: 36.h),
+                                padding: EdgeInsets.zero,
+                              ),
+                              Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w),
+                                child: Text(
+                                  '$quantity',
+                                  style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add, size: 18),
+                                onPressed: quantity < maxStock
+                                    ? () => setModalState(() => quantity++)
+                                    : null,
+                                constraints: BoxConstraints(minWidth: 36.w, minHeight: 36.h),
+                                padding: EdgeInsets.zero,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 24.h),
+
+                    // Add to Cart Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50.h,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await CustomerCartRx.instance.addLeftoverPackToBasket(
+                            packId: pack.id ?? 0,
+                            name: pack.name ?? 'Surplus Food Pack',
+                            price: price,
+                            storeName: store.name,
+                            quantity: quantity,
+                          );
+
+                          Navigator.pop(ctx);
+                          Get.snackbar(
+                            'Added to Cart',
+                            '${pack.name ?? "Leftover Pack"} added to your cart.',
+                            backgroundColor: const Color(0xFF00694C),
+                            colorText: Colors.white,
+                            duration: const Duration(seconds: 4),
+                            mainButton: TextButton(
+                              onPressed: () {
+                                Get.to(() => CustomerCartScreen(
+                                  cartItems: RxList<Map<String, dynamic>>([]),
+                                ));
+                              },
+                              child: const Text(
+                                'View Cart',
+                                style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          );
                         },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
-                  child: Text('Pay €${price.toStringAsFixed(2)}'),
+                        icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+                        label: Text(
+                          'Add to Cart • €${totalPrice.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00694C),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14.r),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    // Optional instant checkout option
+                    Center(
+                      child: TextButton(
+                        onPressed: () async {
+                          await CustomerCartRx.instance.addLeftoverPackToBasket(
+                            packId: pack.id ?? 0,
+                            name: pack.name ?? 'Surplus Food Pack',
+                            price: price,
+                            storeName: store.name,
+                            quantity: quantity,
+                          );
+                          Navigator.pop(ctx);
+                          Get.to(() => const CustomerCheckoutScreen());
+                        },
+                        child: Text(
+                          'Order & Checkout Directly',
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            color: const Color(0xFF00694C),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             );
           },
         );
@@ -379,7 +624,7 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                                     ),
                                   ),
                                   ElevatedButton(
-                                    onPressed: outOfStock ? null : () => _reservePack(pack),
+                                    onPressed: outOfStock ? null : () => _reservePack(pack, store),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: primaryColor,
                                       shape: RoundedRectangleBorder(
@@ -387,7 +632,7 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                                       ),
                                       elevation: 0,
                                     ),
-                                    child: const Text('Reserve'),
+                                    child: const Text('Reserve Now'),
                                   ),
                                 ],
                               ),

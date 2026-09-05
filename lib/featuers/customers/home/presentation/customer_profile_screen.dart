@@ -400,7 +400,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     final nameController = TextEditingController(text: _userName);
     final phoneController = TextEditingController(text: _userPhone);
     String selectedGender = _userGender;
-    DateTime tempDob = _userDob;
 
     showModalBottomSheet(
       context: context,
@@ -469,39 +468,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ),
                   SizedBox(height: 16.h),
 
-                  const Text('Date of Birth', style: TextStyle(fontWeight: FontWeight.bold)),
-                  SizedBox(height: 6.h),
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: tempDob,
-                        firstDate: DateTime(1920),
-                        lastDate: DateTime.now(),
-                      );
-                      if (picked != null) {
-                        setModalState(() {
-                          tempDob = picked;
-                        });
-                      }
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade400),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(DateFormat('dd MMMM yyyy').format(tempDob)),
-                          const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-
                   const Text('Gender', style: TextStyle(fontWeight: FontWeight.bold)),
                   DropdownButtonFormField<String>(
                     value: selectedGender,
@@ -532,7 +498,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                           "lastName": lastName,
                           "phone": phoneController.text,
                           "gender": selectedGender,
-                          "dob": DateFormat('yyyy-MM-dd').format(tempDob),
                         });
                         if (success) {
                           Navigator.pop(context);
@@ -818,18 +783,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                           _userEmail,
                           style: TextStyle(fontSize: 11.sp, color: Colors.grey),
                         ),
-                        SizedBox(height: 4.h),
-                        Row(
-                          children: [
-                            Icon(Icons.cake, size: 12.r, color: Colors.grey),
-                            SizedBox(width: 4.w),
-                            Text(
-                              DateFormat('dd MMM yyyy').format(_userDob),
-                              style: TextStyle(fontSize: 11.sp, color: Colors.grey),
-                            ),
-                          ],
-                        ),
-
                       ],
                     ),
                   ),

@@ -74,9 +74,11 @@ class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
   handleSuccessWithReturn(PostRegisterModel data) async {
     final accessToken = data.access ?? "";
     final id = data.user?.id ?? "";
-    final successMsg = (data.message != null && data.message!.isNotEmpty)
-        ? data.message!
-        : "Application submitted successfully.";
+    final String successMsg = (_selectedRole == 'customer' || _selectedRole.isEmpty)
+        ? "Registration successfully created."
+        : ((data.message != null && data.message!.isNotEmpty)
+            ? data.message!
+            : "Application submitted successfully.");
 
     if (accessToken.isNotEmpty) {
       AppToast.success(successMsg);

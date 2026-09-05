@@ -85,9 +85,24 @@ class CustomerOrdersApi {
     }
   }
 
-  Future<dynamic> validateCoupon(String code) async {
+  Future<dynamic> validateCoupon(
+    String code, {
+    double? cartTotal,
+    List<String>? productIds,
+    Map<String, int>? quantities,
+  }) async {
     try {
-      final response = await postHttp(Endpoints.validateCoupon(), {"code": code});
+      final Map<String, dynamic> body = {"code": code};
+      if (cartTotal != null && cartTotal > 0) {
+        body["cart_total"] = cartTotal;
+      }
+      if (productIds != null && productIds.isNotEmpty) {
+        body["product_ids"] = productIds;
+      }
+      if (quantities != null && quantities.isNotEmpty) {
+        body["quantities"] = quantities;
+      }
+      final response = await postHttp(Endpoints.validateCoupon(), body);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       } else {

@@ -7,12 +7,14 @@ import 'package:rxdart/rxdart.dart';
 
 import '../../../../common_wigdets/common_button.dart';
 import '../../../../common_wigdets/custom_textfiled.dart';
+import '../../../../common_wigdets/app_toast.dart';
 import '../../customers/addresses/data/customer_addresses_rx.dart';
 import '../../customers/orders/data/customer_orders_api.dart';
 import '../../customers/orders/data/customer_orders_rx.dart';
 import '../data/wholesale_rx.dart';
 import 'wholesale_cart_state.dart';
 import 'wholesale_orders_screen.dart';
+import 'package:el_arbol/helpers/di.dart';
 
 class WholesaleCheckoutScreen extends StatefulWidget {
   const WholesaleCheckoutScreen({super.key});
@@ -112,6 +114,17 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
       return;
     }
 
+    for (final it in WholesaleCartState.cartItems) {
+      if (it.stock != null && it.stock! <= 0) {
+        AppToast.error("'${it.name}' is out of stock (Available: 0). Please remove it to proceed.");
+        return;
+      }
+      if (it.stock != null && it.quantity.value > it.stock!) {
+        AppToast.error("Not enough stock for '${it.name}'. Available: ${it.stock}, Requested: ${it.quantity.value.toInt()}");
+        return;
+      }
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -190,6 +203,30 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
           response['order_id']?.toString() ??
           response['order_number']?.toString() ??
           'WHS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+      final orderNumber = response['order_number']?.toString() ?? orderId;
+
+      try {
+        final placedOrder = {
+          'id': orderId,
+          'order_number': orderNumber,
+          'status': 'Pending',
+          'created_at': DateTime.now().toIso8601String(),
+          'total': WholesaleCartState.totalAmount.toStringAsFixed(2),
+          'items_count': WholesaleCartState.cartItems.length,
+          'payment_method': backendPaymentMethod,
+          'items': WholesaleCartState.cartItems.map((item) => {
+            'name': item.name,
+            'quantity': item.quantity.value.toInt(),
+            'price': item.wholesalePrice,
+            'unit': item.unit,
+          }).toList(),
+        };
+        final existing = (appData.read('wholesale_placed_orders') is List)
+            ? List<dynamic>.from(appData.read('wholesale_placed_orders'))
+            : <dynamic>[];
+        existing.insert(0, placedOrder);
+        appData.write('wholesale_placed_orders', existing);
+      } catch (_) {}
 
       if (_paymentMethod == 'card') {
         try {

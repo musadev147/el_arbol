@@ -243,6 +243,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                   product.unit ??
                                   'unit',
                               minPurchase: product.minimumPurchase ?? 1,
+                              stock: product.stock,
                             ),
                           );
                         },

@@ -41,9 +41,12 @@ class ProductDetailsScreen extends StatefulWidget {
     this.isWholesale = false,
     this.wholesaleUnit,
     this.minPurchase,
+    this.stock,
     this.isStaff = false,
     this.showBasket = true,
   });
+
+  final int? stock;
 
   @override
   State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
@@ -353,7 +356,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       height: 1.5,
                     ),
                   ),
-                  if (!widget.isStaff && widget.showBasket) ...[
+                  if (widget.showBasket) ...[
                     SizedBox(height: 24.h),
 
                     // Quantity Selector Section
@@ -427,8 +430,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                 bool success = false;
                                 String errorMsg = '';
 
-                                // 1. If product has ID, invoke the backend Basket API
-                                if (widget.id != null && widget.id!.isNotEmpty) {
+                                // 1. If Wholesale product / mode -> Use WholesaleCartState
+                                if (widget.isWholesale) {
+                                  final double? priceVal = double.tryParse(widget.price.replaceAll(RegExp(r'[^0-9.]'), ''));
+                                  WholesaleCartState.addToCart(
+                                    id: widget.id ?? '',
+                                    name: widget.name,
+                                    price: priceVal ?? 0.0,
+                                    unit: widget.wholesaleUnit ?? 'unit',
+                                    imageUrl: widget.imageUrl,
+                                    minPurchase: widget.minPurchase ?? 1,
+                                    stock: widget.stock,
+                                    qty: _quantity.toDouble(),
+                                  );
+                                  success = true;
+                                } else if (widget.id != null && widget.id!.isNotEmpty) {
+                                  // 2. Normal customer / staff -> backend Basket API
                                   try {
                                     await EasyLoading.show(status: 'Adding to basket...');
                                     await CustomerOrdersApi.instance.addBasketItem(widget.id!, _quantity);
@@ -443,21 +460,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                   }
                                 } else {
                                   // If id was not provided, still allow adding
-                                  success = true;
-                                }
-
-                                // 2. If Wholesale product / mode
-                                if (widget.isWholesale) {
-                                  final double? priceVal = double.tryParse(widget.price.replaceAll(RegExp(r'[^0-9.]'), ''));
-                                  WholesaleCartState.addToCart(
-                                    id: widget.id ?? '',
-                                    name: widget.name,
-                                    price: priceVal ?? 0.0,
-                                    unit: widget.wholesaleUnit ?? 'unit',
-                                    imageUrl: widget.imageUrl,
-                                    minPurchase: widget.minPurchase ?? 1,
-                                    qty: _quantity.toDouble(),
-                                  );
                                   success = true;
                                 }
 
@@ -494,7 +496,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                 }
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryBrandColor,
+                          backgroundColor: (widget.stock != null && widget.stock! <= 0) ? Colors.grey : primaryBrandColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16.r),
                           ),
@@ -509,10 +511,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.shopping_basket, color: Colors.white),
+                                  Icon((widget.stock != null && widget.stock! <= 0) ? Icons.block : Icons.shopping_basket, color: Colors.white),
                                   SizedBox(width: 12.w),
                                   Text(
-                                    'Add to Basket',
+                                    (widget.stock != null && widget.stock! <= 0) ? 'Out of Stock' : 'Add to Basket',
                                     style: TextStyle(
                                       fontSize: 16.sp,
                                       fontWeight: FontWeight.bold,

@@ -101,7 +101,14 @@ final class ErrorHandler implements Exception {
           String errorMessage = error.response?.statusMessage ?? "";
 
           if (responseData is Map<String, dynamic>) {
-            errorMessage = responseData['message'] ?? errorMessage;
+            errorMessage = responseData['message'] ??
+                responseData['detail'] ??
+                responseData['error'] ??
+                responseData['msg'] ??
+                (responseData['non_field_errors'] is List && (responseData['non_field_errors'] as List).isNotEmpty
+                    ? responseData['non_field_errors'][0].toString()
+                    : null) ??
+                errorMessage;
           } else if (responseData is String) {
             if (responseData.contains("<!DOCTYPE html>") || responseData.contains("<html")) {
               errorMessage = "Server error: ${error.response?.statusCode ?? 500} ${error.response?.statusMessage ?? 'Internal Server Error'}";

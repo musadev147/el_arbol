@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:el_arbol/common_wigdets/app_toast.dart';
 import 'wholesale_cart_state.dart';
 import 'wholesale_checkout_screen.dart';
 
@@ -397,6 +398,16 @@ class WholesaleCartScreen extends StatelessWidget {
                       height: 48.h,
                       child: ElevatedButton.icon(
                         onPressed: () {
+                          for (final it in WholesaleCartState.cartItems) {
+                            if (it.stock != null && it.stock! <= 0) {
+                              AppToast.error("'${it.name}' is out of stock (Available: 0). Please remove it to proceed.");
+                              return;
+                            }
+                            if (it.stock != null && it.quantity.value > it.stock!) {
+                              AppToast.error("Requested quantity for '${it.name}' exceeds available stock (${it.stock}).");
+                              return;
+                            }
+                          }
                           Get.to(() => const WholesaleCheckoutScreen());
                         },
                         icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 18),

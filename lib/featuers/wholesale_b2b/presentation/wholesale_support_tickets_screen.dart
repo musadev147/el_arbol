@@ -151,63 +151,118 @@ class _WholesaleSupportTicketsScreenState extends State<WholesaleSupportTicketsS
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
+              insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-              title: const Text('Create Support Ticket'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: subjectController,
-                      decoration: const InputDecoration(
-                        labelText: 'Subject *',
-                        hintText: 'e.g. Order delivery or catalog issue',
+              titlePadding: EdgeInsets.fromLTRB(20.w, 18.h, 20.w, 12.h),
+              contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+              actionsPadding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 14.h),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Create Support Ticket',
+                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  SizedBox(height: 12.h),
+                  const Divider(color: Color(0xFFF0F1F3), height: 1, thickness: 1),
+                ],
+              ),
+              content: SizedBox(
+                width: MediaQuery.of(context).size.width,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: subjectController,
+                        decoration: InputDecoration(
+                          labelText: 'Subject *',
+                          hintText: 'e.g. Order delivery or catalog issue',
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(color: Color(0xFF00694C)),
+                          ),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 12.h),
-                    TextField(
-                      controller: messageController,
-                      decoration: const InputDecoration(
-                        labelText: 'Message / Description *',
-                        hintText: 'Describe your issue in detail',
+                      SizedBox(height: 12.h),
+                      TextField(
+                        controller: messageController,
+                        decoration: InputDecoration(
+                          labelText: 'Message / Description *',
+                          hintText: 'Describe your issue in detail',
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(color: Color(0xFF00694C)),
+                          ),
+                        ),
+                        maxLines: 3,
                       ),
-                      maxLines: 3,
-                    ),
-                    SizedBox(height: 12.h),
-                    DropdownButtonFormField<String>(
-                      value: category,
-                      decoration: const InputDecoration(labelText: 'Category'),
-                      items: const [
-                        DropdownMenuItem(value: 'ORDER', child: Text('Order Issue')),
-                        DropdownMenuItem(value: 'PAYMENT', child: Text('Payment / Billing')),
-                        DropdownMenuItem(value: 'GENERAL', child: Text('General Inquiry')),
-                        DropdownMenuItem(value: 'OTHER', child: Text('Other')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setModalState(() => category = val);
-                      },
-                    ),
-                    SizedBox(height: 12.h),
-                    DropdownButtonFormField<String>(
-                      value: priority,
-                      decoration: const InputDecoration(labelText: 'Priority'),
-                      items: const [
-                        DropdownMenuItem(value: 'LOW', child: Text('Low')),
-                        DropdownMenuItem(value: 'MEDIUM', child: Text('Medium')),
-                        DropdownMenuItem(value: 'HIGH', child: Text('High')),
-                        DropdownMenuItem(value: 'URGENT', child: Text('Urgent')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setModalState(() => priority = val);
-                      },
-                    ),
-                  ],
+                      SizedBox(height: 12.h),
+                      DropdownButtonFormField<String>(
+                        value: category,
+                        decoration: InputDecoration(
+                          labelText: 'Category',
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(color: Color(0xFF00694C)),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'ORDER', child: Text('Order Issue')),
+                          DropdownMenuItem(value: 'PAYMENT', child: Text('Payment / Billing')),
+                          DropdownMenuItem(value: 'GENERAL', child: Text('General Inquiry')),
+                          DropdownMenuItem(value: 'OTHER', child: Text('Other')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => category = val);
+                        },
+                      ),
+                      SizedBox(height: 12.h),
+                      DropdownButtonFormField<String>(
+                        value: priority,
+                        decoration: InputDecoration(
+                          labelText: 'Priority',
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(color: Color(0xFF00694C)),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'LOW', child: Text('Low')),
+                          DropdownMenuItem(value: 'MEDIUM', child: Text('Medium')),
+                          DropdownMenuItem(value: 'HIGH', child: Text('High')),
+                          DropdownMenuItem(value: 'URGENT', child: Text('Urgent')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => priority = val);
+                        },
+                      ),
+                      SizedBox(height: 8.h),
+                      const Divider(color: Color(0xFFF0F1F3), height: 1, thickness: 1),
+                    ],
+                  ),
                 ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
                 ),
                 ElevatedButton(
                   onPressed: () async {
@@ -232,7 +287,10 @@ class _WholesaleSupportTicketsScreenState extends State<WholesaleSupportTicketsS
                       if (context.mounted) Navigator.pop(context);
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00694C),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                  ),
                   child: const Text('Submit', style: TextStyle(color: Colors.white)),
                 ),
               ],

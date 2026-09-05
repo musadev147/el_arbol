@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../addresses/data/customer_addresses_rx.dart';
 import 'product_details_screen.dart';
 import 'data/rx.dart';
 import 'model/get_product_model.dart';
@@ -14,8 +15,8 @@ import 'model/post_wishlist_model.dart' show PostCreateWishlistModel;
 import '../../../../route/app_pages.dart';
 import '../../orders/data/customer_orders_rx.dart';
 import '../../orders/data/customer_orders_api.dart';
-import '../../addresses/data/customer_addresses_rx.dart';
 import '../../orders/presentation/customer_cart_screen.dart';
+import '../../../../constants/app_assets/assets_icons.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -411,6 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final cardNumberController = TextEditingController(text: '4111222233334444');
         final cardExpiryController = TextEditingController(text: '12/28');
         final cardCvvController = TextEditingController(text: '123');
+        final transactionIdController = TextEditingController(text: 'TXN_${DateTime.now().millisecondsSinceEpoch}');
         
         Map<String, dynamic>? selectedAddress;
         Map<String, dynamic>? selectedShippingMethod;
@@ -858,20 +860,60 @@ class _HomeScreenState extends State<HomeScreen> {
                           SizedBox(width: 8.w),
                           ElevatedButton(
                             onPressed: () async {
-                              if (couponController.text.isEmpty) return;
-                              final couponResult = await _couponRx.validateCoupon(couponController.text);
-                              if (couponResult != null && couponResult is Map) {
+                              final code = couponController.text.trim();
+                              if (code.isEmpty) return;
+                              final couponResult = await _couponRx.validateCoupon(code, cartTotal: subtotal);
+
+                              final bool isExplicitlyExpired = couponResult is Map &&
+                                  (couponResult['valid'] == false ||
+                                   couponResult['is_valid'] == false ||
+                                   couponResult['is_expired'] == true ||
+                                   couponResult['status']?.toString().toLowerCase() == 'expired');
+
+                              bool isDateExpired = false;
+                              if (couponResult is Map) {
+                                final expiryStr = couponResult['expiry_date'] ??
+                                    couponResult['expires_at'] ??
+                                    couponResult['valid_until'];
+                                if (expiryStr != null) {
+                                  final expDate = DateTime.tryParse(expiryStr.toString());
+                                   if (expDate != null && DateTime.now().isAfter(DateTime(expDate.year, expDate.month, expDate.day, 23, 59, 59))) {
+                                    isDateExpired = true;
+                                  }
+                                }
+                              }
+
+                              if (couponResult != null &&
+                                  couponResult is Map &&
+                                  !isExplicitlyExpired &&
+                                  !isDateExpired &&
+                                  (couponResult['valid'] == true ||
+                                   couponResult['is_valid'] == true ||
+                                   couponResult.containsKey('discount') ||
+                                   couponResult.containsKey('discount_percentage'))) {
                                 setModalState(() {
-                                  appliedCouponCode = couponController.text;
+                                  appliedCouponCode = code;
                                   discountAmount = double.tryParse(couponResult['discount']?.toString() ?? '0.0') ?? 0.0;
+                                  if (discountAmount == 0.0 && couponResult['discount_percentage'] != null) {
+                                    final pct = double.tryParse(couponResult['discount_percentage'].toString()) ?? 0.0;
+                                    discountAmount = (subtotal * (pct / 100.0));
+                                  }
                                   if (discountAmount == 0.0) {
-                                    // Fallback percentage or flat if not directly present as 'discount'
-                                    discountAmount = (subtotal * 0.40); // e.g. SAVE40 gives 40% discount
+                                    discountAmount = (subtotal * 0.40);
                                   }
                                 });
                                 Fluttertoast.showToast(msg: "Coupon Applied successfully!");
                               } else {
-                                Fluttertoast.showToast(msg: "Invalid or Expired Coupon");
+                                setModalState(() {
+                                  appliedCouponCode = '';
+                                  discountAmount = 0.0;
+                                });
+                                final String errorMsg = (couponResult is Map && couponResult['message'] != null)
+                                    ? couponResult['message'].toString()
+                                    : (couponResult is Map && couponResult['detail'] != null)
+                                        ? couponResult['detail'].toString()
+                                        : "This coupon has expired or is invalid.";
+                                Fluttertoast.showToast(msg: errorMsg);
                               }
                             },
                             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
@@ -1025,31 +1067,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                 }).toList(),
                               };
                               
-                              if (paymentMethod == 'card') {
-                                orderPayload.addAll({
-                                  "card_number": cardNumberController.text,
-                                  "card_expiry": cardExpiryController.text,
-                                  "card_cvv": cardCvvController.text,
-                                });
-                              }
-                              
-                              final createSuccess = await _createOrderRx.createOrder(orderPayload);
-                              if (createSuccess) {
-                                final createdOrderData = _createOrderRx.valueStreamData.valueOrNull;
-                                if (createdOrderData != null && createdOrderData is Map) {
-                                  final orderId = createdOrderData['id']?.toString() ?? createdOrderData['order_id']?.toString();
-                                  if (orderId != null) {
-                                    // Submit order
-                                    final submitSuccess = await _createOrderRx.submitOrder({"order_id": orderId});
-                                    if (submitSuccess) {
-                                      // Confirm payment
-                                      if (paymentMethod == 'card') {
-                                        await _paymentConfirmationRx.confirmPayment({
-                                          "order_id": orderId,
-                                          "transaction_id": "ST_MOCK_${DateTime.now().millisecondsSinceEpoch}",
-                                          "status": "succeeded",
-                                        });
-                                      }
+                              final String currentTxId = transactionIdController.text.trim().isNotEmpty
+                                   ? transactionIdController.text.trim()
+                                   : "TXN_${DateTime.now().millisecondsSinceEpoch}";
+
+                               if (paymentMethod == 'card') {
+                                 orderPayload.addAll({
+                                   "card_number": cardNumberController.text,
+                                   "card_expiry": cardExpiryController.text,
+                                   "card_cvv": cardCvvController.text,
+                                   "transaction_id": currentTxId,
+                                 });
+                               }
+                               
+                               final createSuccess = await _createOrderRx.createOrder(orderPayload);
+                               if (createSuccess) {
+                                 final createdOrderData = _createOrderRx.valueStreamData.valueOrNull;
+                                 if (createdOrderData != null && createdOrderData is Map) {
+                                   final orderId = createdOrderData['id']?.toString() ?? createdOrderData['order_id']?.toString();
+                                   if (orderId != null) {
+                                     // Submit order
+                                     final submitSuccess = await _createOrderRx.submitOrder({"order_id": orderId});
+                                     if (submitSuccess) {
+                                       // Confirm payment
+                                       if (paymentMethod == 'card') {
+                                         await _paymentConfirmationRx.confirmPayment({
+                                           "order_id": orderId,
+                                           "transaction_id": currentTxId,
+                                           "status": "succeeded",
+                                         });
+                                       }
+                                     }
                                       
                                       Navigator.pop(context);
                                       
@@ -1077,7 +1125,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                     }
                                   }
                                 }
-                              }
                               
                               setModalState(() {
                                 checkingOut = false;
@@ -1122,20 +1169,56 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
       appBar: AppBar(
-        title: const Text(
-          'El Árbol',
-          style: TextStyle(
-            color: Color(0xFF151E13),
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              AssetsIcons.logoIcons,
+              height: 28.h,
+              width: 28.h,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(width: 8.w),
+            const Text(
+              'El Árbol',
+              style: TextStyle(
+                color: Color(0xFF151E13),
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border_rounded, color: Color(0xFF151E13)),
-            onPressed: () => Get.toNamed(Routes.WISHLIST),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.favorite_border_rounded, color: Color(0xFF151E13)),
+                onPressed: () => Get.toNamed(Routes.WISHLIST),
+              ),
+              StreamBuilder<List<PostCreateWishlistModel>>(
+                stream: _wishlistRx.valueStreamData,
+                builder: (context, snapshot) {
+                  final list = snapshot.data ?? [];
+                  if (list.isEmpty) return const SizedBox.shrink();
+                  return Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      child: Text(
+                        '${list.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           Stack(
             alignment: Alignment.center,

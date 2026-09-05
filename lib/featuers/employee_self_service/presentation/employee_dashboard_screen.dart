@@ -7,7 +7,6 @@ import 'request_shift_change_screen.dart';
 import 'apply_day_off_screen.dart';
 import 'notifications_inbox_screen.dart';
 import 'price_list_screen.dart';
-import 'update_staff_profile_screen.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
 import '../data/rx.dart';
@@ -15,6 +14,8 @@ import '../model/staff_dashboard_model.dart';
 import 'package:el_arbol/route/app_pages.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
+import 'package:el_arbol/helpers/di.dart';
+import '../../wholesale_b2b/presentation/wholesale_add_product_screen.dart';
 
 class EmployeeDashboardScreen extends StatefulWidget {
   const EmployeeDashboardScreen({super.key});
@@ -26,6 +27,7 @@ class EmployeeDashboardScreen extends StatefulWidget {
 class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
   late GetStaffDashboardRx _dashboardRx;
   late StaffCheckInOutRx _checkInOutRx;
+  int? _selectedStoreFilterId;
 
   @override
   void initState() {
@@ -45,52 +47,194 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     super.dispose();
   }
 
+  bool _isStoreOpen(ActiveStore store) {
+    if (store.isActive == false) return false;
+    if (store.openTime != null && store.closeTime != null) {
+      try {
+        final now = DateTime.now();
+        final openParts = store.openTime!.split(':').map(int.parse).toList();
+        final closeParts = store.closeTime!.split(':').map(int.parse).toList();
+        final openDateTime = DateTime(now.year, now.month, now.day, openParts[0], openParts[1]);
+        final closeDateTime = DateTime(now.year, now.month, now.day, closeParts[0], closeParts[1]);
+        return now.isAfter(openDateTime) && now.isBefore(closeDateTime);
+      } catch (_) {}
+    }
+    return store.isActive ?? true;
+  }
+
+  double _calculateShiftHours(StaffShift shift) {
+    if (shift.startTime == null || shift.endTime == null) return 0.0;
+    try {
+      final startParts = shift.startTime!.split(':').map(int.parse).toList();
+      final endParts = shift.endTime!.split(':').map(int.parse).toList();
+      double startHours = startParts[0] + (startParts.length > 1 ? startParts[1] / 60.0 : 0.0);
+      double endHours = endParts[0] + (endParts.length > 1 ? endParts[1] / 60.0 : 0.0);
+      if (endHours < startHours) {
+        endHours += 24.0; // Overnight shift
+      }
+      double total = endHours - startHours;
+      if (shift.breakDurationMinutes != null && shift.breakDurationMinutes! > 0) {
+        total -= (shift.breakDurationMinutes! / 60.0);
+      }
+      return total > 0 ? total : 0.0;
+    } catch (_) {
+      return 0.0;
+    }
+  }
+
+  double _getCalculatedTotalHours(List<StaffShift>? shifts, int? storeFilterId) {
+    if (shifts == null || shifts.isEmpty) return 0.0;
+    double total = 0.0;
+    for (final shift in shifts) {
+      if (storeFilterId != null) {
+        if (shift.store != storeFilterId) continue;
+      }
+      total += _calculateShiftHours(shift);
+    }
+    return total;
+  }
+
   void _handleCheckIn(BuildContext context, List<ActiveStore> activeStores) {
     if (activeStores.length == 1) {
-      _performCheckIn(activeStores.first.id!);
+      _performCheckIn(activeStores.first);
     } else {
       showModalBottomSheet(
         context: context,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20.r))),
         builder: (context) {
           return Container(
             padding: EdgeInsets.all(16.r),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Select Store to Check In', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                Text('Select Store to Check In', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
                 SizedBox(height: 16.h),
-                ...activeStores.map((store) => ListTile(
-                  title: Text(store.name ?? 'Unknown Store'),
-                  subtitle: Text(store.address ?? ''),
-                  onTap: () {
-                    Get.back();
-                    _performCheckIn(store.id!);
-                  },
-                )).toList(),
+                ...activeStores.map((store) {
+                  final isOpen = _isStoreOpen(store);
+                  return ListTile(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    leading: Container(
+                      padding: EdgeInsets.all(8.r),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00694C).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.storefront_rounded, color: Color(0xFF00694C)),
+                    ),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            store.name ?? 'Unknown Store',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
+                          ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: isOpen ? Colors.green.shade50 : Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(6.r),
+                            border: Border.all(color: isOpen ? Colors.green.shade200 : Colors.red.shade200),
+                          ),
+                          child: Text(
+                            isOpen ? 'Open' : 'Closed',
+                            style: TextStyle(
+                              color: isOpen ? Colors.green.shade700 : Colors.red.shade700,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    subtitle: Text(
+                      store.hours != null ? 'Hours: ${store.hours}' : (store.address ?? ''),
+                      style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                    ),
+                    onTap: () {
+                      Get.back();
+                      _performCheckIn(store);
+                    },
+                  );
+                }),
               ],
             ),
           );
-        }
+        },
       );
     }
   }
 
-  void _performCheckIn(int storeId) async {
+  void _performCheckIn(ActiveStore store) async {
     final pinController = TextEditingController();
+    final isOpen = _isStoreOpen(store);
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-          title: const Text('Store Check-In PIN'),
-          content: TextField(
-            controller: pinController,
-            keyboardType: TextInputType.number,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'Enter Store PIN (e.g. 45678)',
-              border: OutlineInputBorder(),
-            ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  store.name ?? 'Store Check-In',
+                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16.sp),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: isOpen ? Colors.green.shade50 : Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: isOpen ? Colors.green.shade300 : Colors.red.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 4.r,
+                      backgroundColor: isOpen ? Colors.green : Colors.red,
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      isOpen ? 'Open' : 'Closed',
+                      style: TextStyle(
+                        color: isOpen ? Colors.green.shade800 : Colors.red.shade800,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (store.hours != null || (store.openTime != null && store.closeTime != null)) ...[
+                Text(
+                  'Hours: ${store.hours ?? "${store.openTime} - ${store.closeTime}"}',
+                  style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                ),
+                SizedBox(height: 12.h),
+              ],
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Enter Store PIN (e.g. 45678)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -107,7 +251,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                 Navigator.pop(context);
                 
                 EasyLoading.show(status: 'Checking in...');
-                final success = await _checkInOutRx.checkIn(storeId, pin);
+                final success = await _checkInOutRx.checkIn(store.id!, pin);
                 EasyLoading.dismiss();
                 if (success) {
                   AppToast.success("Checked in successfully!");
@@ -124,14 +268,15 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
   }
 
   void _handleCheckOut(BuildContext context) async {
-    // Assuming the API determines which store to check out of, but we need to pass storeId.
-    // If the dashboard returns currentActiveShift, we use its store id.
     final data = _dashboardRx.dataFetcher.value;
-    if (data is StaffDashboardModel && data.currentActiveShift != null) {
+    if (data.currentActiveShift != null) {
       EasyLoading.show(status: 'Checking out...');
       final success = await _checkInOutRx.checkOut(Map<String, dynamic>.from(data.currentActiveShift));
       EasyLoading.dismiss();
       if (success) {
+        final now = DateTime.now();
+        final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+        appData.write('staff_shift_completed_$todayStr', true);
         AppToast.success("Checked out successfully!");
         _dashboardRx.fetchDashboardData();
       }
@@ -149,7 +294,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
-          'Self-Service',
+          'Staff Dashboard',
           style: TextStyle(
             color: Color(0xFF151E13),
             fontFamily: 'Poppins',
@@ -159,9 +304,38 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_outlined, color: Color(0xFF151E13)),
-            onPressed: () => Get.to(() => const NotificationsInboxScreen()),
+          StreamBuilder<StaffDashboardModel>(
+            stream: _dashboardRx.valueStreamData,
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data?.notifications?.where((n) => n.isRead != true).length ?? 0;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_none_outlined, color: Color(0xFF151E13)),
+                    onPressed: () => Get.to(() => const NotificationsInboxScreen())?.then((_) => _dashboardRx.fetchDashboardData()),
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 6.w,
+                      top: 6.h,
+                      child: Container(
+                        padding: EdgeInsets.all(4.r),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: TextStyle(color: Colors.white, fontSize: 9.sp, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -200,7 +374,11 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                   final name = user?.name ?? 'Unknown';
                   final role = profile.role ?? 'Staff';
                   final staffId = profile.staffId ?? 'N/A';
-                  final shiftCount = data.shifts?.length ?? 0;
+                  final activeStores = data.activeStores ?? [];
+                  final calculatedHours = _getCalculatedTotalHours(data.shifts, _selectedStoreFilterId);
+                  final filteredShiftCount = _selectedStoreFilterId == null
+                      ? (data.shifts?.length ?? 0)
+                      : (data.shifts?.where((s) => s.store == _selectedStoreFilterId).length ?? 0);
 
                   return Container(
                     width: double.infinity,
@@ -271,6 +449,42 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                           ),
                         ),
                         const Divider(color: Colors.white24, height: 24),
+                        if (activeStores.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'STORE FILTER',
+                                style: TextStyle(color: Colors.white60, fontSize: 10.sp, fontWeight: FontWeight.bold),
+                              ),
+                              DropdownButtonHideUnderline(
+                                child: DropdownButton<int?>(
+                                  value: _selectedStoreFilterId,
+                                  dropdownColor: const Color(0xFF004D38),
+                                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
+                                  isDense: true,
+                                  style: TextStyle(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.w600),
+                                  items: [
+                                    const DropdownMenuItem<int?>(
+                                      value: null,
+                                      child: Text('All Stores', style: TextStyle(color: Colors.white)),
+                                    ),
+                                    ...activeStores.map((store) => DropdownMenuItem<int?>(
+                                      value: store.id,
+                                      child: Text(store.name ?? 'Store #${store.id}', style: const TextStyle(color: Colors.white)),
+                                    )),
+                                  ],
+                                  onChanged: (newVal) {
+                                    setState(() {
+                                      _selectedStoreFilterId = newVal;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                        ],
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -283,7 +497,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                                 ),
                                 SizedBox(height: 4.h),
                                 Text(
-                                  '$shiftCount Days Assigned',
+                                  '$filteredShiftCount Days Assigned',
                                   style: TextStyle(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.bold),
                                 ),
                               ],
@@ -297,7 +511,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                                 ),
                                 SizedBox(height: 4.h),
                                 Text(
-                                  '-- hrs',
+                                  '${calculatedHours.toStringAsFixed(1)} hrs',
                                   style: TextStyle(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.bold),
                                 ),
                               ],
@@ -320,7 +534,12 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                     final profile = data.profile;
                     final isWorking = profile?.isWorking == true;
                     final activeStores = data.activeStores ?? [];
-                    
+                    final now = DateTime.now();
+                    final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+                    final hasCompletedToday = data.hasCompletedShiftToday == true ||
+                        (appData.read('staff_shift_completed_$todayStr') == true) ||
+                        (data.shifts?.any((s) => (s.date == todayStr || s.date?.startsWith(todayStr) == true) && (s.status?.toUpperCase() == 'COMPLETED')) == true);
+
                     return Container(
                       padding: EdgeInsets.all(16.r),
                       decoration: BoxDecoration(
@@ -341,16 +560,31 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                             ),
                           ),
                           SizedBox(height: 12.h),
-                          if (data.hasCompletedShiftToday == true)
+                          if (hasCompletedToday && !isWorking)
                             Container(
                               width: double.infinity,
-                              padding: EdgeInsets.symmetric(vertical: 12.h),
+                              padding: EdgeInsets.symmetric(vertical: 14.h),
                               decoration: BoxDecoration(
                                 color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(8.r),
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(color: Colors.green.shade200),
                               ),
-                              child: const Center(
-                                child: Text('Shift Completed for Today', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.check_circle_outline, color: Colors.green.shade700, size: 20.r),
+                                    SizedBox(width: 8.w),
+                                    Text(
+                                      'Shift completed for today',
+                                      style: TextStyle(
+                                        color: Colors.green.shade700,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             )
                           else if (isWorking)
@@ -388,8 +622,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                   return const SizedBox();
                 }
               ),
-              SizedBox(height: 24.h),              Text(
-                'My Self-Service Actions',
+              SizedBox(height: 24.h),
+              Text(
+                'Staff Actions',
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 18.sp,
@@ -402,22 +637,22 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
               // Actions Menu list
               _buildListActionCard(
                 context,
+                title: 'Add Product',
+                subtitle: 'Register new organic produce or products to store',
+                icon: Icons.add_business_rounded,
+                iconBg: const Color(0xFFDCFCE7),
+                iconColor: const Color(0xFF16A34A),
+                onTap: () => Get.to(() => const WholesaleAddProductScreen()),
+              ),
+              SizedBox(height: 12.h),
+              _buildListActionCard(
+                context,
                 title: 'My Daily Tasks',
                 subtitle: 'View and mark assigned tasks as completed',
                 icon: Icons.checklist_rtl_rounded,
                 iconBg: const Color(0xFFF3E8FF),
                 iconColor: const Color(0xFFA855F7),
-                onTap: () => Get.toNamed(Routes.STAFF_TASKS_SCREEN) ?? Get.to(() => const SizedBox()), // Placeholder for now until routing is set
-              ),
-              SizedBox(height: 12.h),
-              _buildListActionCard(
-                context,
-                title: 'My Colleagues',
-                subtitle: 'View staff directory for assigned stores',
-                icon: Icons.people_alt_rounded,
-                iconBg: const Color(0xFFE0F2FE),
-                iconColor: const Color(0xFF0EA5E9),
-                onTap: () => Get.toNamed(Routes.STAFF_COLLEAGUES_SCREEN) ?? Get.to(() => const SizedBox()),
+                onTap: () => Get.toNamed(Routes.STAFF_TASKS_SCREEN) ?? Get.to(() => const SizedBox()),
               ),
               SizedBox(height: 12.h),
               _buildListActionCard(

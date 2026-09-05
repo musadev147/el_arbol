@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:get/get.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
 import '../data/customer_notifications_rx.dart';
+import '../../tickets/data/customer_tickets_api.dart';
+import '../../tickets/presentation/customer_ticket_chat_screen.dart';
+import '../../tickets/presentation/customer_tickets_screen.dart';
 
 class CustomerNotificationsScreen extends StatefulWidget {
   const CustomerNotificationsScreen({super.key});
@@ -48,6 +53,78 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
         );
       },
     );
+  }
+
+  void _handleNotificationTap(Map<String, dynamic> notif) async {
+    final title = (notif['title'] ?? notif['subject'] ?? '').toString().toLowerCase();
+    final body = (notif['body'] ?? notif['message'] ?? notif['description'] ?? '').toString().toLowerCase();
+    final type = (notif['type'] ?? notif['action'] ?? notif['category'] ?? '').toString().toLowerCase();
+
+    // Check if notification is related to a support ticket
+    final bool isTicketRelated = type.contains('ticket') ||
+        type.contains('support') ||
+        title.contains('ticket') ||
+        title.contains('support') ||
+        body.contains('ticket') ||
+        body.contains('support');
+
+    if (isTicketRelated) {
+      String? ticketId = notif['ticket_id']?.toString() ??
+          notif['ticketId']?.toString() ??
+          notif['data']?['ticket_id']?.toString() ??
+          notif['data']?['ticketId']?.toString();
+
+      if (ticketId == null || ticketId.isEmpty) {
+        final regex = RegExp(r'ticket\s*#?(\d+)', caseSensitive: false);
+        final match = regex.firstMatch('$title $body');
+        if (match != null) {
+          ticketId = match.group(1);
+        }
+      }
+
+      if (ticketId != null && ticketId.isNotEmpty) {
+        try {
+          EasyLoading.show(status: 'Opening ticket...');
+          final ticketsData = await CustomerTicketsApi.instance.getTickets();
+          EasyLoading.dismiss();
+          List<dynamic> ticketList = [];
+          if (ticketsData is Map && ticketsData['results'] is List) {
+            ticketList = ticketsData['results'] as List;
+          } else if (ticketsData is List) {
+            ticketList = ticketsData;
+          }
+          final matchingTicket = ticketList.firstWhere(
+            (t) => t['id']?.toString() == ticketId,
+            orElse: () => null,
+          );
+
+          if (matchingTicket != null) {
+            Get.to(() => CustomerTicketChatScreen(ticket: matchingTicket));
+            return;
+          } else {
+            Get.to(() => CustomerTicketChatScreen(ticket: {
+              'id': ticketId,
+              'subject': notif['title'] ?? notif['subject'] ?? 'Support Ticket #$ticketId',
+              'status': 'Open',
+              'created_at': notif['created_at'] ?? '',
+            }));
+            return;
+          }
+        } catch (_) {
+          EasyLoading.dismiss();
+          Get.to(() => CustomerTicketChatScreen(ticket: {
+            'id': ticketId,
+            'subject': notif['title'] ?? notif['subject'] ?? 'Support Ticket #$ticketId',
+            'status': 'Open',
+            'created_at': notif['created_at'] ?? '',
+          }));
+          return;
+        }
+      } else {
+        Get.to(() => const CustomerSupportTicketsScreen());
+        return;
+      }
+    }
   }
 
   @override
@@ -117,51 +194,57 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
             separatorBuilder: (context, index) => SizedBox(height: 12.h),
             itemBuilder: (context, index) {
               final notif = notifications[index] as Map<String, dynamic>;
-              final isRead = (notif['is_read'] ?? notif['isRead']) == true;
-
-              return Container(
-                padding: EdgeInsets.all(16.r),
-                decoration: BoxDecoration(
-                  color: isRead ? Colors.white : Colors.blue.withOpacity(0.05),
+              final bool isRead = notif['is_read'] == true || notif['read'] == true;
+              return Material(
+                color: isRead ? Colors.white : Colors.blue.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16.r),
+                child: InkWell(
+                  onTap: () => _handleNotificationTap(notif),
                   borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(color: isRead ? Colors.grey.shade100 : Colors.blue.withOpacity(0.2)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(12.r),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.notifications, color: primaryColor),
+                  child: Container(
+                    padding: EdgeInsets.all(16.r),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(color: isRead ? Colors.grey.shade100 : Colors.blue.withOpacity(0.2)),
                     ),
-                    SizedBox(width: 16.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(notif['title'] ?? notif['subject'] ?? 'Notification', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
-                          SizedBox(height: 4.h),
-                          Text(notif['body'] ?? notif['message'] ?? notif['description'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp)),
-                          SizedBox(height: 8.h),
-                          Text(notif['created_at'] ?? notif['date'] ?? notif['timestamp'] ?? '', style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp)),
-                        ],
-                      ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(12.r),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.notifications, color: primaryColor),
+                        ),
+                        SizedBox(width: 16.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(notif['title'] ?? notif['subject'] ?? 'Notification', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                              SizedBox(height: 4.h),
+                              Text(notif['body'] ?? notif['message'] ?? notif['description'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp)),
+                              SizedBox(height: 8.h),
+                              Text(notif['created_at'] ?? notif['date'] ?? notif['timestamp'] ?? '', style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                          onPressed: () async {
+                            final id = notif['id']?.toString();
+                            if (id != null) {
+                              await _rx.bulkDeleteNotifications([id]);
+                              _rx.fetchNotifications();
+                            }
+                          },
+                          tooltip: 'Delete notification',
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 18, color: Colors.grey),
-                      onPressed: () async {
-                        final id = notif['id']?.toString();
-                        if (id != null) {
-                          await _rx.bulkDeleteNotifications([id]);
-                          _rx.fetchNotifications();
-                        }
-                      },
-                      tooltip: 'Delete notification',
-                    ),
-                  ],
+                  ),
                 ),
               );
             },

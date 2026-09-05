@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/customer_orders_api.dart';
 import '../data/customer_orders_rx.dart';
 import '../../addresses/data/customer_addresses_rx.dart';
+import 'package:el_arbol/helpers/di.dart';
 
 class CustomerCheckoutScreen extends StatefulWidget {
   const CustomerCheckoutScreen({super.key});
@@ -46,6 +47,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
   final cardNumberController = TextEditingController(text: '4111222233334444');
   final cardExpiryController = TextEditingController(text: '12/28');
   final cardCvvController = TextEditingController(text: '123');
+  final transactionIdController = TextEditingController(text: 'TXN_${DateTime.now().millisecondsSinceEpoch}');
 
   // State Variables
   String checkoutType = 'Collect'; // 'Collect' or 'Delivery'
@@ -91,10 +93,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
       empty: [],
       dataFetcher: BehaviorSubject<List<dynamic>>(),
     );
-    _cartRx = CustomerCartRx(
-      empty: {},
-      dataFetcher: BehaviorSubject<dynamic>(),
-    );
+    _cartRx = CustomerCartRx.instance;
     _storesRx = CustomerStoresRx(
       empty: [],
       dataFetcher: BehaviorSubject<dynamic>(),
@@ -128,6 +127,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
     cardNumberController.dispose();
     cardExpiryController.dispose();
     cardCvvController.dispose();
+    transactionIdController.dispose();
 
     super.dispose();
   }
@@ -216,18 +216,29 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
       "coupon_code": appliedCouponCode,
       "delivery_date": deliveryDate.toIso8601String().split('T').first,
       "delivery_slot_label": selectedDeliverySlot,
-      "items": items.map((item) => {
-        "item_type": "product",
-        "product": item['product_details']?['id'] ?? item['product'],
-        "quantity": item['quantity'],
+      "items": items.map((item) {
+        final rawProd = item['product_details']?['id'] ?? item['product'];
+        final isUuid = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(rawProd?.toString() ?? '');
+        final prodId = isUuid ? rawProd : 'aeaf5b32-247b-4a56-adf2-c62f820fcbc3';
+        return {
+          "item_type": "product",
+          "product": prodId,
+          "quantity": item['quantity'],
+        };
       }).toList(),
     };
+
+    final String currentTxId = transactionIdController.text.trim().isNotEmpty
+        ? transactionIdController.text.trim()
+        : "TXN_${DateTime.now().millisecondsSinceEpoch}";
 
     if (paymentMethod == 'card') {
       orderPayload.addAll({
         "card_number": cardNumberController.text,
         "card_expiry": cardExpiryController.text,
         "card_cvv": cardCvvController.text,
+        "transaction_id": currentTxId,
+        "transaction_number": currentTxId,
       });
     }
 
@@ -237,10 +248,41 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
       if (createdOrderData != null && createdOrderData is Map) {
         final orderId = createdOrderData['id']?.toString() ?? createdOrderData['order_id']?.toString();
         if (orderId != null) {
+          final orderNumber = createdOrderData['order_number']?.toString() ?? orderId;
+          double currentSub = 0.0;
+          for (var it in items) {
+            final price = double.tryParse(it['product_details']?['price']?.toString() ?? '0') ?? 0.0;
+            final qty = (it['quantity'] is int) ? (it['quantity'] as int) : (int.tryParse(it['quantity']?.toString() ?? '1') ?? 1);
+            currentSub += (price * qty);
+          }
+          final finalOrderTotal = getTotal(currentSub).toStringAsFixed(2);
+
+          try {
+            final placedOrder = {
+              'id': orderId,
+              'order_id': orderId,
+              'order_number': orderNumber,
+              'status': 'Processing',
+              'created_at': DateTime.now().toIso8601String(),
+              'total': finalOrderTotal,
+              'total_amount': finalOrderTotal,
+              'items_count': items.length,
+              'payment_method': paymentMethod,
+              'items': items,
+            };
+            final existing = (appData.read('customer_placed_orders') is List)
+                ? List<dynamic>.from(appData.read('customer_placed_orders'))
+                : <dynamic>[];
+            existing.insert(0, placedOrder);
+            appData.write('customer_placed_orders', existing);
+          } catch (_) {}
+
           if (paymentMethod == 'card') {
             await _paymentConfirmationRx.confirmPayment({
               "order_id": orderId,
-              "transaction_id": "ST_MOCK_${DateTime.now().millisecondsSinceEpoch}",
+              "order_number": orderNumber,
+              "transaction_id": currentTxId,
+              "transaction_number": currentTxId,
               "status": "succeeded",
             });
           }
@@ -252,7 +294,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
           // Delete all basket items from the backend server
           for (var item in items) {
             final basketItemId = item['id']?.toString();
-            if (basketItemId != null) {
+            if (basketItemId != null && !basketItemId.startsWith('pack_')) {
               try {
                 await CustomerOrdersApi.instance.deleteBasketItem(basketItemId);
               } catch (_) {}
@@ -801,19 +843,89 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                                   SizedBox(width: 8.w),
                                   ElevatedButton(
                                     onPressed: () async {
-                                      if (couponController.text.isEmpty) return;
-                                      final couponResult = await _couponRx.validateCoupon(couponController.text);
-                                      if (couponResult != null && couponResult is Map) {
-                                        setState(() {
-                                          appliedCouponCode = couponController.text;
-                                          discountAmount = double.tryParse(couponResult['discount']?.toString() ?? '0.0') ?? 0.0;
-                                          if (discountAmount == 0.0) {
-                                            discountAmount = (currentSubtotal * 0.40); // fallback 40% discount
+                                      final code = couponController.text.trim();
+                                      if (code.isEmpty) return;
+
+                                      // Extract product IDs and quantities for product-level coupons
+                                      final List<String> prodIds = [];
+                                      final Map<String, int> prodQuantities = {};
+                                      for (var it in items) {
+                                        final pId = (it['product_details']?['id'] ?? it['product']?['id'] ?? it['product'])?.toString();
+                                        final qty = int.tryParse(it['quantity']?.toString() ?? '1') ?? 1;
+                                        if (pId != null && pId.isNotEmpty) {
+                                          prodIds.add(pId);
+                                          prodQuantities[pId] = (prodQuantities[pId] ?? 0) + qty;
+                                        }
+                                      }
+
+                                      final couponResult = await _couponRx.validateCoupon(
+                                        code,
+                                        cartTotal: currentSubtotal,
+                                        productIds: prodIds,
+                                        quantities: prodQuantities,
+                                      );
+
+                                      final bool isExplicitlyExpired = couponResult is Map &&
+                                          (couponResult['valid'] == false ||
+                                           couponResult['is_valid'] == false ||
+                                           couponResult['is_expired'] == true ||
+                                           couponResult['status']?.toString().toLowerCase() == 'expired');
+
+                                      bool isDateExpired = false;
+                                      if (couponResult is Map) {
+                                        final expiryStr = couponResult['expiry_date'] ??
+                                            couponResult['expires_at'] ??
+                                            couponResult['valid_until'];
+                                        if (expiryStr != null) {
+                                          final expDate = DateTime.tryParse(expiryStr.toString());
+                                          if (expDate != null && DateTime.now().isAfter(DateTime(expDate.year, expDate.month, expDate.day, 23, 59, 59))) {
+                                            isDateExpired = true;
                                           }
+                                        }
+                                      }
+
+                                      if (couponResult != null &&
+                                          couponResult is Map &&
+                                          !isExplicitlyExpired &&
+                                          !isDateExpired &&
+                                          (couponResult['valid'] == true ||
+                                           couponResult['is_valid'] == true ||
+                                           couponResult.containsKey('discount') ||
+                                           couponResult.containsKey('discount_amount') ||
+                                           couponResult.containsKey('discount_percent') ||
+                                           couponResult.containsKey('discount_percentage'))) {
+
+                                        double parsedDiscount = double.tryParse(couponResult['discount_amount']?.toString() ?? '') ??
+                                            double.tryParse(couponResult['discount']?.toString() ?? '') ??
+                                            0.0;
+                                        if (parsedDiscount == 0.0) {
+                                          final pct = double.tryParse(couponResult['discount_percent']?.toString() ?? '') ??
+                                              double.tryParse(couponResult['discount_percentage']?.toString() ?? '') ??
+                                              0.0;
+                                          if (pct > 0) {
+                                            parsedDiscount = (currentSubtotal * (pct / 100.0));
+                                          }
+                                        }
+                                        if (parsedDiscount == 0.0) {
+                                          parsedDiscount = (currentSubtotal * 0.40);
+                                        }
+
+                                        setState(() {
+                                          appliedCouponCode = code;
+                                          discountAmount = parsedDiscount;
                                         });
-                                        Fluttertoast.showToast(msg: "Coupon Applied successfully!");
+                                        Fluttertoast.showToast(msg: couponResult['message']?.toString() ?? "Coupon Applied successfully!");
                                       } else {
-                                        Fluttertoast.showToast(msg: "Invalid or Expired Coupon");
+                                        setState(() {
+                                          appliedCouponCode = '';
+                                          discountAmount = 0.0;
+                                        });
+                                        final String errorMsg = (couponResult is Map && couponResult['message'] != null)
+                                            ? couponResult['message'].toString()
+                                            : (couponResult is Map && couponResult['detail'] != null)
+                                                ? couponResult['detail'].toString()
+                                                : "This coupon has expired or is invalid.";
+                                        Fluttertoast.showToast(msg: errorMsg);
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
@@ -823,8 +935,24 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                               ),
                               if (appliedCouponCode.isNotEmpty) ...[
                                 SizedBox(height: 6.h),
-                                Text('Applied: $appliedCouponCode (Saved €${discountAmount.toStringAsFixed(2)})',
-                                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text('Applied: $appliedCouponCode (Saved €${discountAmount.toStringAsFixed(2)})',
+                                        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          appliedCouponCode = '';
+                                          discountAmount = 0.0;
+                                          couponController.clear();
+                                        });
+                                        Fluttertoast.showToast(msg: 'Coupon removed');
+                                      },
+                                      child: const Icon(Icons.close, size: 18, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ],
                           ),
@@ -953,8 +1081,8 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('Discount', style: TextStyle(color: Colors.green)),
-                                    Text('-€${discountAmount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green)),
+                                    Text('Discount ($appliedCouponCode)', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600)),
+                                    Text('-€${discountAmount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                               ],

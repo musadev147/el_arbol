@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:intl/intl.dart';
+import 'package:el_arbol/common_wigdets/app_toast.dart';
 import '../data/rx.dart';
 import '../model/staff_chat_model.dart';
 
@@ -17,6 +18,7 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   late final StaffChatRx _chatRx;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
@@ -28,10 +30,18 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
     _chatRx.fetchChatMessages().then((_) {
       _scrollToBottom();
     });
+
+    // Automatically poll every 5 seconds for new incoming messages from Admin
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        _chatRx.fetchChatMessages(silent: true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     _chatRx.dispose();
@@ -55,17 +65,23 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
     if (text.isEmpty) return;
 
     _messageController.clear();
+
+    // Optimistic local UI update so staff sees message right away
+    final optimisticMsg = StaffChatMessage(
+      message: text,
+      sender: 'STAFF',
+      createdAt: DateTime.now().toIso8601String(),
+    );
+    final currentList = _chatRx.dataFetcher.hasValue ? _chatRx.dataFetcher.value : <StaffChatMessage>[];
+    _chatRx.dataFetcher.sink.add(List<StaffChatMessage>.from(currentList)..add(optimisticMsg));
+    _scrollToBottom();
+
     final success = await _chatRx.sendMessage(text);
     if (success) {
       _scrollToBottom();
+      _chatRx.fetchChatMessages(silent: true);
     } else {
-      Get.snackbar(
-        'Error',
-        'Failed to send message',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      AppToast.error('Failed to send message. Please try again.');
     }
   }
 

@@ -17,8 +17,12 @@ import 'package:rxdart/rxdart.dart';
 import 'package:el_arbol/featuers/customers/tickets/presentation/customer_tickets_screen.dart' as el_arbol;
 import 'package:el_arbol/featuers/customers/addresses/presentation/customer_addresses_screen.dart' as el_arbol_addr;
 import 'package:el_arbol/featuers/customers/orders/presentation/customer_orders_screen.dart' as el_arbol_order;
+import 'package:el_arbol/featuers/wholesale_b2b/presentation/wholesale_orders_screen.dart';
+import 'package:el_arbol/featuers/employee_self_service/presentation/staff_order_history_screen.dart';
 import 'package:el_arbol/featuers/customers/wishlist/presentation/customer_wishlist_screen.dart' as el_arbol_wish;
 import 'package:el_arbol/featuers/customers/notifications/presentation/customer_notifications_screen.dart' as el_arbol_notif;
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:el_arbol/common_wigdets/app_toast.dart';
 import '../../wholesale_b2b/data/wholesale_api.dart';
 import 'data/rx.dart';
 
@@ -611,6 +615,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       await _customerProfileRx.updateAvatar(File(image.path));
                     } else if (widget.role == UserRole.wholesale) {
                       await _wholesaleProfileRx.updateAvatar(File(image.path));
+                    } else if (widget.role == UserRole.staff || widget.role == UserRole.employeeSelfService) {
+                      EasyLoading.show(status: 'Updating photo...');
+                      final success = await _staffProfileRx.updateProfile(
+                        name: _employeeName.isNotEmpty ? _employeeName : 'Staff',
+                        phone: _personalPhone,
+                        photoPath: image.path,
+                      );
+                      EasyLoading.dismiss();
+                      if (success) {
+                        AppToast.success('Profile photo updated successfully!');
+                        _staffProfileRx.fetchStaffProfile();
+                      }
                     }
                   }
                 },
@@ -629,6 +645,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       await _customerProfileRx.updateAvatar(File(image.path));
                     } else if (widget.role == UserRole.wholesale) {
                       await _wholesaleProfileRx.updateAvatar(File(image.path));
+                    } else if (widget.role == UserRole.staff || widget.role == UserRole.employeeSelfService) {
+                      EasyLoading.show(status: 'Updating photo...');
+                      final success = await _staffProfileRx.updateProfile(
+                        name: _employeeName.isNotEmpty ? _employeeName : 'Staff',
+                        phone: _personalPhone,
+                        photoPath: image.path,
+                      );
+                      EasyLoading.dismiss();
+                      if (success) {
+                        AppToast.success('Profile photo updated successfully!');
+                        _staffProfileRx.fetchStaffProfile();
+                      }
                     }
                   }
                 },
@@ -644,7 +672,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final formKey = GlobalKey<FormState>();
     final phoneController = TextEditingController(text: _personalPhone);
     String selectedGender = _personalGender;
-    DateTime selectedDob = _personalDob;
 
     showModalBottomSheet(
       context: context,
@@ -683,24 +710,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (val != null) setModalState(() => selectedGender = val);
                       },
                     ),
-                    SizedBox(height: 12.h),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Date of Birth'),
-                      subtitle: Text('${selectedDob.day}/${selectedDob.month}/${selectedDob.year}'),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDob,
-                          firstDate: DateTime(1950),
-                          lastDate: DateTime.now(),
-                        );
-                        if (date != null) {
-                          setModalState(() => selectedDob = date);
-                        }
-                      },
-                    ),
                     SizedBox(height: 20.h),
                     SizedBox(
                       width: double.infinity,
@@ -712,7 +721,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               final success = await _customerProfileRx.updateProfile({
                                 'phone': phoneController.text,
                                 'gender': selectedGender,
-                                'dob': selectedDob.toIso8601String().split('T').first,
                               });
                               if (success) {
                                 Navigator.pop(ctx);
@@ -721,7 +729,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               setState(() {
                                 _personalPhone = phoneController.text;
                                 _personalGender = selectedGender;
-                                _personalDob = selectedDob;
                               });
                               Fluttertoast.showToast(msg: 'Personal details updated!');
                               Navigator.pop(ctx);
@@ -946,25 +953,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ],
                             ),
                             Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('GENDER', style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.bold)),
                                 SizedBox(height: 4.h),
                                 Text(_personalGender, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('DATE OF BIRTH', style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.bold)),
-                                SizedBox(height: 4.h),
-                                Text('${_personalDob.day}/${_personalDob.month}/${_personalDob.year}', style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600)),
                               ],
                             ),
                             IconButton(
@@ -1066,7 +1059,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         leading: const Icon(Icons.shopping_bag_outlined, color: primaryColor),
                         title: const Text('My Orders'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                        onTap: () => Get.to(() => const el_arbol_order.CustomerOrdersScreen()),
+                        onTap: () {
+                          final currentRole = widget.role;
+                          if (currentRole == UserRole.wholesale) {
+                            Get.to(() => const WholesaleOrdersScreen());
+                          } else if (currentRole == UserRole.staff || currentRole == UserRole.employeeSelfService) {
+                            Get.to(() => const StaffOrderHistoryScreen());
+                          } else {
+                            Get.to(() => const el_arbol_order.CustomerOrdersScreen());
+                          }
+                        },
                       ),
                       const Divider(height: 1),
                       ListTile(

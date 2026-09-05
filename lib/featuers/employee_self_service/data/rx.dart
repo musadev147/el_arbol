@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:el_arbol/common_wigdets/app_toast.dart';
 import '../../../../networks/rx_base.dart';
 import '../model/staff_dashboard_model.dart';
 import '../model/get_staff_history_model.dart';
@@ -23,7 +24,7 @@ class GetStaffDashboardRx extends RxResponseInt<StaffDashboardModel> {
       final data = await api.fetchDashboard();
       handleSuccessWithReturn(data);
     } catch (error) {
-      log("Dashboard fetch error: $error");
+      log("Fetch dashboard error: $error");
       handleErrorWithReturn(error);
     }
   }
@@ -104,7 +105,28 @@ class StaffCheckInOutRx extends RxResponseInt<dynamic> {
       return true;
     } catch (error) {
       log("Check-in error: $error");
-      handleErrorWithReturn(error);
+      EasyLoading.dismiss();
+      String customError = "Store is already closed.";
+      if (error is DioException) {
+        final res = error.response?.data;
+        if (res is Map) {
+          final msg = res['message'] ??
+              res['detail'] ??
+              res['error'] ??
+              res['msg'] ??
+              (res['non_field_errors'] is List && (res['non_field_errors'] as List).isNotEmpty
+                  ? res['non_field_errors'][0].toString()
+                  : null);
+          if (msg != null && msg.toString().isNotEmpty && !msg.toString().toLowerCase().contains("bad request")) {
+            customError = msg.toString();
+          } else {
+            customError = "Store is already closed.";
+          }
+        } else if (res is String && res.isNotEmpty && !res.toLowerCase().contains("bad request")) {
+          customError = res;
+        }
+      }
+      AppToast.error(customError);
       return false;
     }
   }
@@ -337,13 +359,17 @@ class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
 
   ValueStream<List<StaffChatMessage>> get valueStreamData => dataFetcher.stream;
 
-  Future<void> fetchChatMessages() async {
+  Future<void> fetchChatMessages({bool silent = false}) async {
     try {
       final data = await api.getStaffChat();
-      handleSuccessWithReturn(data);
+      if (!dataFetcher.isClosed) {
+        dataFetcher.sink.add(data);
+      }
     } catch (error) {
       log("Fetch staff chat messages error: $error");
-      handleErrorWithReturn(error);
+      if (!silent) {
+        handleErrorWithReturn(error);
+      }
     }
   }
 
@@ -352,14 +378,15 @@ class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
       final sentMessage = await api.sendStaffChatMessage(message);
       
       // Update local stream to show sent message instantly
-      final currentList = dataFetcher.value ?? [];
+      final currentList = dataFetcher.hasValue ? (dataFetcher.value ?? []) : <StaffChatMessage>[];
       final newList = List<StaffChatMessage>.from(currentList)..add(sentMessage);
-      dataFetcher.sink.add(newList);
+      if (!dataFetcher.isClosed) {
+        dataFetcher.sink.add(newList);
+      }
       
       return true;
     } catch (error) {
       log("Send staff chat message error: $error");
-      handleErrorWithReturn(error);
       return false;
     }
   }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:el_arbol/common_wigdets/custom_navigation.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
 import 'package:el_arbol/common_wigdets/user_role.dart';
@@ -20,15 +19,13 @@ class CustomerCartScreen extends StatefulWidget {
   State<CustomerCartScreen> createState() => _CustomerCartScreenState();
 }
 
-class _CustomerCheckoutCartScreenState {} // empty
-
 class _CustomerCartScreenState extends State<CustomerCartScreen> {
   late final CustomerCartRx _cartRx;
 
   @override
   void initState() {
     super.initState();
-    _cartRx = CustomerCartRx(empty: {}, dataFetcher: BehaviorSubject<dynamic>());
+    _cartRx = CustomerCartRx.instance;
     _cartRx.fetchBasket();
   }
 
@@ -176,13 +173,25 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12.r),
-                            child: Image.network(
-                              imageUrl,
-                              width: 70.w,
-                              height: 70.w,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Icon(Icons.image, size: 70.w),
-                            ),
+                            child: (imageUrl.toString().startsWith('http'))
+                                ? Image.network(
+                                    imageUrl,
+                                    width: 70.w,
+                                    height: 70.w,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      width: 70.w,
+                                      height: 70.w,
+                                      color: Colors.green.shade50,
+                                      child: const Icon(Icons.eco, size: 36, color: Color(0xFF00694C)),
+                                    ),
+                                  )
+                                : Container(
+                                    width: 70.w,
+                                    height: 70.w,
+                                    color: Colors.green.shade50,
+                                    child: const Icon(Icons.eco, size: 36, color: Color(0xFF00694C)),
+                                  ),
                           ),
                           SizedBox(width: 16.w),
                           Expanded(

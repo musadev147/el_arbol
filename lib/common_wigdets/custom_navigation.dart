@@ -10,6 +10,7 @@ import '../featuers/customers/home/presentation/leftover_pack_screen.dart';
 import '../featuers/customers/home/presentation/customer_orders_screen.dart';
 import '../featuers/customers/home/presentation/customer_profile_screen.dart';
 import '../featuers/customers/orders/presentation/customer_cart_screen.dart';
+import '../featuers/customers/orders/data/customer_orders_rx.dart';
 import '../featuers/customers/message/messages_screen.dart';
 import '../featuers/customers/profile/profile.dart';
 import '../featuers/customers/wallet/tenant_wallet_screen.dart';
@@ -81,13 +82,13 @@ class _CustomNavigationState extends State<CustomNavigation> {
       "Profile",
     ],
     UserRole.employeeSelfService: [
-      "Dashboard",
+      "Staff Dashboard",
       "Messages",
       "Prices",
       "Profile",
     ],
     UserRole.staff: [
-      "Dashboard",
+      "Staff Dashboard",
       "Messages",
       "Prices",
       "Profile",
@@ -126,6 +127,9 @@ class _CustomNavigationState extends State<CustomNavigation> {
   void initState() {
     super.initState();
     _selectedIndex.value = widget.selectedIndex;
+    if (widget.role == null || widget.role == UserRole.customer) {
+      CustomerCartRx.instance.fetchBasket();
+    }
   }
 
   @override
@@ -261,23 +265,65 @@ class _CustomNavigationState extends State<CustomNavigation> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (iconItem is IconData)
-                        Icon(
-                          iconItem,
-                          size: 24.sp,
-                          color: isSelected
-                              ? const Color(0xFF00694C)
-                              : AppColors.c87878A,
-                        )
-                      else
-                        Image.asset(
-                          iconItem.toString(),
-                          width: 24.w,
-                          height: 24.h,
-                          color: isSelected
-                              ? const Color(0xFF00694C)
-                              : AppColors.c87878A,
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final Widget iconWidget = (iconItem is IconData)
+                              ? Icon(
+                                  iconItem,
+                                  size: 24.sp,
+                                  color: isSelected
+                                      ? const Color(0xFF00694C)
+                                      : AppColors.c87878A,
+                                )
+                              : Image.asset(
+                                  iconItem.toString(),
+                                  width: 24.w,
+                                  height: 24.h,
+                                  color: isSelected
+                                      ? const Color(0xFF00694C)
+                                      : AppColors.c87878A,
+                                );
+
+                          if (role == UserRole.customer && index == 2) {
+                            return StreamBuilder(
+                              stream: CustomerCartRx.instance.valueStreamData,
+                              builder: (context, snapshot) {
+                                final count = CustomerCartRx.instance.itemCount;
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    iconWidget,
+                                    if (count > 0)
+                                      Positioned(
+                                        right: -6,
+                                        top: -4,
+                                        child: Container(
+                                          padding: EdgeInsets.all(3.r),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
+                                          child: Center(
+                                            child: Text(
+                                              '$count',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 9.sp,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            );
+                          }
+                          return iconWidget;
+                        },
+                      ),
                       SizedBox(height: 3.h),
                       Text(
                         labels[index],

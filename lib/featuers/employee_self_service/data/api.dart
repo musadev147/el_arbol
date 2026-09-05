@@ -187,12 +187,50 @@ class StaffDashboardApi {
 
   Future<dynamic> getOrderHistory() async {
     try {
-      final response = await getHttp(Endpoints.staffOrderHistory());
-      if (response.statusCode == 200) {
-        return response.data;
-      } else {
-        throw DataSource.DEFAULT.getFailure();
+      final List<dynamic> allOrders = [];
+      try {
+        final staffOrdersRes = await getHttp(Endpoints.staffOrderHistory());
+        if (staffOrdersRes.statusCode == 200 && staffOrdersRes.data != null) {
+          final sData = staffOrdersRes.data;
+          if (sData is Map && sData['results'] is List) {
+            allOrders.addAll(sData['results']);
+          } else if (sData is List) {
+            allOrders.addAll(sData);
+          }
+        }
+      } catch (e) {
+        log("Staff orders fetch fallback: $e");
       }
+
+      try {
+        final custOrdersRes = await getHttp(Endpoints.customerOrders());
+        if (custOrdersRes.statusCode == 200 && custOrdersRes.data != null) {
+          final cData = custOrdersRes.data;
+          if (cData is Map && cData['results'] is List) {
+            allOrders.addAll(cData['results']);
+          } else if (cData is List) {
+            allOrders.addAll(cData);
+          }
+        }
+      } catch (e) {
+        log("Customer orders fetch fallback: $e");
+      }
+
+      final seenIds = <String>{};
+      final uniqueOrders = <dynamic>[];
+      for (final order in allOrders) {
+        if (order is Map) {
+          final id = order['order_number']?.toString() ?? order['id']?.toString() ?? order.hashCode.toString();
+          if (!seenIds.contains(id)) {
+            seenIds.add(id);
+            uniqueOrders.add(order);
+          }
+        } else {
+          uniqueOrders.add(order);
+        }
+      }
+
+      return uniqueOrders;
     } catch (error) {
       rethrow;
     }
@@ -331,12 +369,22 @@ class StaffDashboardApi {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final dynamic rawData = response.data;
         List<dynamic> list = [];
-        if (rawData is Map && rawData['results'] is List) {
-          list = rawData['results'];
+        if (rawData is Map) {
+          if (rawData['results'] is List) {
+            list = rawData['results'];
+          } else if (rawData['data'] is List) {
+            list = rawData['data'];
+          } else if (rawData['messages'] is List) {
+            list = rawData['messages'];
+          } else if (rawData['chats'] is List) {
+            list = rawData['chats'];
+          } else if (rawData['result'] is List) {
+            list = rawData['result'];
+          }
         } else if (rawData is List) {
           list = rawData;
         }
-        return list.map((json) => StaffChatMessage.fromJson(json)).toList();
+        return list.map((json) => StaffChatMessage.fromJson(Map<String, dynamic>.from(json))).toList();
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
@@ -350,8 +398,26 @@ class StaffDashboardApi {
       final response = await postHttp(Endpoints.staffChat(), {
         "message": message,
       });
+      log("SEND STAFF CHAT RESPONSE: ${response.data}");
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return StaffChatMessage.fromJson(response.data);
+        final resData = response.data;
+        if (resData is Map<String, dynamic>) {
+          if (resData['data'] is Map<String, dynamic>) {
+            return StaffChatMessage.fromJson(resData['data']);
+          } else if (resData['result'] is Map<String, dynamic>) {
+            return StaffChatMessage.fromJson(resData['result']);
+          } else if (resData['message_object'] is Map<String, dynamic>) {
+            return StaffChatMessage.fromJson(resData['message_object']);
+          }
+          return StaffChatMessage.fromJson(resData);
+        } else if (resData is Map) {
+          return StaffChatMessage.fromJson(Map<String, dynamic>.from(resData));
+        }
+        return StaffChatMessage(
+          message: message,
+          sender: 'STAFF',
+          createdAt: DateTime.now().toIso8601String(),
+        );
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
