@@ -189,12 +189,18 @@ class WholesaleApi {
     try {
       final response = await getHttp(Endpoints.wholesaleSingleTicket(id));
       if (response.statusCode == 200) {
-        return response.data;
+        return response.data is Map<String, dynamic> ? response.data : Map<String, dynamic>.from(response.data);
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
     } catch (e) {
-      log('Wholesale getSingleTicket error: $e');
+      log('Wholesale getSingleTicket fallback attempt for ticket $id: $e');
+      try {
+        final fallbackRes = await getHttp("auth/tickets/$id/");
+        if (fallbackRes.statusCode == 200) {
+          return fallbackRes.data is Map<String, dynamic> ? fallbackRes.data : Map<String, dynamic>.from(fallbackRes.data);
+        }
+      } catch (_) {}
       rethrow;
     }
   }
@@ -211,7 +217,16 @@ class WholesaleApi {
         throw DataSource.DEFAULT.getFailure();
       }
     } catch (e) {
-      log('Wholesale createTicketReply error: $e');
+      log('Wholesale createTicketReply error, trying fallback: $e');
+      try {
+        final fallbackRes = await postHttp(
+          Endpoints.customerTicketReply(id),
+          {"message": message},
+        );
+        if (fallbackRes.statusCode == 200 || fallbackRes.statusCode == 201) {
+          return fallbackRes.data is Map<String, dynamic> ? fallbackRes.data : Map<String, dynamic>.from(fallbackRes.data);
+        }
+      } catch (_) {}
       rethrow;
     }
   }

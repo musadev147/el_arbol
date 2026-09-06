@@ -81,6 +81,7 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^31.2.18
   syncfusion_flutter_pdf: ^31.2.18
   device_info_plus: ^12.1.0
+  google_fonts: ^8.2.1
 #  file_picker: ^8.0.0
 
 

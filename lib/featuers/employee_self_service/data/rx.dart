@@ -361,14 +361,44 @@ class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
 
   Future<void> fetchChatMessages({bool silent = false}) async {
     try {
-      final data = await api.getStaffChat();
+      // If this is a background poll and we already have messages loaded, check last page quickly
+      if (silent && dataFetcher.hasValue && dataFetcher.value.isNotEmpty) {
+        final latestMessages = await api.getStaffChat(lastPageOnly: true);
+        final currentList = List<StaffChatMessage>.from(dataFetcher.value);
+        bool hasNew = false;
+        for (final msg in latestMessages) {
+          if (msg.id != null && !currentList.any((m) => m.id == msg.id)) {
+            // Remove optimistic match if present
+            currentList.removeWhere((m) => m.id == null && m.message == msg.message);
+            currentList.add(msg);
+            hasNew = true;
+          }
+        }
+        if (hasNew) {
+          currentList.sort((a, b) {
+            if (a.createdAt != null && b.createdAt != null) {
+              return a.createdAt!.compareTo(b.createdAt!);
+            }
+            return (a.id ?? 0).compareTo(b.id ?? 0);
+          });
+          if (!dataFetcher.isClosed) {
+            dataFetcher.sink.add(currentList);
+          }
+        }
+        return;
+      }
+
+      // Full fetch (initial load or pull-to-refresh)
+      final data = await api.getStaffChat(fetchAll: true);
       if (!dataFetcher.isClosed) {
         dataFetcher.sink.add(data);
       }
     } catch (error) {
       log("Fetch staff chat messages error: $error");
       if (!silent) {
-        handleErrorWithReturn(error);
+        if (!dataFetcher.hasValue || dataFetcher.value.isEmpty) {
+          handleErrorWithReturn(error);
+        }
       }
     }
   }
@@ -377,11 +407,25 @@ class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
     try {
       final sentMessage = await api.sendStaffChatMessage(message);
       
-      // Update local stream to show sent message instantly
-      final currentList = dataFetcher.hasValue ? (dataFetcher.value ?? []) : <StaffChatMessage>[];
-      final newList = List<StaffChatMessage>.from(currentList)..add(sentMessage);
-      if (!dataFetcher.isClosed) {
-        dataFetcher.sink.add(newList);
+      // Update local stream to show sent message instantly without duplicating
+      final currentList = dataFetcher.hasValue ? List<StaffChatMessage>.from(dataFetcher.value) : <StaffChatMessage>[];
+      final exists = currentList.any((m) => m.id != null && m.id == sentMessage.id);
+      if (!exists) {
+        final optimisticIdx = currentList.indexWhere((m) => m.id == null && m.message == message);
+        if (optimisticIdx != -1) {
+          currentList[optimisticIdx] = sentMessage;
+        } else {
+          currentList.add(sentMessage);
+        }
+        currentList.sort((a, b) {
+          if (a.createdAt != null && b.createdAt != null) {
+            return a.createdAt!.compareTo(b.createdAt!);
+          }
+          return (a.id ?? 0).compareTo(b.id ?? 0);
+        });
+        if (!dataFetcher.isClosed) {
+          dataFetcher.sink.add(currentList);
+        }
       }
       
       return true;

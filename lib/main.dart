@@ -111,10 +111,10 @@ class UtillScreenMobile extends StatelessWidget {
           getPages: AppPages.routes,
           showPerformanceOverlay: false,
           theme: ThemeData(
-            primaryColor: const Color(0xFF00694C),
+            primaryColor: AppColors.primaryGreen,
             colorScheme: ColorScheme.fromSwatch().copyWith(
-              primary: const Color(0xFF00694C),
-              secondary: const Color(0xFF00694C),
+              primary: AppColors.primaryGreen,
+              secondary: AppColors.accentOrange,
             ),
             progressIndicatorTheme: const ProgressIndicatorThemeData(
               color: Color(0xFF00694C),

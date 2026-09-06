@@ -73,10 +73,11 @@ class _SignInScreenState extends State<SignInScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.eco,
-                            color: primaryBrandColor,
-                            size: 32.sp,
+                          Image.asset(
+                            AssetsIcons.logoIcons,
+                            width: 34.w,
+                            height: 34.w,
+                            fit: BoxFit.contain,
                           ),
                           SizedBox(width: 8.w),
                           Text(

@@ -7,6 +7,7 @@ class StaffChatMessage {
   final bool? isRead;
   final String? createdAt;
   final String? staffName;
+  final String? adminName;
 
   StaffChatMessage({
     this.id,
@@ -17,6 +18,7 @@ class StaffChatMessage {
     this.isRead,
     this.createdAt,
     this.staffName,
+    this.adminName,
   });
 
   factory StaffChatMessage.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class StaffChatMessage {
       isRead: json['is_read'] is bool ? json['is_read'] : (json['is_read']?.toString() == 'true'),
       createdAt: json['created_at']?.toString(),
       staffName: json['staff_name']?.toString(),
+      adminName: json['admin_name']?.toString() ?? json['admin_user_name']?.toString() ?? json['admin']?.toString(),
     );
   }
 
@@ -42,6 +45,7 @@ class StaffChatMessage {
       'is_read': isRead,
       'created_at': createdAt,
       'staff_name': staffName,
+      'admin_name': adminName,
     };
   }
 }

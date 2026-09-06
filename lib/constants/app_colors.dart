@@ -2,8 +2,19 @@ import 'dart:ui';
 
 class AppColors {
   AppColors._();
+
+  // El Árbol Core Brand Colors (Forest Green & Citrus Orange)
+  static const Color primaryGreen = Color(0xFF00694C);
+  static const Color primaryGreenDark = Color(0xFF004D37);
+  static const Color primaryGreenLight = Color(0xFFE8F5E9);
+
+  // Vibrant Citrus Orange Accents
+  static const Color accentOrange = Color(0xFFFF7A00);
+  static const Color accentOrangeDark = Color(0xFFE66700);
+  static const Color accentOrangeLight = Color(0xFFFFF3E6);
+
   static const Color allPrimaryColor = Color(0xFF032262);
-  static const Color appThemeColor = Color(0xFF0461D3);
+  static const Color appThemeColor = Color(0xFF00694C);
   static const Color white = Color(0xffFFFFFF);
   static const Color c05112A = Color(0xFF05112A);
   static const Color c0461D3 = Color(0xFF0461D3);

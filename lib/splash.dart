@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'route/app_pages.dart';
 import 'constants/app_constants.dart';
+import 'constants/app_colors.dart';
+import 'constants/app_assets/assets_icons.dart';
 import 'helpers/di.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -48,26 +51,74 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFF00694C), // primary brand green
+    return Scaffold(
+      backgroundColor: const Color(0xFF00694C), // primary brand green
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.eco,
-              color: Colors.white,
-              size: 80,
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Image.asset(
+                AssetsIcons.logoIcons,
+                width: 100.w,
+                height: 100.w,
+                fit: BoxFit.contain,
+              ),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 18.h),
             Text(
               'El Árbol',
               style: TextStyle(
                 fontFamily: 'Poppins',
-                fontSize: 32,
+                fontSize: 30.sp,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
+                letterSpacing: 0.5,
               ),
+            ),
+            SizedBox(height: 6.h),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 5.r,
+                  height: 5.r,
+                  decoration: const BoxDecoration(
+                    color: AppColors.accentOrange,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  'Frutas & Verduras',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12.sp,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Container(
+                  width: 5.r,
+                  height: 5.r,
+                  decoration: const BoxDecoration(
+                    color: AppColors.accentOrange,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

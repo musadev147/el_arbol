@@ -274,13 +274,15 @@ class WholesaleSingleTicketRx extends RxResponseInt<Map<String, dynamic>> {
 
   ValueStream get valueStreamData => dataFetcher.stream;
 
-  Future<void> fetchSingleTicket(String id) async {
+  Future<void> fetchSingleTicket(String id, {bool silent = false}) async {
     try {
       final data = await api.getSingleTicket(id);
       await handleSuccessWithReturn(data);
     } catch (e) {
       log('WholesaleSingleTicketRx fetchSingleTicket error: $e');
-      await handleErrorWithReturn(e);
+      if (!silent) {
+        await handleErrorWithReturn(e);
+      }
     }
   }
 

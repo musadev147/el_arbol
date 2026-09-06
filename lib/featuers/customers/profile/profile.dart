@@ -23,6 +23,7 @@ import 'package:el_arbol/featuers/customers/wishlist/presentation/customer_wishl
 import 'package:el_arbol/featuers/customers/notifications/presentation/customer_notifications_screen.dart' as el_arbol_notif;
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
+import 'package:el_arbol/featuers/employee_self_service/presentation/staff_chat_screen.dart';
 import '../../wholesale_b2b/data/wholesale_api.dart';
 import 'data/rx.dart';
 
@@ -249,13 +250,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Divider(),
               SizedBox(height: 12.h),
 
-              const Text('Registered Business Name', style: TextStyle(fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  const Text('Registered Business Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                  SizedBox(width: 6.w),
+                  Icon(Icons.lock_outline, size: 14.r, color: Colors.grey.shade600),
+                ],
+              ),
               SizedBox(height: 6.h),
               TextField(
                 controller: nameController,
+                enabled: false,
+                readOnly: true,
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp),
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  suffixIcon: Icon(Icons.lock, size: 18.r, color: Colors.grey.shade400),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
                   contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  helperText: 'Business Name is locked for compliance purposes.',
+                  helperStyle: TextStyle(fontSize: 10.sp, color: Colors.grey.shade500),
                 ),
               ),
               SizedBox(height: 16.h),
@@ -769,10 +791,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.redAccent),
-            onPressed: _logout,
-          ),
+          if (currentRole != UserRole.wholesale)
+            IconButton(
+              icon: const Icon(Icons.logout, color: Colors.redAccent),
+              onPressed: _logout,
+            ),
         ],
       ),
       body: SafeArea(
@@ -1073,9 +1096,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const Divider(height: 1),
                       ListTile(
                         leading: const Icon(Icons.support_agent, color: primaryColor),
-                        title: const Text('Support Tickets'),
+                        title: Text(
+                          (widget.role == UserRole.staff || widget.role == UserRole.employeeSelfService)
+                              ? 'Support Chat'
+                              : 'Support Tickets',
+                        ),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                        onTap: () => Get.to(() => const el_arbol.CustomerSupportTicketsScreen()),
+                        onTap: () {
+                          final currentRole = widget.role;
+                          if (currentRole == UserRole.staff || currentRole == UserRole.employeeSelfService) {
+                            Get.to(() => const StaffChatScreen());
+                          } else if (currentRole == UserRole.wholesale) {
+                            Get.toNamed(Routes.WHOLESALE_SUPPORT_TICKETS_SCREEN);
+                          } else {
+                            Get.to(() => const el_arbol.CustomerSupportTicketsScreen());
+                          }
+                        },
                       ),
                       const Divider(height: 1),
                       ListTile(
@@ -1182,15 +1218,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(
                 width: double.infinity,
                 height: 48.h,
-                child: OutlinedButton.icon(
-                  onPressed: _logout,
-                  icon: const Icon(Icons.logout, color: Colors.red),
-                  label: const Text('Log Out from Portal', style: TextStyle(color: Colors.red)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                  ),
-                ),
+                child: currentRole == UserRole.wholesale
+                    ? OutlinedButton(
+                        onPressed: _logout,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                        ),
+                        child: const Text('Log Out from Portal', style: TextStyle(color: Colors.red)),
+                      )
+                    : OutlinedButton.icon(
+                        onPressed: _logout,
+                        icon: const Icon(Icons.logout, color: Colors.red),
+                        label: const Text('Log Out from Portal', style: TextStyle(color: Colors.red)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                        ),
+                      ),
               ),
               SizedBox(height: 30.h),
             ],

@@ -368,9 +368,76 @@ class _WholesaleSupportTicketsScreenState extends State<WholesaleSupportTicketsS
 
           return ListView.builder(
             padding: EdgeInsets.all(16.r),
-            itemCount: tickets.length,
+            itemCount: tickets.length + 1,
             itemBuilder: (context, index) {
-              final ticket = tickets[index];
+              if (index == 0) {
+                return Container(
+                  margin: EdgeInsets.only(bottom: 16.h),
+                  padding: EdgeInsets.all(16.r),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00694C), Color(0xFF004D37)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF00694C).withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(10.r),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.headset_mic_rounded, color: Colors.white, size: 26),
+                      ),
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chat with Admin Support',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14.sp,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              'Instant help with orders, billing, and supply',
+                              style: TextStyle(fontSize: 11.sp, color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: _createTicket,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF00694C),
+                          elevation: 0,
+                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+                        ),
+                        child: Text('New Chat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.sp)),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final ticket = tickets[index - 1];
               final ticketId = ticket['id']?.toString() ?? '';
               final subject = ticket['subject'] ?? ticket['title'] ?? 'Ticket #$ticketId';
               final status = ticket['status'] ?? 'Open';

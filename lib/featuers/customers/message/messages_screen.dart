@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import '../../../route/app_pages.dart';
 
@@ -110,20 +109,27 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         return Align(
                           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                           child: Container(
-                            margin: EdgeInsets.symmetric(vertical: 4.h),
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                            margin: EdgeInsets.only(
+                              bottom: 8.h,
+                              left: isMe ? 48.w : 0,
+                              right: isMe ? 0 : 48.w,
+                            ),
                             padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
                             decoration: BoxDecoration(
                               color: isMe ? const Color(0xFF00694C) : Colors.white,
                               borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(12.r),
-                                topRight: Radius.circular(12.r),
-                                bottomLeft: isMe ? Radius.circular(12.r) : Radius.zero,
-                                bottomRight: isMe ? Radius.zero : Radius.circular(12.r),
+                                topLeft: Radius.circular(14.r),
+                                topRight: Radius.circular(14.r),
+                                bottomLeft: isMe ? Radius.circular(14.r) : Radius.circular(3.r),
+                                bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(14.r),
                               ),
+                              border: isMe ? null : Border.all(color: Colors.grey.shade200),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.01),
+                                  color: Colors.black.withValues(alpha: 0.03),
                                   blurRadius: 4,
+                                  offset: const Offset(0, 1),
                                 )
                               ],
                             ),
@@ -397,133 +403,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 12.h),
-
-                    // Daily Reports Card
-                    GestureDetector(
-                      onTap: () => Get.toNamed(Routes.WHOLESALE_DAILY_REPORTS_SCREEN),
-                      child: Container(
-                        padding: EdgeInsets.all(18.r),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(color: Colors.grey.shade100),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.015),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            )
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(12.r),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF00694C).withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.analytics_outlined, color: Color(0xFF00694C), size: 28),
-                            ),
-                            SizedBox(width: 16.w),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Daily Reports",
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 15.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF151E13),
-                                    ),
-                                  ),
-                                  SizedBox(height: 4.h),
-                                  Text(
-                                    "Access transaction data and sales summaries",
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 11.sp,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
-                ),
-              ),
-              
-              // FAQ / Info Section
-              SizedBox(height: 24.h),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "B2B Support Desk Info",
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Container(
-                  padding: EdgeInsets.all(16.r),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.info_outline, color: Color(0xFF00694C), size: 18),
-                          SizedBox(width: 10.w),
-                          Expanded(
-                            child: Text(
-                              "Support hours: 09:00 AM - 06:00 PM",
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Colors.grey.shade800,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 20),
-                      Row(
-                        children: [
-                          const Icon(Icons.lock_clock_outlined, color: Color(0xFF00694C), size: 18),
-                          SizedBox(width: 10.w),
-                          Expanded(
-                            child: Text(
-                              "Reports update automatically every 24 hours.",
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Colors.grey.shade800,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ],

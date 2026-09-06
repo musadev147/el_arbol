@@ -39,7 +39,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final List<Map<String, String>> _businessTypeOptions = const [
     {'value': 'restaurant', 'label': 'Restaurant'},
     {'value': 'food_retail', 'label': 'Food Retail / Grocery'},
-    {'value': 'supermarket', 'label': 'Supermarket'},
     {'value': 'hotel', 'label': 'Hotel / Lodging'},
     {'value': 'catering', 'label': 'Catering'},
     {'value': 'other', 'label': 'Other Business'},

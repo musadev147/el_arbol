@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:el_arbol/common_wigdets/custom_navigation.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
 import 'package:el_arbol/common_wigdets/user_role.dart';
+import '../../../../constants/app_assets/assets_icons.dart';
 import '../data/customer_orders_rx.dart';
 import 'customer_checkout_screen.dart';
 
@@ -183,14 +184,16 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
                                       width: 70.w,
                                       height: 70.w,
                                       color: Colors.green.shade50,
-                                      child: const Icon(Icons.eco, size: 36, color: Color(0xFF00694C)),
+                                      padding: EdgeInsets.all(12.r),
+                                      child: Image.asset(AssetsIcons.logoIcons, fit: BoxFit.contain),
                                     ),
                                   )
                                 : Container(
                                     width: 70.w,
                                     height: 70.w,
                                     color: Colors.green.shade50,
-                                    child: const Icon(Icons.eco, size: 36, color: Color(0xFF00694C)),
+                                    padding: EdgeInsets.all(12.r),
+                                    child: Image.asset(AssetsIcons.logoIcons, fit: BoxFit.contain),
                                   ),
                           ),
                           SizedBox(width: 16.w),

@@ -8,6 +8,8 @@ import 'package:rxdart/rxdart.dart';
 import '../../../../common_wigdets/common_button.dart';
 import '../../../../common_wigdets/custom_textfiled.dart';
 import '../../../../common_wigdets/app_toast.dart';
+import '../../../../constants/app_assets/assets_icons.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../customers/addresses/data/customer_addresses_rx.dart';
 import '../../customers/orders/data/customer_orders_api.dart';
 import '../../customers/orders/data/customer_orders_rx.dart';
@@ -226,6 +228,22 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
             : <dynamic>[];
         existing.insert(0, placedOrder);
         appData.write('wholesale_placed_orders', existing);
+
+        // Add order placed notification
+        final notif = {
+          'id': 'notif_${DateTime.now().millisecondsSinceEpoch}',
+          'title': 'Wholesale Order Placed',
+          'message': 'Order $orderNumber for €${WholesaleCartState.totalAmount.toStringAsFixed(2)} placed and queued for dispatch.',
+          'created_at': DateFormat('dd MMM, HH:mm').format(DateTime.now()),
+          'type': 'order',
+          'target_id': orderNumber,
+          'is_read': false,
+        };
+        final notifs = (appData.read('wholesale_local_notifications') is List)
+            ? List<dynamic>.from(appData.read('wholesale_local_notifications'))
+            : <dynamic>[];
+        notifs.insert(0, notif);
+        appData.write('wholesale_local_notifications', notifs);
       } catch (_) {}
 
       if (_paymentMethod == 'card') {
@@ -463,14 +481,16 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                                                 color: Colors.grey.shade100,
                                                 width: 46.w,
                                                 height: 46.w,
-                                                child: const Icon(Icons.grass, color: primaryColor, size: 20),
+                                                padding: EdgeInsets.all(8.r),
+                                                child: Image.asset(AssetsIcons.logoIcons, fit: BoxFit.contain),
                                               ),
                                             )
                                           : Container(
                                               color: Colors.grey.shade100,
                                               width: 46.w,
                                               height: 46.w,
-                                              child: const Icon(Icons.grass, color: primaryColor, size: 20),
+                                              padding: EdgeInsets.all(8.r),
+                                              child: Image.asset(AssetsIcons.logoIcons, fit: BoxFit.contain),
                                             ),
                                     ),
                                     SizedBox(width: 12.w),
@@ -527,56 +547,40 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                         title: 'Buyer & Company Profile',
                         icon: Icons.business_outlined,
                         children: [
-                          CustomTextFormField(
+                          _buildInterTextField(
                             controller: _companyNameController,
                             labelText: 'Company / Business Name *',
                             hintText: 'e.g. BioFresh Distributors SL',
                             validator: (v) => v == null || v.trim().isEmpty ? 'Company name is required' : null,
                           ),
                           SizedBox(height: 12.h),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: CustomTextFormField(
-                                  controller: _contactPersonController,
-                                  labelText: 'Contact Person *',
-                                  hintText: 'e.g. Carlos Mendoza',
-                                  validator: (v) => v == null || v.trim().isEmpty ? 'Contact person required' : null,
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: CustomTextFormField(
-                                  controller: _vatIdController,
-                                  labelText: 'Tax / CIF / VAT ID',
-                                  hintText: 'e.g. ES-B12345678',
-                                ),
-                              ),
-                            ],
+                          _buildInterTextField(
+                            controller: _contactPersonController,
+                            labelText: 'Contact Person *',
+                            hintText: 'e.g. Carlos Mendoza',
+                            validator: (v) => v == null || v.trim().isEmpty ? 'Contact person required' : null,
                           ),
                           SizedBox(height: 12.h),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: CustomTextFormField(
-                                  controller: _businessEmailController,
-                                  labelText: 'Business Email *',
-                                  hintText: 'e.g. orders@biofresh.es',
-                                  keyboardType: TextInputType.emailAddress,
-                                  validator: (v) => v == null || v.trim().isEmpty ? 'Email required' : null,
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: CustomTextFormField(
-                                  controller: _businessPhoneController,
-                                  labelText: 'Contact Phone *',
-                                  hintText: 'e.g. +34 622 998 877',
-                                  keyboardType: TextInputType.phone,
-                                  validator: (v) => v == null || v.trim().isEmpty ? 'Phone required' : null,
-                                ),
-                              ),
-                            ],
+                          _buildInterTextField(
+                            controller: _vatIdController,
+                            labelText: 'Tax / CIF / VAT ID',
+                            hintText: 'e.g. ES-B12345678',
+                          ),
+                          SizedBox(height: 12.h),
+                          _buildInterTextField(
+                            controller: _businessEmailController,
+                            labelText: 'Business Email *',
+                            hintText: 'e.g. orders@biofresh.es',
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) => v == null || v.trim().isEmpty ? 'Email required' : null,
+                          ),
+                          SizedBox(height: 12.h),
+                          _buildInterTextField(
+                            controller: _businessPhoneController,
+                            labelText: 'Contact Phone *',
+                            hintText: 'e.g. +34 622 998 877',
+                            keyboardType: TextInputType.phone,
+                            validator: (v) => v == null || v.trim().isEmpty ? 'Phone required' : null,
                           ),
                         ],
                       ),
@@ -967,9 +971,25 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                       // Submit Button
                       SizedBox(
                         width: double.infinity,
-                        child: CommonButton(
-                          text: 'Confirm & Submit Wholesale Order',
-                          onPressed: _submitWholesaleOrder,
+                        height: 50.h,
+                        child: ElevatedButton(
+                          onPressed: _isSubmitting ? null : _submitWholesaleOrder,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00694C),
+                            disabledBackgroundColor: const Color(0xFF00694C).withValues(alpha: 0.6),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                          ),
+                          child: Text(
+                            'Confirm and Submit Order',
+                            style: GoogleFonts.inter(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                       SizedBox(height: 24.h),
@@ -978,6 +998,70 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildInterTextField({
+    required TextEditingController controller,
+    required String labelText,
+    String? hintText,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          labelText,
+          style: GoogleFonts.inter(
+            fontSize: 13.sp,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF374151),
+          ),
+        ),
+        SizedBox(height: 6.h),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          validator: validator,
+          style: GoogleFonts.inter(
+            fontSize: 13.sp,
+            color: const Color(0xFF151E13),
+            fontWeight: FontWeight.normal,
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: hintText,
+            hintStyle: GoogleFonts.inter(
+              fontSize: 12.sp,
+              color: Colors.grey.shade400,
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.r),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.r),
+              borderSide: const BorderSide(color: Color(0xFF00694C), width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.r),
+              borderSide: const BorderSide(color: Colors.red, width: 1.0),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.r),
+              borderSide: const BorderSide(color: Colors.red, width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

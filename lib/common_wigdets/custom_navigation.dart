@@ -6,14 +6,11 @@ import '../constants/app_assets/assets_icons.dart';
 import '../constants/app_colors.dart';
 import '../featuers/customers/home/presentation/home_screen.dart';
 import '../featuers/customers/home/presentation/shop_map_screen.dart';
-import '../featuers/customers/home/presentation/leftover_pack_screen.dart';
 import '../featuers/customers/home/presentation/customer_orders_screen.dart';
 import '../featuers/customers/home/presentation/customer_profile_screen.dart';
 import '../featuers/customers/orders/presentation/customer_cart_screen.dart';
 import '../featuers/customers/orders/data/customer_orders_rx.dart';
-import '../featuers/customers/message/messages_screen.dart';
 import '../featuers/customers/profile/profile.dart';
-import '../featuers/customers/wallet/tenant_wallet_screen.dart';
 
 import '../featuers/employee_self_service/presentation/employee_dashboard_screen.dart';
 import '../featuers/employee_self_service/presentation/staff_chat_screen.dart';
@@ -49,7 +46,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
     ],
     UserRole.wholesale: [
       AssetsIcons.homeIcons,
-      AssetsIcons.messagenavIcons,
+      Icons.storefront_rounded,
       Icons.receipt_long_rounded,
       AssetsIcons.usernavIcons,
     ],
@@ -77,7 +74,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
     ],
     UserRole.wholesale: [
       "Market",
-      "Messages",
+      "Store",
       "Orders",
       "Profile",
     ],
@@ -105,7 +102,7 @@ class _CustomNavigationState extends State<CustomNavigation> {
     ],
     UserRole.wholesale: [
       const WholesaleCatalogScreen(),
-      const MessagesScreen(isWholesale: true),
+      const ShopMapScreen(),
       const WholesaleOrdersScreen(),
       const ProfileScreen(role: UserRole.wholesale),
     ],
@@ -299,9 +296,17 @@ class _CustomNavigationState extends State<CustomNavigation> {
                                         top: -4,
                                         child: Container(
                                           padding: EdgeInsets.all(3.r),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.red,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accentOrange,
                                             shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white, width: 1.5),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppColors.accentOrange.withValues(alpha: 0.4),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 1),
+                                              ),
+                                            ],
                                           ),
                                           constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
                                           child: Center(

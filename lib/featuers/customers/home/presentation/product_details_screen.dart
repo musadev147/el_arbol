@@ -11,6 +11,8 @@ import '../../orders/presentation/customer_cart_screen.dart';
 import '../../wishlist/presentation/data/rx.dart';
 import '../../../wholesale_b2b/presentation/wholesale_cart_screen.dart';
 import '../../../wholesale_b2b/presentation/wholesale_cart_state.dart';
+import '../../../../constants/app_assets/assets_icons.dart';
+import '../../../../constants/app_colors.dart';
 import 'model/post_wishlist_model.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
@@ -64,8 +66,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.minPurchase != null && widget.minPurchase! > 1) {
-      _quantity = widget.minPurchase!;
+    final minQty = widget.minPurchase ?? 1;
+    if (widget.stock != null && widget.stock! > 0 && minQty > widget.stock!) {
+      _quantity = widget.stock!;
+    } else {
+      _quantity = minQty;
     }
     try {
       _wishlistRx = Get.find<WishlistRx>();
@@ -124,33 +129,40 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
             ),
             actions: [
-              if (!widget.isStaff && widget.id != null && _wishlistRx != null)
-                Padding(
-                  padding: EdgeInsets.only(right: 16.w, top: 8.h),
-                  child: StreamBuilder<List<PostCreateWishlistModel>>(
-                    stream: _wishlistRx!.valueStreamData,
-                    builder: (context, snapshot) {
-                      final isWish = _wishlistRx!.isWishlisted(widget.id);
+              Builder(
+                builder: (context) {
+                  final rx = _wishlistRx;
+                  if (widget.isStaff || widget.id == null || rx == null) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: EdgeInsets.only(right: 16.w, top: 8.h),
+                    child: StreamBuilder<List<PostCreateWishlistModel>>(
+                      stream: rx.valueStreamData,
+                      builder: (context, snapshot) {
+                        final isWish = rx.isWishlisted(widget.id);
 
-                      return CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: IconButton(
-                          icon: Icon(
-                            isWish ? Icons.favorite : Icons.favorite_border_rounded,
-                            color: isWish ? Colors.red : const Color(0xFF151E13),
+                        return CircleAvatar(
+                          backgroundColor: Colors.white,
+                          child: IconButton(
+                            icon: Icon(
+                              isWish ? Icons.favorite : Icons.favorite_border_rounded,
+                              color: isWish ? Colors.red : const Color(0xFF151E13),
+                            ),
+                            onPressed: () {
+                              if (isWish) {
+                                rx.removeItem(widget.id!);
+                              } else {
+                                rx.addItem(widget.id!);
+                              }
+                            },
                           ),
-                          onPressed: () {
-                            if (isWish) {
-                              _wishlistRx!.removeItem(widget.id!);
-                            } else {
-                              _wishlistRx!.addItem(widget.id!);
-                            }
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
@@ -179,7 +191,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         ),
                         errorWidget: (context, url, error) => Container(
                           color: Colors.grey.shade100,
-                          child: const Icon(Icons.grass, size: 60, color: primaryBrandColor),
+                          child: Center(
+                            child: Image.asset(
+                              AssetsIcons.logoIcons,
+                              width: 60.r,
+                              height: 60.r,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.eco, size: 50, color: primaryBrandColor),
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -322,11 +342,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       ),
                       Text(
                         widget.price,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontFamily: 'Poppins',
-                          fontSize: 24.sp,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.amber.shade700,
+                          color: AppColors.accentOrange,
                         ),
                       ),
                     ],
@@ -360,60 +380,113 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     SizedBox(height: 24.h),
 
                     // Quantity Selector Section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Quantity',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF151E13),
-                          ),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  if (_quantity > 1) {
-                                    setState(() {
-                                      _quantity--;
-                                    });
-                                  }
-                                },
-                                icon: const Icon(Icons.remove, color: Color(0xFF151E13)),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8.w),
+                    Builder(
+                      builder: (context) {
+                        final int minAllowed = widget.minPurchase ?? 1;
+                        final bool isOutOfStock = widget.stock != null && widget.stock! <= 0;
+                        final bool canDecrement = !isOutOfStock && _quantity > minAllowed;
+                        final bool canIncrement = !isOutOfStock && (widget.stock == null || _quantity < widget.stock!);
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Quantity',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xFF151E13),
+                                      ),
+                                    ),
+                                    if (widget.minPurchase != null && widget.minPurchase! > 1)
+                                      Text(
+                                        'Min order: ${widget.minPurchase}',
+                                        style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
+                                      ),
+                                  ],
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      IconButton(
+                                        onPressed: canDecrement
+                                            ? () {
+                                                setState(() {
+                                                  _quantity--;
+                                                });
+                                              }
+                                            : null,
+                                        icon: Icon(
+                                          Icons.remove,
+                                          color: canDecrement ? const Color(0xFF151E13) : Colors.grey.shade400,
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 8.w),
+                                        child: Text(
+                                          '$_quantity',
+                                          style: TextStyle(
+                                            fontSize: 16.sp,
+                                            fontWeight: FontWeight.bold,
+                                            color: isOutOfStock ? Colors.grey : const Color(0xFF151E13),
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        onPressed: canIncrement
+                                            ? () {
+                                                setState(() {
+                                                  _quantity++;
+                                                });
+                                              }
+                                            : null,
+                                        icon: Icon(
+                                          Icons.add,
+                                          color: canIncrement ? const Color(0xFF151E13) : Colors.grey.shade400,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (widget.stock != null) ...[
+                              SizedBox(height: 6.h),
+                              Align(
+                                alignment: Alignment.centerRight,
                                 child: Text(
-                                  '$_quantity',
+                                  widget.stock! <= 0
+                                      ? 'Stock Out (0 available)'
+                                      : (_quantity >= widget.stock!
+                                          ? 'Maximum stock reached (${widget.stock} in stock)'
+                                          : 'Available in stock: ${widget.stock}'),
                                   style: TextStyle(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF151E13),
+                                    fontSize: 11.sp,
+                                    color: widget.stock! <= 0
+                                        ? Colors.red
+                                        : (_quantity >= widget.stock! ? Colors.orange.shade800 : Colors.grey.shade600),
+                                    fontWeight: _quantity >= widget.stock! ? FontWeight.bold : FontWeight.w500,
                                   ),
                                 ),
                               ),
-                              IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _quantity++;
-                                  });
-                                },
-                                icon: const Icon(Icons.add, color: Color(0xFF151E13)),
-                              ),
                             ],
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
-                    SizedBox(height: 32.h),
+                    SizedBox(height: 28.h),
 
                     // Add To Basket Button
                     SizedBox(
@@ -487,7 +560,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                       },
                                       child: const Text(
                                         'VIEW BASKET',
-                                        style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold),
+                                        style: TextStyle(color: AppColors.accentOrange, fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
+import 'package:el_arbol/constants/app_assets/assets_icons.dart';
 import 'wholesale_cart_state.dart';
 import 'wholesale_checkout_screen.dart';
 
@@ -201,14 +202,24 @@ class WholesaleCartScreen extends StatelessWidget {
                                       color: Colors.grey.shade100,
                                       width: 60.w,
                                       height: 60.w,
-                                      child: const Icon(Icons.grass, color: primaryColor, size: 28),
+                                      padding: EdgeInsets.all(8.r),
+                                      child: Image.asset(
+                                        AssetsIcons.logoIcons,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.eco, color: primaryColor, size: 28),
+                                      ),
                                     ),
                                   )
                                 : Container(
                                     color: Colors.grey.shade100,
                                     width: 60.w,
                                     height: 60.w,
-                                    child: const Icon(Icons.grass, color: primaryColor, size: 28),
+                                    padding: EdgeInsets.all(8.r),
+                                    child: Image.asset(
+                                      AssetsIcons.logoIcons,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.eco, color: primaryColor, size: 28),
+                                    ),
                                   ),
                           ),
                           SizedBox(width: 12.w),
@@ -312,17 +323,26 @@ class WholesaleCartScreen extends StatelessWidget {
                                               style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
                                             )),
                                           ),
-                                          IconButton(
-                                            padding: EdgeInsets.all(4.r),
-                                            constraints: const BoxConstraints(),
-                                            icon: const Icon(Icons.add, size: 16, color: primaryColor),
-                                            onPressed: () {
-                                              WholesaleCartState.updateQuantity(
-                                                item.id.isNotEmpty ? item.id : item.name,
-                                                item.quantity.value + 1,
-                                              );
-                                            },
-                                          ),
+                                          Obx(() {
+                                            final bool canAddMore = item.stock == null || item.quantity.value < item.stock!;
+                                            return IconButton(
+                                              padding: EdgeInsets.all(4.r),
+                                              constraints: const BoxConstraints(),
+                                              icon: Icon(
+                                                Icons.add,
+                                                size: 16,
+                                                color: canAddMore ? primaryColor : Colors.grey.shade400,
+                                              ),
+                                              onPressed: canAddMore
+                                                  ? () {
+                                                      WholesaleCartState.updateQuantity(
+                                                        item.id.isNotEmpty ? item.id : item.name,
+                                                        item.quantity.value + 1,
+                                                      );
+                                                    }
+                                                  : null,
+                                            );
+                                          }),
                                         ],
                                       ),
                                     ),

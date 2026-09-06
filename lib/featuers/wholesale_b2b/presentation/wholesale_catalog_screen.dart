@@ -4,12 +4,18 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/app_toast.dart';
+import '../../../../constants/app_assets/assets_icons.dart';
+import '../../../../constants/app_colors.dart';
 import 'wholesale_cart_state.dart';
 import 'wholesale_cart_screen.dart';
+import '../data/wholesale_rx.dart';
 import '../../customers/home/presentation/product_details_screen.dart';
 import '../../customers/home/presentation/data/rx.dart';
 import '../../customers/home/presentation/model/get_product_model.dart';
+import '../../customers/home/presentation/model/get_category_model.dart';
 import '../../../route/app_pages.dart';
+import 'package:el_arbol/helpers/di.dart';
 
 class WholesaleCatalogScreen extends StatefulWidget {
   const WholesaleCatalogScreen({super.key});
@@ -21,7 +27,11 @@ class WholesaleCatalogScreen extends StatefulWidget {
 class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedCategory = 'All';
+
   late final GetProductRx _productRx;
+  late final GetCategoryRx _categoryRx;
+  late final WholesaleNotificationsRx _notificationsRx;
 
   @override
   void initState() {
@@ -31,6 +41,19 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
       dataFetcher: BehaviorSubject<GetProductModel>(),
     );
     _productRx.fetchProducts();
+
+    _categoryRx = GetCategoryRx(
+      empty: GetCategoryModel(),
+      dataFetcher: BehaviorSubject<GetCategoryModel>(),
+    );
+    _categoryRx.fetchCategories();
+
+    _notificationsRx = WholesaleNotificationsRx(
+      empty: {},
+      dataFetcher: BehaviorSubject<Map<String, dynamic>>(),
+    );
+    _notificationsRx.fetchNotifications();
+
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -42,6 +65,8 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
   void dispose() {
     _searchController.dispose();
     _productRx.dispose();
+    _categoryRx.dispose();
+    _notificationsRx.dispose();
     super.dispose();
   }
 
@@ -63,12 +88,67 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_outlined,
-              color: Color(0xFF151E13),
-            ),
-            onPressed: () => Get.toNamed(Routes.WHOLESALE_NOTIFICATIONS_SCREEN),
+          // Notification Icon with Unread Badge
+          StreamBuilder<dynamic>(
+            stream: _notificationsRx.valueStreamData,
+            builder: (context, notifSnapshot) {
+              int unreadCount = 0;
+              final data = notifSnapshot.data;
+              if (data is Map && data['unread_count'] is int) {
+                unreadCount = data['unread_count'];
+              } else if (data is Map && data['results'] is List) {
+                unreadCount = (data['results'] as List).where((n) => n['is_read'] != true && n['read'] != true).length;
+              } else if (data is List) {
+                unreadCount = data.where((n) => n['is_read'] != true && n['read'] != true).length;
+              }
+              try {
+                final localNotifs = appData.read('wholesale_local_notifications');
+                if (localNotifs is List) {
+                  unreadCount += localNotifs.where((n) => n['is_read'] != true).length;
+                }
+              } catch (_) {}
+
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_outlined,
+                      color: Color(0xFF151E13),
+                    ),
+                    onPressed: () async {
+                      await Get.toNamed(Routes.WHOLESALE_NOTIFICATIONS_SCREEN);
+                      _notificationsRx.fetchNotifications();
+                    },
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 8.w,
+                      top: 8.h,
+                      child: Container(
+                        padding: EdgeInsets.all(4.r),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: BoxConstraints(
+                          minWidth: 16.w,
+                          minHeight: 16.h,
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           Stack(
             alignment: Alignment.center,
@@ -81,8 +161,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                 onPressed: () => Get.to(() => const WholesaleCartScreen()),
               ),
               Obx(() {
-                if (WholesaleCartState.cartItems.isEmpty)
-                  return const SizedBox();
+                if (WholesaleCartState.cartItems.isEmpty) return const SizedBox();
                 return Positioned(
                   right: 6.w,
                   top: 6.h,
@@ -118,7 +197,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
           children: [
             // Search Bar
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
               child: TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
@@ -142,6 +221,76 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                   ),
                 ),
               ),
+            ),
+
+            // Category Section (Task 10)
+            StreamBuilder<dynamic>(
+              stream: _categoryRx.valueStreamData,
+              builder: (context, catSnapshot) {
+                final GetCategoryModel? catModel = catSnapshot.data;
+                final List<String> categories = ['All'];
+                if (catModel?.results != null) {
+                  for (final c in catModel!.results!) {
+                    final name = c.name?.trim();
+                    if (name != null && name.isNotEmpty && !categories.contains(name)) {
+                      categories.add(name);
+                    }
+                  }
+                }
+
+                return Container(
+                  height: 38.h,
+                  margin: EdgeInsets.only(bottom: 8.h),
+                  child: ListView.separated(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: categories.length,
+                    separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                    itemBuilder: (context, idx) {
+                      final cat = categories[idx];
+                      final isSelected = _selectedCategory == cat;
+
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = cat;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                          decoration: BoxDecoration(
+                            color: isSelected ? primaryColor : Colors.white,
+                            borderRadius: BorderRadius.circular(20.r),
+                            border: Border.all(
+                              color: isSelected ? primaryColor : Colors.grey.shade200,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: primaryColor.withOpacity(0.2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              cat,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? Colors.white : const Color(0xFF151E13),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
 
             // Products Grid
@@ -171,18 +320,24 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                     );
                   }
 
-                  // Filter by query
+                  // Filter by search query and category
                   final filteredProducts = products.where((p) {
                     final name = (p.name ?? '').toLowerCase();
                     final catName = (p.category?.name ?? '').toLowerCase();
-                    return name.contains(_searchQuery) ||
+                    final matchesSearch = _searchQuery.isEmpty ||
+                        name.contains(_searchQuery) ||
                         catName.contains(_searchQuery);
+
+                    final matchesCat = _selectedCategory == 'All' ||
+                        catName.toLowerCase() == _selectedCategory.toLowerCase();
+
+                    return matchesSearch && matchesCat;
                   }).toList();
 
                   if (filteredProducts.isEmpty) {
                     return Center(
                       child: Text(
-                        'No products found matching your search.',
+                        'No products found in this category.',
                         style: TextStyle(color: Colors.grey, fontSize: 13.sp),
                       ),
                     );
@@ -191,7 +346,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                   return GridView.builder(
                     padding: EdgeInsets.symmetric(
                       horizontal: 20.w,
-                      vertical: 10.h,
+                      vertical: 6.h,
                     ),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
@@ -205,16 +360,17 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                       final wholesalePriceVal = product.wholesalePrice != null
                           ? double.tryParse(product.wholesalePrice!)
                           : null;
-                      final isRunout = wholesalePriceVal == null;
+                      final isRunout = wholesalePriceVal == null || (product.stock != null && product.stock! <= 0);
 
                       final displayPrice = isRunout
-                          ? 'Runout'
+                          ? 'Stock Out'
                           : '€ ${wholesalePriceVal.toStringAsFixed(2)} / ${product.wholesaleUnit ?? product.unit ?? 'unit'}';
 
                       final imageUrl = product.thumbnailUrl ?? '';
                       final List<String> extractedImages = [];
-                      if (product.thumbnailUrl != null)
+                      if (product.thumbnailUrl != null) {
                         extractedImages.add(product.thumbnailUrl!);
+                      }
                       if (product.additionalImages != null) {
                         extractedImages.addAll(
                           product.additionalImages!
@@ -234,14 +390,10 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                               imageUrl: imageUrl,
                               images: extractedImages,
                               category: product.category?.name ?? '',
-                              description:
-                                  product.description ??
+                              description: product.description ??
                                   'Premium organic B2B crop supply. Sourced directly from certified sustainable farms.',
                               isWholesale: true,
-                              wholesaleUnit:
-                                  product.wholesaleUnit ??
-                                  product.unit ??
-                                  'unit',
+                              wholesaleUnit: product.wholesaleUnit ?? product.unit ?? 'unit',
                               minPurchase: product.minimumPurchase ?? 1,
                               stock: product.stock,
                             ),
@@ -256,7 +408,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Image Container with Runout overlay
+                              // Image Container with Stock Out overlay
                               Expanded(
                                 child: Stack(
                                   fit: StackFit.expand,
@@ -275,52 +427,47 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                               maxHeightDiskCache: 600,
                                               fadeInDuration: const Duration(milliseconds: 100),
                                               fadeOutDuration: const Duration(milliseconds: 100),
-                                              placeholder: (context, url) =>
-                                                  Container(
-                                                    color: Colors.grey.shade100,
-                                                    child: const Center(
-                                                      child: SizedBox(
-                                                        width: 20,
-                                                        height: 20,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              color: Color(
-                                                                0xFF00694C,
-                                                              ),
-                                                            ),
-                                                      ),
+                                              placeholder: (context, url) => Container(
+                                                color: Colors.grey.shade100,
+                                                child: const Center(
+                                                  child: SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: primaryColor,
                                                     ),
                                                   ),
-                                              errorWidget:
-                                                  (
-                                                    context,
-                                                    url,
-                                                    error,
-                                                  ) => Container(
-                                                    color: Colors.grey.shade100,
-                                                    child: const Icon(
-                                                      Icons.grass,
-                                                      color: Color(0xFF00694C),
-                                                      size: 30,
-                                                    ),
+                                                ),
+                                              ),
+                                              errorWidget: (context, url, error) => Container(
+                                                color: Colors.grey.shade100,
+                                                padding: EdgeInsets.all(12.r),
+                                                child: Center(
+                                                  child: Image.asset(
+                                                    AssetsIcons.logoIcons,
+                                                    fit: BoxFit.contain,
+                                                    errorBuilder: (_, __, ___) => const Icon(Icons.eco, color: primaryColor, size: 28),
                                                   ),
+                                                ),
+                                              ),
                                             )
                                           : Container(
                                               color: Colors.grey.shade100,
-                                              child: const Icon(
-                                                Icons.grass,
-                                                color: Color(0xFF00694C),
-                                                size: 30,
+                                              padding: EdgeInsets.all(12.r),
+                                              child: Center(
+                                                child: Image.asset(
+                                                  AssetsIcons.logoIcons,
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (_, __, ___) => const Icon(Icons.eco, color: primaryColor, size: 28),
+                                                ),
                                               ),
                                             ),
                                     ),
                                     if (isRunout)
                                       Container(
                                         decoration: BoxDecoration(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.55,
-                                          ),
+                                          color: Colors.black.withOpacity(0.55),
                                           borderRadius: BorderRadius.vertical(
                                             top: Radius.circular(14.r),
                                           ),
@@ -333,12 +480,10 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.redAccent,
-                                            borderRadius: BorderRadius.circular(
-                                              20.r,
-                                            ),
+                                            borderRadius: BorderRadius.circular(20.r),
                                           ),
                                           child: Text(
-                                            'Runout',
+                                            'Stock Out',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 12.sp,
@@ -379,8 +524,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                     ),
                                     SizedBox(height: 6.h),
                                     Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Text(
@@ -388,9 +532,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                             style: TextStyle(
                                               fontSize: 11.sp,
                                               fontWeight: FontWeight.bold,
-                                              color: isRunout
-                                                  ? Colors.grey
-                                                  : primaryColor,
+                                              color: isRunout ? Colors.grey : primaryColor,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -399,57 +541,52 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                         if (!isRunout)
                                           GestureDetector(
                                             onTap: () {
-                                              final minQty =
-                                                  product.minimumPurchase ?? 1;
-                                              WholesaleCartState.addToCart(
+                                              if (product.stock != null && product.stock! <= 0) {
+                                                AppToast.error("${product.name} is currently out of stock.");
+                                                return;
+                                              }
+                                              final minQty = product.minimumPurchase ?? 1;
+                                              final added = WholesaleCartState.addToCart(
                                                 id: product.id ?? '',
                                                 name: product.name ?? '',
                                                 price: wholesalePriceVal,
-                                                unit:
-                                                    product.wholesaleUnit ??
-                                                    product.unit ??
-                                                    'unit',
+                                                unit: (product.wholesaleUnit ?? product.unit) ?? 'unit',
                                                 imageUrl: imageUrl,
                                                 minPurchase: minQty,
                                                 stock: product.stock,
                                                 qty: minQty.toDouble(),
                                               );
-                                              Get.snackbar(
-                                                'Added to Cart',
-                                                '${product.name} added to wholesale cart.',
-                                                backgroundColor: primaryColor,
-                                                colorText: Colors.white,
-                                                duration: const Duration(
-                                                  seconds: 2,
-                                                ),
-                                                snackPosition:
-                                                    SnackPosition.BOTTOM,
-                                                mainButton: TextButton(
-                                                  onPressed: () => Get.to(
-                                                    () =>
-                                                        const WholesaleCartScreen(),
-                                                  ),
-                                                  child: const Text(
-                                                    'VIEW CART',
-                                                    style: TextStyle(
-                                                      color: Colors.amberAccent,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                              if (added) {
+                                                Get.snackbar(
+                                                  'Added to Cart',
+                                                  '${product.name} ($minQty) added to wholesale cart.',
+                                                  backgroundColor: primaryColor,
+                                                  colorText: Colors.white,
+                                                  duration: const Duration(seconds: 2),
+                                                  snackPosition: SnackPosition.BOTTOM,
+                                                  mainButton: TextButton(
+                                                    onPressed: () => Get.to(() => const WholesaleCartScreen()),
+                                                    child: const Text(
+                                                      'VIEW CART',
+                                                      style: TextStyle(
+                                                        color: AppColors.accentOrange,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                              );
+                                                );
+                                              }
                                             },
                                             child: Container(
                                               padding: EdgeInsets.all(6.r),
-                                              decoration: const BoxDecoration(
-                                                color: primaryColor,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.accentOrange.withValues(alpha: 0.12),
                                                 shape: BoxShape.circle,
                                               ),
                                               child: const Icon(
-                                                Icons.add,
-                                                color: Colors.white,
-                                                size: 14,
+                                                Icons.add_shopping_cart,
+                                                color: AppColors.accentOrange,
+                                                size: 18,
                                               ),
                                             ),
                                           ),

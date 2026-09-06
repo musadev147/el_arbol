@@ -20,6 +20,8 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
   late final StaffChatRx _chatRx;
   Timer? _pollingTimer;
 
+  int _lastMessageCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -28,11 +30,19 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
       dataFetcher: BehaviorSubject<List<StaffChatMessage>>(),
     );
     _chatRx.fetchChatMessages().then((_) {
-      _scrollToBottom();
+      _scrollToBottom(immediate: true, force: true);
     });
 
-    // Automatically poll every 5 seconds for new incoming messages from Admin
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    // Auto-scroll whenever new messages arrive
+    _chatRx.valueStreamData.listen((list) {
+      if (list.length > _lastMessageCount) {
+        _scrollToBottom(force: _lastMessageCount == 0);
+        _lastMessageCount = list.length;
+      }
+    });
+
+    // Automatically poll every 3 seconds for new incoming messages from Admin
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted) {
         _chatRx.fetchChatMessages(silent: true);
       }
@@ -48,14 +58,22 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool immediate = false, bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final currentScroll = _scrollController.position.pixels;
+        if (force || (maxScroll - currentScroll).abs() < 160) {
+          if (immediate) {
+            _scrollController.jumpTo(maxScroll);
+          } else {
+            _scrollController.animateTo(
+              maxScroll,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOut,
+            );
+          }
+        }
       }
     });
   }
@@ -74,11 +92,11 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
     );
     final currentList = _chatRx.dataFetcher.hasValue ? _chatRx.dataFetcher.value : <StaffChatMessage>[];
     _chatRx.dataFetcher.sink.add(List<StaffChatMessage>.from(currentList)..add(optimisticMsg));
-    _scrollToBottom();
+    _scrollToBottom(immediate: true, force: true);
 
     final success = await _chatRx.sendMessage(text);
     if (success) {
-      _scrollToBottom();
+      _scrollToBottom(force: true);
       _chatRx.fetchChatMessages(silent: true);
     } else {
       AppToast.error('Failed to send message. Please try again.');
@@ -135,15 +153,31 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
               child: StreamBuilder<List<StaffChatMessage>>(
                 stream: _chatRx.valueStreamData,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      (!_chatRx.dataFetcher.hasValue || _chatRx.dataFetcher.value.isEmpty)) {
                     return const Center(child: CircularProgressIndicator(color: primaryColor));
                   }
 
-                  if (snapshot.hasError) {
-                    return const Center(child: Text('Failed to load chat messages'));
+                  if (snapshot.hasError && (!_chatRx.dataFetcher.hasValue || _chatRx.dataFetcher.value.isEmpty)) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 40.r, color: Colors.grey),
+                          SizedBox(height: 8.h),
+                          const Text('Failed to load chat messages'),
+                          SizedBox(height: 12.h),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+                            onPressed: () => _chatRx.fetchChatMessages(),
+                            child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    );
                   }
 
-                  final messages = snapshot.data ?? [];
+                  final messages = snapshot.data ?? (_chatRx.dataFetcher.hasValue ? _chatRx.dataFetcher.value : []);
                   if (messages.isEmpty) {
                     return Center(
                       child: Column(
@@ -161,78 +195,96 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                     );
                   }
 
-                  // Trigger scroll to bottom on new messages
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                  return RefreshIndicator(
+                    color: primaryColor,
+                    onRefresh: () => _chatRx.fetchChatMessages(),
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: EdgeInsets.all(16.r),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = messages[index];
+                        // Message is from staff (me) if sender is STAFF or adminUser is null and sender is not ADMIN
+                        final isMe = (msg.sender?.toUpperCase() == 'STAFF') ||
+                            (msg.adminUser == null && msg.sender?.toUpperCase() != 'ADMIN');
 
-                  return ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.all(16.r),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      // Message is from staff (me) if adminUser is null and sender is not ADMIN
-                      final isMe = msg.adminUser == null && msg.sender?.toUpperCase() != 'ADMIN';
-
-                      return Align(
-                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: EdgeInsets.only(bottom: 12.h),
-                          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                          decoration: BoxDecoration(
-                            color: isMe ? primaryColor : Colors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(12.r),
-                              topRight: Radius.circular(12.r),
-                              bottomLeft: isMe ? Radius.circular(12.r) : Radius.circular(0.r),
-                              bottomRight: isMe ? Radius.circular(0.r) : Radius.circular(12.r),
+                        return Align(
+                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            margin: EdgeInsets.only(
+                              bottom: 12.h,
+                              left: isMe ? 48.w : 0,
+                              right: isMe ? 0 : 48.w,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                            decoration: BoxDecoration(
+                              color: isMe ? primaryColor : Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(12.r),
+                                topRight: Radius.circular(12.r),
+                                bottomLeft: isMe ? Radius.circular(12.r) : Radius.circular(3.r),
+                                bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(12.r),
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (!isMe && msg.staffName != null) ...[
+                              border: isMe ? null : Border.all(color: Colors.grey.shade200),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                if (!isMe) ...[
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.support_agent_rounded, size: 14.r, color: primaryColor),
+                                      SizedBox(width: 4.w),
+                                      Text(
+                                        msg.adminName?.isNotEmpty == true ? msg.adminName! : 'Admin Support',
+                                        style: TextStyle(
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 4.h),
+                                ],
                                 Text(
-                                  msg.staffName!,
+                                  msg.message ?? '',
                                   style: TextStyle(
-                                    fontSize: 10.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey.shade600,
+                                    fontSize: 13.sp,
+                                    color: isMe ? Colors.white : const Color(0xFF151E13),
+                                    fontFamily: 'Poppins',
                                   ),
                                 ),
                                 SizedBox(height: 4.h),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      _formatTime(msg.createdAt),
+                                      style: TextStyle(
+                                        fontSize: 9.sp,
+                                        color: isMe ? Colors.white70 : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
-                              Text(
-                                msg.message ?? '',
-                                style: TextStyle(
-                                  fontSize: 13.sp,
-                                  color: isMe ? Colors.white : const Color(0xFF151E13),
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Align(
-                                alignment: Alignment.bottomRight,
-                                child: Text(
-                                  _formatTime(msg.createdAt),
-                                  style: TextStyle(
-                                    fontSize: 9.sp,
-                                    color: isMe ? Colors.white70 : Colors.grey,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   );
                 },
               ),
@@ -245,7 +297,7 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -2),
                   ),
