@@ -6,6 +6,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import '../data/customer_tickets_rx.dart';
 import 'customer_ticket_chat_screen.dart';
+import '../../../../helpers/support_ticket_unread_manager.dart';
 
 class CustomerSupportTicketsScreen extends StatefulWidget {
   const CustomerSupportTicketsScreen({super.key});
@@ -306,7 +307,40 @@ class _CustomerSupportTicketsScreenState extends State<CustomerSupportTicketsScr
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Support Tickets', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Support Tickets',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.white,
+              ),
+            ),
+            Obx(() {
+              final unread = SupportTicketUnreadManager.instance.customerUnreadCountRx.value;
+              if (unread <= 0) return const SizedBox.shrink();
+              return Container(
+                margin: EdgeInsets.only(left: 8.w),
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF7A00),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
         backgroundColor: primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -330,7 +364,7 @@ class _CustomerSupportTicketsScreenState extends State<CustomerSupportTicketsScr
             return const CustomAppLoading(message: 'Loading tickets...');
           }
           final data = snapshot.data;
-          
+
           List<dynamic> tickets = [];
           if (data is Map) {
             if (data['results'] is List) {
@@ -343,21 +377,25 @@ class _CustomerSupportTicketsScreenState extends State<CustomerSupportTicketsScr
           } else if (data is List) {
             tickets = data;
           }
-          
+
           if (tickets.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.support_agent, size: 64.r, color: Colors.grey.shade300),
+                  Icon(Icons.support_agent, size: 64.r,
+                      color: Colors.grey.shade300),
                   SizedBox(height: 16.h),
-                  Text('No tickets found', style: TextStyle(color: Colors.grey, fontSize: 16.sp)),
+                  Text('No tickets found',
+                      style: TextStyle(color: Colors.grey, fontSize: 16.sp)),
                   SizedBox(height: 12.h),
                   ElevatedButton.icon(
                     onPressed: _createTicket,
-                    style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor),
                     icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Create First Ticket', style: TextStyle(color: Colors.white)),
+                    label: const Text('Create First Ticket',
+                        style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
@@ -365,81 +403,161 @@ class _CustomerSupportTicketsScreenState extends State<CustomerSupportTicketsScr
           }
 
           return ListView.builder(
-            padding: EdgeInsets.all(16.r),
-            itemCount: tickets.length,
-            itemBuilder: (context, index) {
-              final ticket = tickets[index];
-              final ticketId = ticket['id']?.toString() ?? '';
-              final subject = ticket['subject'] ?? ticket['title'] ?? 'Ticket #$ticketId';
-              final status = ticket['status'] ?? 'Open';
-              final createdAt = ticket['created_at'] ?? ticket['date'] ?? '';
+              padding: EdgeInsets.all(16.r),
+              itemCount: tickets.length,
+              itemBuilder: (context, index) {
+                final ticket = tickets[index];
+                final ticketMap = Map<String, dynamic>.from(
+                    ticket is Map ? ticket : {});
+                final ticketId = ticketMap['id']?.toString() ?? '';
+                final subject = ticketMap['subject'] ?? ticketMap['title'] ??
+                    'Ticket #$ticketId';
+                final status = ticketMap['status'] ?? 'Open';
+                final createdAt = ticketMap['created_at'] ??
+                    ticketMap['date'] ?? '';
 
-              return Card(
-                margin: EdgeInsets.only(bottom: 12.h),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                child: ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                  onTap: () {
-                    Get.to(() => CustomerTicketChatScreen(ticket: ticket));
-                  },
-                  title: Text(
-                    subject,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 6.h),
-                      Row(
+                return Obx(() {
+                  final unreadCount = SupportTicketUnreadManager.instance
+                      .ticketUnreadMap[ticketId] ??
+                      SupportTicketUnreadManager.instance
+                          .getUnreadCountForTicket(ticketMap);
+                  final hasUnread = unreadCount > 0;
+
+                  return Card(
+                    margin: EdgeInsets.only(bottom: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: hasUnread
+                          ? BorderSide(color: const Color(0xFFFF7A00)
+                          .withOpacity(0.6), width: 1.5)
+                          : BorderSide.none,
+                    ),
+                    elevation: hasUnread ? 2 : 1,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16.w,
+                          vertical: 8.h),
+                      onTap: () {
+                        SupportTicketUnreadManager.instance.markTicketAsRead(
+                            ticketMap);
+                        Get.to(() =>
+                            CustomerTicketChatScreen(ticket: ticketMap))?.then((
+                            _) {
+                          _rx.fetchTickets();
+                        });
+                      },
+                      title: Row(
                         children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
+                          Expanded(
                             child: Text(
-                              status,
-                              style: TextStyle(fontSize: 11.sp, color: primaryColor, fontWeight: FontWeight.bold),
+                              subject,
+                              style: TextStyle(
+                                fontWeight: hasUnread
+                                    ? FontWeight.w800
+                                    : FontWeight.bold,
+                                fontSize: 14.sp,
+                                color: hasUnread
+                                    ? const Color(0xFF151E13)
+                                    : Colors.black87,
+                              ),
                             ),
                           ),
-                          if (createdAt.isNotEmpty) ...[
-                            SizedBox(width: 8.w),
-                            Text(createdAt, style: TextStyle(color: Colors.grey, fontSize: 10.sp)),
-                          ],
+                          if (hasUnread)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w, vertical: 3.h),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF7A00),
+                                borderRadius: BorderRadius.circular(12.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFFF7A00).withOpacity(
+                                        0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.mark_chat_unread_rounded,
+                                      color: Colors.white, size: 11),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    '$unreadCount new ${unreadCount == 1
+                                        ? 'reply'
+                                        : 'replies'}',
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
-                    ],
-                  ),
-                  trailing: Material(
-                    color: const Color(0xFFFEECEB),
-                    borderRadius: BorderRadius.circular(8.r),
-                    child: InkWell(
-                      onTap: () => _confirmDeleteTicket(ticketId),
-                      borderRadius: BorderRadius.circular(8.r),
-                      child: Container(
-                        padding: EdgeInsets.all(8.r),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(
-                            color: const Color(0xFFFCA5A5).withOpacity(0.5),
-                            width: 0.8,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 6.h),
+                          Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6.r),
+                                ),
+                                child: Text(
+                                  status,
+                                  style: TextStyle(fontSize: 11.sp,
+                                      color: primaryColor,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              if (createdAt.isNotEmpty) ...[
+                                SizedBox(width: 8.w),
+                                Text(createdAt, style: TextStyle(
+                                    color: Colors.grey, fontSize: 10.sp)),
+                              ],
+                            ],
                           ),
-                        ),
-                        child: const Icon(
-                          Icons.delete_outline_rounded,
-                          color: Color(0xFFDC2626),
-                          size: 18,
+                        ],
+                      ),
+                      trailing: Material(
+                        color: const Color(0xFFFEECEB),
+                        borderRadius: BorderRadius.circular(8.r),
+                        child: InkWell(
+                          onTap: () => _confirmDeleteTicket(ticketId),
+                          borderRadius: BorderRadius.circular(8.r),
+                          child: Container(
+                            padding: EdgeInsets.all(8.r),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8.r),
+                              border: Border.all(
+                                color: const Color(0xFFFCA5A5).withOpacity(0.5),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: Color(0xFFDC2626),
+                              size: 18,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            },
+                  );
+                },
+                );
+              }
           );
         }
-      ),
+    )
     );
   }
 }

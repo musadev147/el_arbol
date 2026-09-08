@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../constants/app_colors.dart';
+
 class AppToast {
   AppToast._();
 
@@ -64,14 +66,16 @@ class AppToast {
     ));
   }
 
-  static void success(String message) {
+  /// 🟢 Premium Green (Matches App Theme Color)
+  static void success(String message, {List<Color>? gradient}) {
     _show(
       message: message,
       icon: Icons.check,
-      gradient: const [
-        Color(0xFF5B9CFF),
-        Color(0xFF3C74D8),
-      ],
+      gradient: gradient ??
+          const [
+            Color(0xFF00875A),
+            AppColors.primaryGreen,
+          ],
     );
   }
 

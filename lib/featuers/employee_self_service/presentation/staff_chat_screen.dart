@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:intl/intl.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
+import 'package:el_arbol/common_wigdets/custom_app_loading.dart';
 import '../data/rx.dart';
 import '../model/staff_chat_model.dart';
 
@@ -18,6 +18,7 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   late final StaffChatRx _chatRx;
+  StreamSubscription? _chatSubscription;
   Timer? _pollingTimer;
 
   int _lastMessageCount = 0;
@@ -25,23 +26,27 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
   @override
   void initState() {
     super.initState();
-    _chatRx = StaffChatRx(
-      empty: [],
-      dataFetcher: BehaviorSubject<List<StaffChatMessage>>(),
-    );
+    _chatRx = StaffChatRx.instance;
+    _chatRx.markAllAsRead();
     _chatRx.fetchChatMessages().then((_) {
-      _scrollToBottom(immediate: true, force: true);
-    });
-
-    // Auto-scroll whenever new messages arrive
-    _chatRx.valueStreamData.listen((list) {
-      if (list.length > _lastMessageCount) {
-        _scrollToBottom(force: _lastMessageCount == 0);
-        _lastMessageCount = list.length;
+      if (mounted) {
+        _chatRx.markAllAsRead();
+        _scrollToBottom(immediate: true, force: true);
       }
     });
 
-    // Automatically poll every 3 seconds for new incoming messages from Admin
+    // Auto-scroll and mark read whenever new messages arrive
+    _chatSubscription = _chatRx.valueStreamData.listen((list) {
+      if (list.length > _lastMessageCount) {
+        _lastMessageCount = list.length;
+        _scrollToBottom(force: _lastMessageCount == 0);
+        if (mounted) {
+          _chatRx.markAllAsRead();
+        }
+      }
+    });
+
+    // Automatically poll every 3 seconds for new incoming messages from Admin while on this screen
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted) {
         _chatRx.fetchChatMessages(silent: true);
@@ -52,9 +57,10 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _chatSubscription?.cancel();
+    _chatRx.markAllAsRead();
     _messageController.dispose();
     _scrollController.dispose();
-    _chatRx.dispose();
     super.dispose();
   }
 
@@ -155,7 +161,7 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       (!_chatRx.dataFetcher.hasValue || _chatRx.dataFetcher.value.isEmpty)) {
-                    return const Center(child: CircularProgressIndicator(color: primaryColor));
+                    return const CustomAppLoading.chat();
                   }
 
                   if (snapshot.hasError && (!_chatRx.dataFetcher.hasValue || _chatRx.dataFetcher.value.isEmpty)) {

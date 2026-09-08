@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:el_arbol/common_wigdets/user_role.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -15,6 +16,9 @@ import '../featuers/customers/profile/profile.dart';
 import '../featuers/employee_self_service/presentation/employee_dashboard_screen.dart';
 import '../featuers/employee_self_service/presentation/staff_chat_screen.dart';
 import '../featuers/employee_self_service/presentation/price_list_screen.dart';
+import '../featuers/employee_self_service/data/rx.dart';
+import '../featuers/employee_self_service/model/staff_chat_model.dart';
+import '../helpers/support_ticket_unread_manager.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_catalog_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_orders_screen.dart';
 
@@ -120,6 +124,8 @@ class _CustomNavigationState extends State<CustomNavigation> {
     ],
   };
 
+  Timer? _staffChatPollingTimer;
+
   @override
   void initState() {
     super.initState();
@@ -127,6 +133,20 @@ class _CustomNavigationState extends State<CustomNavigation> {
     if (widget.role == null || widget.role == UserRole.customer) {
       CustomerCartRx.instance.fetchBasket();
     }
+    if (widget.role == UserRole.employeeSelfService || widget.role == UserRole.staff) {
+      StaffChatRx.instance.fetchChatMessages(silent: true);
+      _staffChatPollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (mounted) {
+          StaffChatRx.instance.fetchChatMessages(silent: true);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _staffChatPollingTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -255,7 +275,12 @@ class _CustomNavigationState extends State<CustomNavigation> {
               final iconItem = icons[index];
 
               return InkWell(
-                onTap: () => _selectedIndex.value = index,
+                onTap: () {
+                  _selectedIndex.value = index;
+                  if ((role == UserRole.employeeSelfService || role == UserRole.staff) && index == 1) {
+                    StaffChatRx.instance.markAllAsRead();
+                  }
+                },
                 borderRadius: BorderRadius.circular(12.r),
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
@@ -267,20 +292,21 @@ class _CustomNavigationState extends State<CustomNavigation> {
                           final Widget iconWidget = (iconItem is IconData)
                               ? Icon(
                                   iconItem,
-                                  size: 24.sp,
+                                  size: 26.sp,
                                   color: isSelected
                                       ? const Color(0xFF00694C)
                                       : AppColors.c87878A,
                                 )
                               : Image.asset(
                                   iconItem.toString(),
-                                  width: 24.w,
-                                  height: 24.h,
+                                  width: 26.w,
+                                  height: 26.h,
                                   color: isSelected
                                       ? const Color(0xFF00694C)
                                       : AppColors.c87878A,
                                 );
 
+                          // Customer Cart badge on tab 2
                           if (role == UserRole.customer && index == 2) {
                             return StreamBuilder(
                               stream: CustomerCartRx.instance.valueStreamData,
@@ -326,6 +352,98 @@ class _CustomNavigationState extends State<CustomNavigation> {
                               },
                             );
                           }
+
+                          // Staff Chat Messages unread count badge on tab 1
+                          if ((role == UserRole.employeeSelfService || role == UserRole.staff) && index == 1) {
+                            return Obx(() {
+                              final unreadCount = StaffChatRx.instance.unreadCountRx.value;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  iconWidget,
+                                  if (unreadCount > 0)
+                                    Positioned(
+                                      right: -8,
+                                      top: -4,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentOrange,
+                                          borderRadius: BorderRadius.circular(10.r),
+                                          border: Border.all(color: Colors.white, width: 1.5),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.accentOrange.withValues(alpha: 0.4),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                        constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
+                                        child: Center(
+                                          child: Text(
+                                            unreadCount > 99 ? '99+' : '$unreadCount',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            });
+                          }
+
+                          // Support Ticket unread replies badge on Profile tab for Customer & Wholesale
+                          if ((role == UserRole.customer || role == UserRole.wholesale) &&
+                              index == labels.length - 1) {
+                            return Obx(() {
+                              final unreadCount = role == UserRole.wholesale
+                                  ? SupportTicketUnreadManager.instance.wholesaleUnreadCountRx.value
+                                  : SupportTicketUnreadManager.instance.customerUnreadCountRx.value;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  iconWidget,
+                                  if (unreadCount > 0)
+                                    Positioned(
+                                      right: -8,
+                                      top: -4,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentOrange,
+                                          borderRadius: BorderRadius.circular(10.r),
+                                          border: Border.all(color: Colors.white, width: 1.5),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.accentOrange.withValues(alpha: 0.4),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                        constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
+                                        child: Center(
+                                          child: Text(
+                                            unreadCount > 99 ? '99+' : '$unreadCount',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            });
+                          }
+
                           return iconWidget;
                         },
                       ),

@@ -7,6 +7,7 @@ class AssetsImages {
   static String forgotPasswordBg = 'assets/images/forgot_password_bg.svg';
   static String splashScreenBG = 'assets/images/splash_screen_bg.png';
   static String splashLogo = 'assets/images/splash_logo.png';
+  static String elLogo = 'assets/images/el.png';
   static String onboardingImage1 = 'assets/images/onboading_image1.png';
   static String onboardingImage2 = 'assets/images/onboarding_image2.png';
   static String onboardingImage3 = 'assets/images/onboarding_image3.png';

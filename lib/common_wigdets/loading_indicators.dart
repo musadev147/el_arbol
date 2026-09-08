@@ -1,6 +1,7 @@
 import 'package:dotlottie_loader/dotlottie_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'app_shimmer.dart';
 
 Widget loadingIndicatorCircle({
   required BuildContext context,
@@ -30,12 +31,10 @@ Widget shimmer({
   double? size,
 }) {
   return Center(
-    child: Container(
+    child: AppShimmer.box(
+      width: size ?? double.infinity,
+      height: size ?? 150,
       color: color,
-      // child: Lottie.asset(name ?? Assets.lottie.imageShimmer,
-      //     fit: BoxFit.cover,
-      //     width: size ?? double.infinity,
-      //     height: size ?? 150),
     ),
   );
 }

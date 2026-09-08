@@ -19,6 +19,7 @@ import 'package:el_arbol/featuers/customers/wishlist/presentation/customer_wishl
 import 'package:el_arbol/featuers/customers/notifications/presentation/customer_notifications_screen.dart' as el_arbol_notif;
 import 'leftover_pack_screen.dart';
 import 'package:el_arbol/featuers/customers/notifications/data/customer_notifications_rx.dart';
+import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -834,7 +835,32 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ListTile(
                     leading: const Icon(Icons.support_agent, color: primaryColor),
                     title: const Text('Support Tickets'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Obx(() {
+                          final unread = SupportTicketUnreadManager.instance.customerUnreadCountRx.value;
+                          if (unread <= 0) return const SizedBox.shrink();
+                          return Container(
+                            margin: EdgeInsets.only(right: 8.w),
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF7A00),
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: Text(
+                              unread > 99 ? '99+' : '$unread',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        }),
+                        const Icon(Icons.arrow_forward_ios, size: 14),
+                      ],
+                    ),
                     onTap: () => Get.to(() => const el_arbol.CustomerSupportTicketsScreen()),
                   ),
                   const Divider(height: 1),

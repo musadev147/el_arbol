@@ -6,6 +6,8 @@ import 'package:rxdart/rxdart.dart';
 import 'package:intl/intl.dart';
 import 'package:el_arbol/helpers/di.dart';
 import 'package:el_arbol/constants/app_constants.dart';
+import 'package:el_arbol/common_wigdets/custom_app_loading.dart';
+import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
 
 class WholesaleSingleTicketScreen extends StatefulWidget {
   final String ticketId;
@@ -40,8 +42,11 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
     );
     _rx.fetchSingleTicket(widget.ticketId);
 
-    // Auto-scroll after initial load
-    _rx.valueStreamData.listen((_) {
+    // Auto-scroll and mark read after load
+    _rx.valueStreamData.listen((data) {
+      if (data is Map && data.isNotEmpty) {
+        SupportTicketUnreadManager.instance.markTicketAsRead(Map<String, dynamic>.from(data));
+      }
       _scrollToBottom();
     });
 
@@ -187,7 +192,7 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
         stream: _rx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && _optimisticMessages.isEmpty) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+            return const CustomAppLoading.chat();
           }
 
           final rawData = snapshot.data;

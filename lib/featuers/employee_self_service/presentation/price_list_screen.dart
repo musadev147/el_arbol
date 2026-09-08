@@ -5,6 +5,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/app_shimmer.dart';
 import '../../../../common_wigdets/no_internet_or_data_widget.dart';
 import '../../../../common_wigdets/app_toast.dart';
 import '../../customers/home/presentation/data/rx.dart';
@@ -406,15 +407,10 @@ class _PriceListScreenState extends State<PriceListScreen> {
                                                             memCacheWidth: 150,
                                                             memCacheHeight: 150,
                                                             fadeInDuration: const Duration(milliseconds: 100),
-                                                            placeholder: (context, url) => Center(
-                                                              child: SizedBox(
-                                                                width: 18.r,
-                                                                height: 18.r,
-                                                                child: const CircularProgressIndicator(
-                                                                  strokeWidth: 2,
-                                                                  color: primaryColor,
-                                                                ),
-                                                              ),
+                                                            placeholder: (context, url) => AppShimmer.box(
+                                                              width: 58.r,
+                                                              height: 58.r,
+                                                              borderRadius: BorderRadius.circular(8.r),
                                                             ),
                                                             errorWidget: (context, url, error) => const Icon(
                                                               Icons.grass,

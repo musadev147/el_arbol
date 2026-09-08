@@ -23,6 +23,8 @@ import 'package:el_arbol/featuers/customers/wishlist/presentation/customer_wishl
 import 'package:el_arbol/featuers/customers/notifications/presentation/customer_notifications_screen.dart' as el_arbol_notif;
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
+import 'package:el_arbol/common_wigdets/app_shimmer.dart';
+import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
 import 'package:el_arbol/featuers/employee_self_service/presentation/staff_chat_screen.dart';
 import '../../wholesale_b2b/data/wholesale_api.dart';
 import 'data/rx.dart';
@@ -854,13 +856,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             memCacheHeight: 200,
                                             fadeInDuration: const Duration(milliseconds: 100),
                                             fadeOutDuration: const Duration(milliseconds: 100),
-                                            placeholder: (context, url) => const Center(
-                                              child: SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
-                                              ),
-                                            ),
+                                            placeholder: (context, url) => AppShimmer.circle(size: 72.r),
                                             errorWidget: (context, url, error) => Icon(
                                               currentRole == UserRole.wholesale
                                                   ? Icons.business_center
@@ -1101,7 +1097,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ? 'Support Chat'
                               : 'Support Tickets',
                         ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Obx(() {
+                              final int unread;
+                              if (widget.role == UserRole.staff || widget.role == UserRole.employeeSelfService) {
+                                unread = StaffChatRx.instance.unreadCountRx.value;
+                              } else if (widget.role == UserRole.wholesale) {
+                                unread = SupportTicketUnreadManager.instance.wholesaleUnreadCountRx.value;
+                              } else {
+                                unread = SupportTicketUnreadManager.instance.customerUnreadCountRx.value;
+                              }
+
+                              if (unread <= 0) return const SizedBox.shrink();
+                              return Container(
+                                margin: EdgeInsets.only(right: 8.w),
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF7A00),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                ),
+                                child: Text(
+                                  unread > 99 ? '99+' : '$unread',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }),
+                            const Icon(Icons.arrow_forward_ios, size: 14),
+                          ],
+                        ),
                         onTap: () {
                           final currentRole = widget.role;
                           if (currentRole == UserRole.staff || currentRole == UserRole.employeeSelfService) {

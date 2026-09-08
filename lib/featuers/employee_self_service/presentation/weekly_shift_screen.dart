@@ -77,7 +77,7 @@ class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
           stream: _historyRx.valueStreamData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CustomAppLoading(message: 'Loading shifts...');
+              return const CustomAppLoading.card(message: 'Loading shifts...');
             }
 
             if (snapshot.hasError || !snapshot.hasData || snapshot.data?.shifts == null || snapshot.data!.shifts!.isEmpty) {

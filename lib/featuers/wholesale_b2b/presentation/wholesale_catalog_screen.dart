@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/app_shimmer.dart';
 import '../../../../common_wigdets/app_toast.dart';
 import '../../../../constants/app_assets/assets_icons.dart';
 import '../../../../constants/app_colors.dart';
@@ -299,7 +300,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                 stream: _productRx.valueStreamData,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const CustomAppLoading(message: 'Loading catalog products...');
+                    return const CustomAppLoading.grid(message: 'Loading catalog products...');
                   }
 
                   if (snapshot.hasError) {
@@ -427,18 +428,10 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                                               maxHeightDiskCache: 600,
                                               fadeInDuration: const Duration(milliseconds: 100),
                                               fadeOutDuration: const Duration(milliseconds: 100),
-                                              placeholder: (context, url) => Container(
-                                                color: Colors.grey.shade100,
-                                                child: const Center(
-                                                  child: SizedBox(
-                                                    width: 20,
-                                                    height: 20,
-                                                    child: CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: primaryColor,
-                                                    ),
-                                                  ),
-                                                ),
+                                              placeholder: (context, url) => AppShimmer.box(
+                                                width: double.infinity,
+                                                height: double.infinity,
+                                                borderRadius: BorderRadius.circular(12.r),
                                               ),
                                               errorWidget: (context, url, error) => Container(
                                                 color: Colors.grey.shade100,

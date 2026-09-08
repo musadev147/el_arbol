@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../../../common_wigdets/app_toast.dart';
+import '../../../../common_wigdets/app_shimmer.dart';
 import '../../orders/data/customer_orders_api.dart';
 import '../../orders/presentation/customer_cart_screen.dart';
 import '../../wishlist/presentation/data/rx.dart';
@@ -185,9 +186,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         maxHeightDiskCache: 1200,
                         fadeInDuration: const Duration(milliseconds: 100),
                         fadeOutDuration: const Duration(milliseconds: 100),
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey.shade200,
-                          child: const Center(child: CircularProgressIndicator(color: primaryBrandColor)),
+                        placeholder: (context, url) => AppShimmer.box(
+                          width: double.infinity,
+                          height: double.infinity,
                         ),
                         errorWidget: (context, url, error) => Container(
                           color: Colors.grey.shade100,

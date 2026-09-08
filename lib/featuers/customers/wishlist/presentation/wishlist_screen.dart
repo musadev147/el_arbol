@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../home/presentation/product_details_screen.dart';
 import '../../home/presentation/model/post_wishlist_model.dart';
 import 'data/rx.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 
 /// Premium screen displaying user wishlisted items.
 class WishlistScreen extends StatefulWidget {
@@ -56,7 +57,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           stream: _wishlistRx.valueStreamData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting && (!snapshot.hasData || snapshot.data!.isEmpty)) {
-              return const Center(child: CircularProgressIndicator(color: primaryColor));
+              return const CustomAppLoading.grid(message: 'Loading wishlist...');
             }
 
             final items = snapshot.data ?? [];

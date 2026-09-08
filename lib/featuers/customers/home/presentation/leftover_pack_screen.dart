@@ -7,6 +7,7 @@ import 'model/leftover_store_model.dart';
 import '../../orders/data/customer_orders_rx.dart';
 import '../../orders/presentation/customer_cart_screen.dart';
 import '../../orders/presentation/customer_checkout_screen.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 
 class LeftoverPackScreen extends StatefulWidget {
   const LeftoverPackScreen({super.key});
@@ -444,7 +445,7 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                 stream: _rx.valueStreamData,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: primaryColor));
+                    return const CustomAppLoading.list(message: 'Loading leftover packs...');
                   }
                   if (snapshot.hasError) {
                     return const Center(child: Text('Failed to load leftover packs'));

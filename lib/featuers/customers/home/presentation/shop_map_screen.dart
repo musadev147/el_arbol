@@ -235,6 +235,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
             loaded.add({
               'id': item['id'],
               'name': item['name'] ?? 'Store ${i + 1}',
+              'image': item['image'] ?? item['banner'] ?? item['store_image'] ?? item['photo'] ?? '',
               'address': item['address'] ?? item['street'] ?? 'Calle Sierpes 14, Sevilla',
               'distance': double.tryParse(item['distance']?.toString() ?? '') ?? (1.2 * (i + 1)),
               'phone': item['phone'] ?? '+34 954 123 456',
@@ -272,6 +273,61 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
   void dispose() {
     _storesRx.dispose();
     super.dispose();
+  }
+
+  Widget _buildStoreThumbnail(String? url, {double size = 44}) {
+    String cleanUrl = url?.trim() ?? '';
+    if (cleanUrl.startsWith('http://')) {
+      cleanUrl = cleanUrl.replaceFirst('http://', 'https://');
+    } else if (cleanUrl.startsWith('/')) {
+      cleanUrl = 'https://apielarbol.icommerce.com.bd$cleanUrl';
+    }
+
+    if (cleanUrl.isEmpty) {
+      return Container(
+        width: size.w,
+        height: size.w,
+        padding: EdgeInsets.all(8.r),
+        decoration: BoxDecoration(
+          color: const Color(0xFF00694C).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Icon(Icons.storefront_rounded, color: const Color(0xFF00694C), size: (size * 0.55).sp),
+      );
+    }
+
+    return Container(
+      width: size.w,
+      height: size.w,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade200, width: 1.w),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11.r),
+        child: CachedNetworkImage(
+          imageUrl: cleanUrl,
+          width: size.w,
+          height: size.w,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Container(
+            color: Colors.grey.shade100,
+            child: const Center(
+              child: SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00694C)),
+              ),
+            ),
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: const Color(0xFF00694C).withValues(alpha: 0.1),
+            child: Icon(Icons.storefront_rounded, color: const Color(0xFF00694C), size: (size * 0.55).sp),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _launchDirections(Map<String, dynamic> shop) async {
@@ -484,14 +540,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: EdgeInsets.all(10.r),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Icon(Icons.storefront_rounded, color: primaryColor, size: 24.sp),
-                        ),
+                        _buildStoreThumbnail(shop['image'], size: 48),
                         SizedBox(width: 12.w),
                         Expanded(
                           child: Column(
@@ -821,6 +870,8 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      _buildStoreThumbnail(_selectedShop!['image'], size: 44),
+                      SizedBox(width: 10.w),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

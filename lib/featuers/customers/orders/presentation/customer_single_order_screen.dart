@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:rxdart/rxdart.dart';
 import '../data/customer_orders_rx.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 
 class CustomerSingleOrderScreen extends StatefulWidget {
   final String orderId;
@@ -78,7 +79,7 @@ class _CustomerSingleOrderScreenState extends State<CustomerSingleOrderScreen> {
         initialData: widget.orderData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && widget.orderData == null) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+            return const CustomAppLoading.detail(message: 'Loading order details...');
           }
           final data = (snapshot.hasData && snapshot.data != null && (snapshot.data as Map).isNotEmpty) 
               ? snapshot.data 

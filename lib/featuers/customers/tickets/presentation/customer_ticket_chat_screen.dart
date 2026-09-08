@@ -6,6 +6,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:el_arbol/helpers/di.dart';
 import 'package:el_arbol/constants/app_constants.dart';
 import '../data/customer_tickets_rx.dart';
+import '../../../../helpers/support_ticket_unread_manager.dart';
 
 class CustomerTicketChatScreen extends StatefulWidget {
   final Map<String, dynamic> ticket;
@@ -33,6 +34,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     super.initState();
     _rx = CustomerTicketsRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>());
     _loadMessages(widget.ticket);
+    SupportTicketUnreadManager.instance.markTicketAsRead(widget.ticket);
 
     // Poll every 4 seconds for new incoming responses from Admin
     _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
@@ -60,9 +62,11 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
         orElse: () => null,
       );
       if (updated != null && mounted) {
+        final updatedMap = Map<String, dynamic>.from(updated);
         setState(() {
-          _loadMessages(Map<String, dynamic>.from(updated));
+          _loadMessages(updatedMap);
         });
+        SupportTicketUnreadManager.instance.markTicketAsRead(updatedMap);
       }
     } catch (_) {}
   }

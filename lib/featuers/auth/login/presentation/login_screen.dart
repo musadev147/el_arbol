@@ -75,11 +75,11 @@ class _SignInScreenState extends State<SignInScreen> {
                         children: [
                           Image.asset(
                             AssetsIcons.logoIcons,
-                            width: 34.w,
-                            height: 34.w,
+                            width: 60.w,
+                            height: 60.w,
                             fit: BoxFit.contain,
                           ),
-                          SizedBox(width: 8.w),
+                          SizedBox(width: 10.w),
                           Text(
                             'El Árbol',
                             style: TextStyle(

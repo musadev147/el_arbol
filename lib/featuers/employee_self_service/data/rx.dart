@@ -7,7 +7,9 @@ import '../../../../networks/rx_base.dart';
 import '../model/staff_dashboard_model.dart';
 import '../model/get_staff_history_model.dart';
 import '../model/staff_chat_model.dart';
+import 'package:el_arbol/helpers/di.dart';
 import 'api.dart';
+import 'package:get/get.dart';
 
 class GetStaffDashboardRx extends RxResponseInt<StaffDashboardModel> {
   final api = StaffDashboardApi.instance;
@@ -350,7 +352,13 @@ class StoreStaffRx extends RxResponseInt<dynamic> {
 }
 
 class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
+  static final StaffChatRx instance = StaffChatRx(
+    empty: [],
+    dataFetcher: BehaviorSubject<List<StaffChatMessage>>.seeded([]),
+  );
+
   final api = StaffDashboardApi.instance;
+  final RxInt unreadCountRx = 0.obs;
 
   StaffChatRx({
     required super.empty,
@@ -358,6 +366,44 @@ class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
   });
 
   ValueStream<List<StaffChatMessage>> get valueStreamData => dataFetcher.stream;
+
+  int get unreadCount => unreadCountRx.value;
+
+  void computeUnreadCount([List<StaffChatMessage>? messages]) {
+    final dynamic storedId = appData.read('last_read_admin_chat_id');
+    final int lastReadId = storedId is int ? storedId : (int.tryParse(storedId?.toString() ?? '0') ?? 0);
+    final list = messages ?? (dataFetcher.hasValue ? dataFetcher.value : <StaffChatMessage>[]);
+    final count = list.where((msg) {
+      final isStaff = (msg.sender?.toUpperCase() == 'STAFF') ||
+          (msg.adminUser == null && msg.sender?.toUpperCase() != 'ADMIN');
+      if (isStaff) return false;
+      final id = msg.id ?? 0;
+      if (lastReadId > 0) {
+        return id > lastReadId;
+      }
+      return msg.isRead == false;
+    }).length;
+    unreadCountRx.value = count;
+  }
+
+  void markAllAsRead() {
+    final list = dataFetcher.hasValue ? dataFetcher.value : <StaffChatMessage>[];
+    int maxAdminId = 0;
+    for (final msg in list) {
+      final isStaff = (msg.sender?.toUpperCase() == 'STAFF') ||
+          (msg.adminUser == null && msg.sender?.toUpperCase() != 'ADMIN');
+      if (!isStaff) {
+        final id = msg.id ?? 0;
+        if (id > maxAdminId) {
+          maxAdminId = id;
+        }
+      }
+    }
+    if (maxAdminId > 0) {
+      appData.write('last_read_admin_chat_id', maxAdminId);
+    }
+    unreadCountRx.value = 0;
+  }
 
   Future<void> fetchChatMessages({bool silent = false}) async {
     try {
@@ -381,6 +427,7 @@ class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
             }
             return (a.id ?? 0).compareTo(b.id ?? 0);
           });
+          computeUnreadCount(currentList);
           if (!dataFetcher.isClosed) {
             dataFetcher.sink.add(currentList);
           }
@@ -390,6 +437,7 @@ class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
 
       // Full fetch (initial load or pull-to-refresh)
       final data = await api.getStaffChat(fetchAll: true);
+      computeUnreadCount(data);
       if (!dataFetcher.isClosed) {
         dataFetcher.sink.add(data);
       }
@@ -433,6 +481,12 @@ class StaffChatRx extends RxResponseInt<List<StaffChatMessage>> {
       log("Send staff chat message error: $error");
       return false;
     }
+  }
+
+  @override
+  void dispose() {
+    if (this == StaffChatRx.instance) return;
+    super.dispose();
   }
 }
 

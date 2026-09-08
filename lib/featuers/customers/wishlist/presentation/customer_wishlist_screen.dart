@@ -72,7 +72,7 @@ class _CustomerWishlistScreenState extends State<CustomerWishlistScreen> {
         stream: _rx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CustomAppLoading(message: 'Loading wishlist...');
+            return const CustomAppLoading.grid(message: 'Loading wishlist...');
           }
           final data = snapshot.data;
           if (data == null) {

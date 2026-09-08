@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -9,6 +10,7 @@ import 'notifications_inbox_screen.dart';
 import 'price_list_screen.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/app_shimmer.dart';
 import '../data/rx.dart';
 import '../model/staff_dashboard_model.dart';
 import 'package:el_arbol/route/app_pages.dart';
@@ -94,6 +96,67 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
     return total;
   }
 
+  String _resolveStoreImageUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return '';
+    String cleanUrl = url.trim();
+    if (cleanUrl.startsWith('http://')) {
+      cleanUrl = cleanUrl.replaceFirst('http://', 'https://');
+    } else if (cleanUrl.startsWith('/')) {
+      cleanUrl = 'https://apielarbol.icommerce.com.bd$cleanUrl';
+    }
+    return cleanUrl;
+  }
+
+  Widget _buildStoreImage(String? imageUrl, {double size = 46}) {
+    final cleanUrl = _resolveStoreImageUrl(imageUrl);
+    if (cleanUrl.isEmpty) {
+      return Container(
+        width: size.w,
+        height: size.w,
+        decoration: BoxDecoration(
+          color: const Color(0xFF00694C).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        child: Icon(Icons.storefront_rounded, color: const Color(0xFF00694C), size: (size * 0.55).sp),
+      );
+    }
+
+    return Container(
+      width: size.w,
+      height: size.w,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: Colors.grey.shade200, width: 1.w),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(9.r),
+        child: CachedNetworkImage(
+          imageUrl: cleanUrl,
+          width: size.w,
+          height: size.w,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => AppShimmer.box(
+            width: size.w,
+            height: size.w,
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: const Color(0xFF00694C).withValues(alpha: 0.1),
+            child: Icon(Icons.storefront_rounded, color: const Color(0xFF00694C), size: (size * 0.55).sp),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _handleCheckIn(BuildContext context, List<ActiveStore> activeStores) {
     if (activeStores.length == 1) {
       _performCheckIn(activeStores.first);
@@ -113,15 +176,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                 ...activeStores.map((store) {
                   final isOpen = _isStoreOpen(store);
                   return ListTile(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                    leading: Container(
-                      padding: EdgeInsets.all(8.r),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00694C).withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.storefront_rounded, color: Color(0xFF00694C)),
-                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+                    leading: _buildStoreImage(store.image, size: 48),
                     title: Row(
                       children: [
                         Expanded(
@@ -175,17 +231,32 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
           title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              _buildStoreImage(store.image, size: 42),
+              SizedBox(width: 10.w),
               Expanded(
-                child: Text(
-                  store.name ?? 'Store Check-In',
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16.sp),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      store.name ?? 'Store Check-In',
+                      style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 15.sp),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (store.city != null || store.address != null)
+                      Text(
+                        store.city ?? store.address ?? '',
+                        style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
                 ),
               ),
-              SizedBox(width: 8.w),
+              SizedBox(width: 6.w),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
                 decoration: BoxDecoration(
@@ -352,7 +423,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return SizedBox(
                       height: 180.h,
-                      child: const CustomAppLoading(message: 'Loading dashboard...'),
+                      child: const CustomAppLoading.card(itemCount: 1),
                     );
                   }
 

@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
 import 'dart:developer';
 import 'dart:io';
+import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
 
 class WholesaleProfileRx extends RxResponseInt<Map<String, dynamic>> {
   final api = WholesaleApi.instance;
@@ -200,6 +201,15 @@ class WholesaleTicketsRx extends RxResponseInt<Map<String, dynamic>> {
   Future<void> fetchTickets() async {
     try {
       final data = await api.getTickets();
+      List<dynamic> list = [];
+      if (data['results'] is List) {
+        list = data['results'] as List;
+      } else if (data['data'] is List) {
+        list = data['data'] as List;
+      } else if (data['tickets'] is List) {
+        list = data['tickets'] as List;
+      }
+      SupportTicketUnreadManager.instance.updateWholesaleTickets(list);
       await handleSuccessWithReturn(data);
     } catch (e) {
       log('WholesaleTicketsRx fetchTickets error: $e');

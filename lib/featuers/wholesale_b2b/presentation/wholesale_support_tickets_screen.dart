@@ -6,6 +6,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:el_arbol/featuers/wholesale_b2b/presentation/wholesale_single_ticket_screen.dart';
+import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
 
 class WholesaleSupportTicketsScreen extends StatefulWidget {
   const WholesaleSupportTicketsScreen({super.key});
@@ -308,7 +309,40 @@ class _WholesaleSupportTicketsScreenState extends State<WholesaleSupportTicketsS
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Support Tickets', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Support Tickets',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.white,
+              ),
+            ),
+            Obx(() {
+              final unread = SupportTicketUnreadManager.instance.wholesaleUnreadCountRx.value;
+              if (unread <= 0) return const SizedBox.shrink();
+              return Container(
+                margin: EdgeInsets.only(left: 8.w),
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF7A00),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
         backgroundColor: primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -332,7 +366,7 @@ class _WholesaleSupportTicketsScreenState extends State<WholesaleSupportTicketsS
             return const CustomAppLoading(message: 'Loading tickets...');
           }
           final data = snapshot.data;
-          
+
           List<dynamic> tickets = [];
           if (data is Map) {
             if (data['results'] is List) {
@@ -345,21 +379,25 @@ class _WholesaleSupportTicketsScreenState extends State<WholesaleSupportTicketsS
           } else if (data is List) {
             tickets = data;
           }
-          
+
           if (tickets.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.support_agent, size: 64.r, color: Colors.grey.shade300),
+                  Icon(Icons.support_agent, size: 64.r,
+                      color: Colors.grey.shade300),
                   SizedBox(height: 16.h),
-                  Text('No tickets found', style: TextStyle(color: Colors.grey, fontSize: 16.sp)),
+                  Text('No tickets found',
+                      style: TextStyle(color: Colors.grey, fontSize: 16.sp)),
                   SizedBox(height: 12.h),
                   ElevatedButton.icon(
                     onPressed: _createTicket,
-                    style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor),
                     icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Create First Ticket', style: TextStyle(color: Colors.white)),
+                    label: const Text('Create First Ticket',
+                        style: TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
@@ -367,151 +405,235 @@ class _WholesaleSupportTicketsScreenState extends State<WholesaleSupportTicketsS
           }
 
           return ListView.builder(
-            padding: EdgeInsets.all(16.r),
-            itemCount: tickets.length + 1,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return Container(
-                  margin: EdgeInsets.only(bottom: 16.h),
-                  padding: EdgeInsets.all(16.r),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF00694C), Color(0xFF004D37)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF00694C).withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      )
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(10.r),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.headset_mic_rounded, color: Colors.white, size: 26),
+              padding: EdgeInsets.all(16.r),
+              itemCount: tickets.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Container(
+                    margin: EdgeInsets.only(bottom: 16.h),
+                    padding: EdgeInsets.all(16.r),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00694C), Color(0xFF004D37)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      SizedBox(width: 14.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Chat with Admin Support',
+                      borderRadius: BorderRadius.circular(16.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00694C).withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        )
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.r),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.headset_mic_rounded,
+                              color: Colors.white, size: 26),
+                        ),
+                        SizedBox(width: 14.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Chat with Admin Support',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14.sp,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                'Instant help with orders, billing, and supply',
+                                style: TextStyle(
+                                    fontSize: 11.sp, color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: _createTicket,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF00694C),
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12.w, vertical: 8.h),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.r)),
+                          ),
+                          child: Text('New Chat', style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12.sp)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final ticket = tickets[index - 1];
+                final ticketMap = Map<String, dynamic>.from(
+                    ticket is Map ? ticket : {});
+                final ticketId = ticketMap['id']?.toString() ?? '';
+                final subject = ticketMap['subject'] ?? ticketMap['title'] ??
+                    'Ticket #$ticketId';
+                final status = ticketMap['status'] ?? 'Open';
+                final createdAt = ticketMap['created_at'] ??
+                    ticketMap['date'] ?? '';
+
+                return Obx(() {
+                  final unreadCount = SupportTicketUnreadManager.instance
+                      .ticketUnreadMap[ticketId] ??
+                      SupportTicketUnreadManager.instance
+                          .getUnreadCountForTicket(ticketMap);
+                  final hasUnread = unreadCount > 0;
+
+                  return Card(
+                    margin: EdgeInsets.only(bottom: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: hasUnread
+                          ? BorderSide(color: const Color(0xFFFF7A00)
+                          .withOpacity(0.6), width: 1.5)
+                          : BorderSide.none,
+                    ),
+                    elevation: hasUnread ? 2 : 1,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16.w,
+                          vertical: 8.h),
+                      onTap: () {
+                        SupportTicketUnreadManager.instance.markTicketAsRead(
+                            ticketMap);
+                        Get.to(() =>
+                            WholesaleSingleTicketScreen(
+                              ticketId: ticketId,
+                              ticketSubject: subject,
+                            ))?.then((_) {
+                          _rx.fetchTickets();
+                        });
+                      },
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              subject,
                               style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.bold,
+                                fontWeight: hasUnread
+                                    ? FontWeight.w800
+                                    : FontWeight.bold,
                                 fontSize: 14.sp,
-                                color: Colors.white,
+                                color: hasUnread
+                                    ? const Color(0xFF151E13)
+                                    : Colors.black87,
                               ),
                             ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              'Instant help with orders, billing, and supply',
-                              style: TextStyle(fontSize: 11.sp, color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: _createTicket,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF00694C),
-                          elevation: 0,
-                          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
-                        ),
-                        child: Text('New Chat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.sp)),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              final ticket = tickets[index - 1];
-              final ticketId = ticket['id']?.toString() ?? '';
-              final subject = ticket['subject'] ?? ticket['title'] ?? 'Ticket #$ticketId';
-              final status = ticket['status'] ?? 'Open';
-              final createdAt = ticket['created_at'] ?? ticket['date'] ?? '';
-
-              return Card(
-                margin: EdgeInsets.only(bottom: 12.h),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                child: ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                  onTap: () {
-                    Get.to(() => WholesaleSingleTicketScreen(
-                      ticketId: ticketId,
-                      ticketSubject: subject,
-                    ));
-                  },
-                  title: Text(
-                    subject,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 6.h),
-                      Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6.r),
-                            ),
-                            child: Text(
-                              status,
-                              style: TextStyle(fontSize: 11.sp, color: primaryColor, fontWeight: FontWeight.bold),
-                            ),
                           ),
-                          if (createdAt.isNotEmpty) ...[
-                            SizedBox(width: 8.w),
-                            Text(createdAt, style: TextStyle(color: Colors.grey, fontSize: 10.sp)),
-                          ],
+                          if (hasUnread)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w, vertical: 3.h),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF7A00),
+                                borderRadius: BorderRadius.circular(12.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFFF7A00).withOpacity(
+                                        0.3),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.mark_chat_unread_rounded,
+                                      color: Colors.white, size: 11),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    '$unreadCount new ${unreadCount == 1
+                                        ? 'reply'
+                                        : 'replies'}',
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
-                    ],
-                  ),
-                  trailing: Material(
-                    color: const Color(0xFFFEECEB),
-                    borderRadius: BorderRadius.circular(8.r),
-                    child: InkWell(
-                      onTap: () => _confirmDeleteTicket(ticketId),
-                      borderRadius: BorderRadius.circular(8.r),
-                      child: Container(
-                        padding: EdgeInsets.all(8.r),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(
-                            color: const Color(0xFFFCA5A5).withOpacity(0.5),
-                            width: 0.8,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 6.h),
+                          Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6.r),
+                                ),
+                                child: Text(
+                                  status,
+                                  style: TextStyle(fontSize: 11.sp,
+                                      color: primaryColor,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              if (createdAt.isNotEmpty) ...[
+                                SizedBox(width: 8.w),
+                                Text(createdAt, style: TextStyle(
+                                    color: Colors.grey, fontSize: 10.sp)),
+                              ],
+                            ],
                           ),
-                        ),
-                        child: const Icon(
-                          Icons.delete_outline_rounded,
-                          color: Color(0xFFDC2626),
-                          size: 18,
+                        ],
+                      ),
+                      trailing: Material(
+                        color: const Color(0xFFFEECEB),
+                        borderRadius: BorderRadius.circular(8.r),
+                        child: InkWell(
+                          onTap: () => _confirmDeleteTicket(ticketId),
+                          borderRadius: BorderRadius.circular(8.r),
+                          child: Container(
+                            padding: EdgeInsets.all(8.r),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8.r),
+                              border: Border.all(
+                                color: const Color(0xFFFCA5A5).withOpacity(0.5),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: Color(0xFFDC2626),
+                              size: 18,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            },
+                  );
+                },
+                );
+              }
           );
         }
-      ),
+    ),
     );
   }
 }

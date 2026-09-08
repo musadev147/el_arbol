@@ -51,11 +51,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   children: [
                     Image.asset(
                       AssetsIcons.logoIcons,
-                      width: 30.w,
-                      height: 30.w,
+                      width: 56.w,
+                      height: 56.w,
                       fit: BoxFit.contain,
                     ),
-                    SizedBox(width: 8.w),
+                    SizedBox(width: 10.w),
                     Text(
                       'El Árbol',
                       style: TextStyle(

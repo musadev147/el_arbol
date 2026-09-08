@@ -5,6 +5,7 @@ import '../../../../../networks/rx_base.dart';
 import '../../../../../common_wigdets/app_toast.dart';
 import 'customer_tickets_api.dart';
 import 'dart:developer';
+import '../../../../../helpers/support_ticket_unread_manager.dart';
 
 class CustomerTicketsRx extends RxResponseInt<List<dynamic>> {
   final api = CustomerTicketsApi.instance;
@@ -28,6 +29,7 @@ class CustomerTicketsRx extends RxResponseInt<List<dynamic>> {
           list = data['tickets'];
         }
       }
+      SupportTicketUnreadManager.instance.updateCustomerTickets(list);
       await handleSuccessWithReturn(list);
     } catch (e) {
       log('CustomerTicketsRx fetchTickets error: $e');

@@ -16,6 +16,7 @@ import '../../../../route/app_pages.dart';
 import '../../orders/data/customer_orders_rx.dart';
 import '../../orders/data/customer_orders_api.dart';
 import '../../orders/presentation/customer_cart_screen.dart';
+import '../../../../common_wigdets/app_shimmer.dart';
 import '../../../../constants/app_assets/assets_icons.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -742,7 +743,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           stream: _shippingMethodsRx.valueStreamData,
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator(color: Color(0xFF00694C)));
+                              return Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.h),
+                                child: AppShimmer.box(width: double.infinity, height: 42.h, borderRadius: BorderRadius.circular(8.r)),
+                              );
                             }
                             
                             List<dynamic> methods = [];
@@ -1169,21 +1173,23 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
       appBar: AppBar(
+        toolbarHeight: 68.h,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
               AssetsIcons.logoIcons,
-              height: 28.h,
-              width: 28.h,
+              height: 52.h,
+              width: 52.h,
               fit: BoxFit.contain,
             ),
-            SizedBox(width: 8.w),
-            const Text(
+            SizedBox(width: 12.w),
+            Text(
               'El Árbol',
               style: TextStyle(
-                color: Color(0xFF151E13),
+                color: const Color(0xFF151E13),
                 fontFamily: 'Poppins',
+                fontSize: 22.sp,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1474,6 +1480,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       maxHeightDiskCache: 600,
                       fadeInDuration: const Duration(milliseconds: 100),
                       fadeOutDuration: const Duration(milliseconds: 100),
+                      placeholder: (context, url) => AppShimmer.box(
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
                       errorWidget: (context, url, error) => Container(
                         color: Colors.grey.shade100,
                         child: Icon(Icons.grass, color: primaryColor, size: 36.r),
