@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/no_internet_or_data_widget.dart';
 import '../data/rx.dart';
 
 class NotificationsInboxScreen extends StatefulWidget {
@@ -91,7 +93,7 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
           stream: _rx.valueStreamData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: primaryColor));
+              return const CustomAppLoading(message: 'Loading notifications...');
             }
 
             final rawData = snapshot.data;
@@ -137,15 +139,10 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
 
   Widget _buildNotificationTab(List<dynamic> alerts, IconData icon, Color badgeColor) {
     if (alerts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.mark_email_read_outlined, size: 54.r, color: Colors.grey),
-            SizedBox(height: 12.h),
-            Text('No new notifications in this category.', style: TextStyle(color: Colors.grey, fontSize: 13.sp)),
-          ],
-        ),
+      return const NoInternetOrDataWidget(
+        title: 'No Notifications',
+        message: 'No new notifications in this category.',
+        isFullPage: false,
       );
     }
 

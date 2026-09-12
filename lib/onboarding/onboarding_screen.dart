@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../constants/app_colors.dart';
+import '../../constants/app_assets/assets_icons.dart';
 import '../../route/app_pages.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -105,7 +107,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               errorWidget: (context, url, error) => Container(
                                 height: 200.h,
                                 color: Colors.grey.shade100,
-                                child: const Icon(Icons.eco, size: 80, color: primaryBrandColor),
+                                child: Center(
+                                  child: Image.asset(
+                                    AssetsIcons.logoIcons,
+                                    width: 80.w,
+                                    height: 80.w,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -158,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: _currentPage == index ? 24.w : 8.w,
                         height: 8.h,
                         decoration: BoxDecoration(
-                          color: _currentPage == index ? primaryBrandColor : Colors.grey.shade300,
+                          color: _currentPage == index ? AppColors.accentOrange : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(4.r),
                         ),
                       ),
@@ -180,7 +189,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryBrandColor,
+                        backgroundColor: _currentPage == onboardingData.length - 1
+                            ? AppColors.accentOrange
+                            : primaryBrandColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12.r),
                         ),

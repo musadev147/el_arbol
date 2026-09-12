@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:el_arbol/common_wigdets/user_role.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,15 +7,18 @@ import '../constants/app_assets/assets_icons.dart';
 import '../constants/app_colors.dart';
 import '../featuers/customers/home/presentation/home_screen.dart';
 import '../featuers/customers/home/presentation/shop_map_screen.dart';
-import '../featuers/customers/home/presentation/leftover_pack_screen.dart';
 import '../featuers/customers/home/presentation/customer_orders_screen.dart';
 import '../featuers/customers/home/presentation/customer_profile_screen.dart';
-import '../featuers/customers/message/messages_screen.dart';
+import '../featuers/customers/orders/presentation/customer_cart_screen.dart';
+import '../featuers/customers/orders/data/customer_orders_rx.dart';
 import '../featuers/customers/profile/profile.dart';
-import '../featuers/customers/wallet/tenant_wallet_screen.dart';
 
 import '../featuers/employee_self_service/presentation/employee_dashboard_screen.dart';
 import '../featuers/employee_self_service/presentation/staff_chat_screen.dart';
+import '../featuers/employee_self_service/presentation/price_list_screen.dart';
+import '../featuers/employee_self_service/data/rx.dart';
+import '../featuers/employee_self_service/model/staff_chat_model.dart';
+import '../helpers/support_ticket_unread_manager.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_catalog_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_orders_screen.dart';
 
@@ -36,30 +40,30 @@ class _CustomNavigationState extends State<CustomNavigation> {
 
 
 
-  late final Map<UserRole, List<String>> roleIcons = {
+  late final Map<UserRole, List<dynamic>> roleIcons = {
     UserRole.customer: [
       AssetsIcons.homeIcons,
-      AssetsIcons.locationIcons,
-      AssetsIcons.offerIcons,
-      AssetsIcons.propertyIcons,
+      Icons.storefront_rounded,
+      AssetsIcons.shoppingIcons,
+      Icons.receipt_long_rounded,
       AssetsIcons.usernavIcons,
     ],
     UserRole.wholesale: [
       AssetsIcons.homeIcons,
-      AssetsIcons.messagenavIcons,
-      AssetsIcons.propertyIcons,
+      Icons.storefront_rounded,
+      Icons.receipt_long_rounded,
       AssetsIcons.usernavIcons,
     ],
     UserRole.employeeSelfService: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
-      AssetsIcons.propertyIcons,
+      Icons.price_change_outlined,
       AssetsIcons.usernavIcons,
     ],
     UserRole.staff: [
       AssetsIcons.homeIcons,
       AssetsIcons.messagenavIcons,
-      AssetsIcons.propertyIcons,
+      Icons.price_change_outlined,
       AssetsIcons.usernavIcons,
     ],
   };
@@ -68,26 +72,26 @@ class _CustomNavigationState extends State<CustomNavigation> {
     UserRole.customer: [
       "Shop",
       "Stores",
-      "Surplus",
+      "Cart",
       "Orders",
       "Profile",
     ],
     UserRole.wholesale: [
       "Market",
-      "Messages",
+      "Store",
       "Orders",
       "Profile",
     ],
     UserRole.employeeSelfService: [
-      "Dashboard",
+      "Staff Dashboard",
       "Messages",
-      "Payslips",
+      "Prices",
       "Profile",
     ],
     UserRole.staff: [
-      "Dashboard",
+      "Staff Dashboard",
       "Messages",
-      "Payslips",
+      "Prices",
       "Profile",
     ],
   };
@@ -96,43 +100,62 @@ class _CustomNavigationState extends State<CustomNavigation> {
     UserRole.customer: [
       const HomeScreen(),
       const ShopMapScreen(),
-      const LeftoverPackScreen(),
+      CustomerCartScreen(cartItems: RxList<Map<String, dynamic>>([])),
       const CustomerOrdersScreen(),
       const CustomerProfileScreen(),
     ],
     UserRole.wholesale: [
       const WholesaleCatalogScreen(),
-      MessagesScreen(),
+      const ShopMapScreen(),
       const WholesaleOrdersScreen(),
       const ProfileScreen(role: UserRole.wholesale),
     ],
     UserRole.employeeSelfService: [
       const EmployeeDashboardScreen(),
       const StaffChatScreen(),
-      TenantWallet(),
+      const PriceListScreen(),
       const ProfileScreen(role: UserRole.employeeSelfService),
     ],
     UserRole.staff: [
       const EmployeeDashboardScreen(),
       const StaffChatScreen(),
-      TenantWallet(),
+      const PriceListScreen(),
       const ProfileScreen(role: UserRole.staff),
     ],
   };
+
+  Timer? _staffChatPollingTimer;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex.value = widget.selectedIndex;
+    if (widget.role == null || widget.role == UserRole.customer) {
+      CustomerCartRx.instance.fetchBasket();
+    }
+    if (widget.role == UserRole.employeeSelfService || widget.role == UserRole.staff) {
+      StaffChatRx.instance.fetchChatMessages(silent: true);
+      _staffChatPollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+        if (mounted) {
+          StaffChatRx.instance.fetchChatMessages(silent: true);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _staffChatPollingTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final role = widget.role ?? UserRole.wholesale;
+    final role = widget.role ?? UserRole.customer;
 
-    final icons = roleIcons[role]!;
-    final labels = roleLabels[role]!;
-    final screens = roleScreens[role]!;
+    final icons = roleIcons[role] ?? roleIcons[UserRole.customer]!;
+    final labels = roleLabels[role] ?? roleLabels[UserRole.customer]!;
+    final screens = roleScreens[role] ?? roleScreens[UserRole.customer]!;
 
     if (_selectedIndex.value >= screens.length) {
       _selectedIndex.value = 0;
@@ -228,14 +251,14 @@ class _CustomNavigationState extends State<CustomNavigation> {
         child:Scaffold(
       body: screens[_selectedIndex.value],
       bottomNavigationBar: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
         decoration: BoxDecoration(
           color: AppColors.cFFFFFF,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(24.r),
             topRight: Radius.circular(24.r),
           ),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 10,
@@ -243,37 +266,204 @@ class _CustomNavigationState extends State<CustomNavigation> {
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(icons.length, (index) {
-            final isSelected = _selectedIndex.value == index;
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(icons.length, (index) {
+              final isSelected = _selectedIndex.value == index;
+              final iconItem = icons[index];
 
-            return GestureDetector(
-              onTap: () => _selectedIndex.value = index,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    icons[index],
-                    width: 26.w,
-                    height: 26.h,
-                    color: isSelected
-                        ? const Color(0xFF00694C)
-                        : AppColors.c87878A,
-                  ),
-                  if (isSelected)
-                    Text(
-                      labels[index],
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF00694C),
+              return InkWell(
+                onTap: () {
+                  _selectedIndex.value = index;
+                  if ((role == UserRole.employeeSelfService || role == UserRole.staff) && index == 1) {
+                    StaffChatRx.instance.markAllAsRead();
+                  }
+                },
+                borderRadius: BorderRadius.circular(12.r),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Builder(
+                        builder: (context) {
+                          final Widget iconWidget = (iconItem is IconData)
+                              ? Icon(
+                                  iconItem,
+                                  size: 26.sp,
+                                  color: isSelected
+                                      ? const Color(0xFF00694C)
+                                      : AppColors.c87878A,
+                                )
+                              : Image.asset(
+                                  iconItem.toString(),
+                                  width: 26.w,
+                                  height: 26.h,
+                                  color: isSelected
+                                      ? const Color(0xFF00694C)
+                                      : AppColors.c87878A,
+                                );
+
+                          // Customer Cart badge on tab 2
+                          if (role == UserRole.customer && index == 2) {
+                            return StreamBuilder(
+                              stream: CustomerCartRx.instance.valueStreamData,
+                              builder: (context, snapshot) {
+                                final count = CustomerCartRx.instance.itemCount;
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    iconWidget,
+                                    if (count > 0)
+                                      Positioned(
+                                        right: -6,
+                                        top: -4,
+                                        child: Container(
+                                          padding: EdgeInsets.all(3.r),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.accentOrange,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white, width: 1.5),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppColors.accentOrange.withValues(alpha: 0.4),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 1),
+                                              ),
+                                            ],
+                                          ),
+                                          constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
+                                          child: Center(
+                                            child: Text(
+                                              '$count',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 9.sp,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            );
+                          }
+
+                          // Staff Chat Messages unread count badge on tab 1
+                          if ((role == UserRole.employeeSelfService || role == UserRole.staff) && index == 1) {
+                            return Obx(() {
+                              final unreadCount = StaffChatRx.instance.unreadCountRx.value;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  iconWidget,
+                                  if (unreadCount > 0)
+                                    Positioned(
+                                      right: -8,
+                                      top: -4,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentOrange,
+                                          borderRadius: BorderRadius.circular(10.r),
+                                          border: Border.all(color: Colors.white, width: 1.5),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.accentOrange.withValues(alpha: 0.4),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                        constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
+                                        child: Center(
+                                          child: Text(
+                                            unreadCount > 99 ? '99+' : '$unreadCount',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            });
+                          }
+
+                          // Support Ticket unread replies badge on Profile tab for Customer & Wholesale
+                          if ((role == UserRole.customer || role == UserRole.wholesale) &&
+                              index == labels.length - 1) {
+                            return Obx(() {
+                              final unreadCount = role == UserRole.wholesale
+                                  ? SupportTicketUnreadManager.instance.wholesaleUnreadCountRx.value
+                                  : SupportTicketUnreadManager.instance.customerUnreadCountRx.value;
+                              return Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  iconWidget,
+                                  if (unreadCount > 0)
+                                    Positioned(
+                                      right: -8,
+                                      top: -4,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.accentOrange,
+                                          borderRadius: BorderRadius.circular(10.r),
+                                          border: Border.all(color: Colors.white, width: 1.5),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.accentOrange.withValues(alpha: 0.4),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                        constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
+                                        child: Center(
+                                          child: Text(
+                                            unreadCount > 99 ? '99+' : '$unreadCount',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              );
+                            });
+                          }
+
+                          return iconWidget;
+                        },
                       ),
-                    ),
-                ],
-              ),
-            );
-          }),
+                      SizedBox(height: 3.h),
+                      Text(
+                        labels[index],
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? const Color(0xFF00694C)
+                              : AppColors.c87878A,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     )

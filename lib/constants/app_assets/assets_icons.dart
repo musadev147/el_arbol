@@ -44,7 +44,7 @@ class AssetsIcons {
   static String phoneIcon = 'assets/icons/phoneIcon.png';
   static String emailIcon1 = 'assets/icons/emailIcon1.png';
   static String timeZone = 'assets/icons/timeZone.png';
-  static String logoIcons = 'assets/icons/logo.png';
+  static String logoIcons = 'assets/images/el.png';
   static String drictionleftIcons = 'assets/icons/drictionleft.png';
   static String derictionrightIcons = 'assets/icons/derictionright.png';
   static String ArrowLeftIcons = 'assets/icons/ArrowLeft.png';

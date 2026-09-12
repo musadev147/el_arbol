@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:el_arbol/helpers/di.dart';
+import 'package:el_arbol/constants/app_constants.dart';
 import '../data/customer_tickets_rx.dart';
+import '../../../../helpers/support_ticket_unread_manager.dart';
 
 class CustomerTicketChatScreen extends StatefulWidget {
   final Map<String, dynamic> ticket;
@@ -20,34 +23,124 @@ class CustomerTicketChatScreen extends StatefulWidget {
 class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
   late CustomerTicketsRx _rx;
   final TextEditingController _replyController = TextEditingController();
+  final Set<String> _mySentMessages = {};
   List<dynamic> _messages = [];
   Timer? _typingTimer;
+  Timer? _pollingTimer;
   bool _isTyping = false;
 
   @override
   void initState() {
     super.initState();
     _rx = CustomerTicketsRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>());
-    _loadMessages();
+    _loadMessages(widget.ticket);
+    SupportTicketUnreadManager.instance.markTicketAsRead(widget.ticket);
+
+    // Poll every 4 seconds for new incoming responses from Admin
+    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _pollTicketUpdates();
+    });
   }
 
-  void _loadMessages() {
-    // The main ticket object has a 'message' or 'description' and might have 'replies' or 'messages' array
+  Future<void> _pollTicketUpdates() async {
+    try {
+      final ticketId = widget.ticket['id']?.toString() ?? '';
+      if (ticketId.isEmpty) return;
+      final tickets = await _rx.api.getTickets();
+      List<dynamic> list = [];
+      if (tickets is List) {
+        list = tickets;
+      } else if (tickets is Map) {
+        if (tickets['results'] is List) {
+          list = tickets['results'];
+        } else if (tickets['data'] is List) {
+          list = tickets['data'];
+        }
+      }
+      final updated = list.firstWhere(
+        (t) => t is Map && t['id']?.toString() == ticketId,
+        orElse: () => null,
+      );
+      if (updated != null && mounted) {
+        final updatedMap = Map<String, dynamic>.from(updated);
+        setState(() {
+          _loadMessages(updatedMap);
+        });
+        SupportTicketUnreadManager.instance.markTicketAsRead(updatedMap);
+      }
+    } catch (_) {}
+  }
+
+  void _loadMessages(Map<String, dynamic> ticketData) {
     _messages = [];
-    _messages.add({
-      'isOriginal': true,
-      'message': widget.ticket['description'] ?? widget.ticket['message'] ?? '',
-      'sender': 'You',
-      'created_at': widget.ticket['created_at'] ?? '',
-      'isMe': true,
-    });
-    
-    final replies = widget.ticket['messages'] ?? widget.ticket['replies'] ?? [];
-    for (var r in replies) {
-      bool isMe = r['sender_role'] == 'customer' || r['user_role'] == 'customer' || r['is_customer'] == true;
+    final currentUserId = appData.read(kKeyUserID)?.toString().trim() ?? '';
+    final currentUserEmail = appData.read(kKeyEmail)?.toString().trim().toLowerCase() ?? '';
+
+    // The main ticket object has a 'message' or 'description' (sent by user -> RIGHT side)
+    final origMsg = ticketData['description'] ?? ticketData['message'] ?? '';
+    if (origMsg.toString().trim().isNotEmpty) {
       _messages.add({
+        'id': null,
+        'isOriginal': true,
+        'message': origMsg.toString(),
+        'sender': 'You',
+        'created_at': ticketData['created_at'] ?? '',
+        'isMe': true,
+      });
+    }
+    
+    final replies = ticketData['messages'] ?? ticketData['replies'] ?? [];
+    for (var r in replies) {
+      if (r is! Map) continue;
+      final text = (r['message'] ?? r['text'] ?? r['content'] ?? '').toString().trim();
+      if (text.isEmpty) continue;
+
+      final role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '')
+          .toString()
+          .toLowerCase();
+      final senderStr = (r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
+          .toString()
+          .toLowerCase();
+
+      final bool isExplicitAdminOrStaff = role.contains('admin') ||
+          role.contains('support') ||
+          role.contains('agent') ||
+          role.contains('helpdesk') ||
+          senderStr.contains('admin') ||
+          senderStr.contains('support') ||
+          senderStr.contains('agent') ||
+          senderStr.contains('helpdesk') ||
+          r['is_admin'] == true ||
+          r['is_support'] == true;
+
+      final senderId = (r['user_id'] ?? r['user'] ?? r['sender_id'] ?? r['author_id'])?.toString().trim() ?? '';
+      final senderEmail = (r['email'] ?? r['user_email'] ?? r['sender_email'])?.toString().trim().toLowerCase() ?? '';
+
+      final bool isExplicitMe = r['isMe'] == true ||
+          r['is_me'] == true ||
+          r['sender'] == 'You' ||
+          (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId == currentUserId) ||
+          (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail) ||
+          _mySentMessages.contains(text) ||
+          role.contains('customer') ||
+          role.contains('wholesale') ||
+          role.contains('buyer');
+
+      bool isMe = false;
+      if (isExplicitMe) {
+        isMe = true;
+      } else if (isExplicitAdminOrStaff) {
+        isMe = false;
+      } else if (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId != currentUserId) {
+        isMe = false;
+      } else {
+        isMe = false;
+      }
+
+      _messages.add({
+        'id': r['id']?.toString(),
         'isOriginal': false,
-        'message': r['message'] ?? '',
+        'message': text,
         'sender': isMe ? 'You' : 'Support',
         'created_at': r['created_at'] ?? '',
         'isMe': isMe,
@@ -57,6 +150,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _rx.dispose();
     _replyController.dispose();
     _typingTimer?.cancel();
@@ -77,6 +171,81 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     });
   }
 
+  void _editMessage(int index, String messageId) {
+    final msg = _messages[index];
+    final controller = TextEditingController(text: msg['message']);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          title: const Text('Edit Message'),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            decoration: const InputDecoration(hintText: 'Enter new message'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newText = controller.text.trim();
+                if (newText.isEmpty) return;
+                final ticketId = widget.ticket['id']?.toString() ?? '';
+                final success = await _rx.updateMessage(ticketId, messageId, newText);
+                if (success) {
+                  setState(() {
+                    _messages[index]['message'] = newText;
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(msg: 'Message updated');
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteMessage(int index, String messageId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          title: const Text('Delete Message'),
+          content: const Text('Are you sure you want to delete this message?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final ticketId = widget.ticket['id']?.toString() ?? '';
+                final success = await _rx.deleteMessage(ticketId, messageId);
+                if (success) {
+                  setState(() {
+                    _messages.removeAt(index);
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _submitReply() async {
     final message = _replyController.text.trim();
     if (message.isEmpty) {
@@ -85,12 +254,14 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     }
 
     final ticketId = widget.ticket['id']?.toString() ?? '';
-    final success = await _rx.replyTicket(ticketId, message);
-    if (success) {
+    _mySentMessages.add(message);
+    final newMsgData = await _rx.replyTicket(ticketId, message);
+    if (newMsgData != null) {
       setState(() {
         _messages.add({
+          'id': newMsgData['id']?.toString(),
           'isOriginal': false,
-          'message': message,
+          'message': newMsgData['message'] ?? message,
           'sender': 'You',
           'created_at': 'Just now',
           'isMe': true,
@@ -98,6 +269,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
       });
       _replyController.clear();
       FocusScope.of(context).unfocus();
+      _pollTicketUpdates();
     }
   }
 
@@ -121,13 +293,51 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-                return _buildMessageBubble(
+                final isEditable = msg['isMe'] == true && msg['id'] != null;
+                
+                final bubble = _buildMessageBubble(
                   message: msg['message'],
                   sender: msg['sender'],
                   date: msg['created_at'],
                   isMe: msg['isMe'],
                   primaryColor: primaryColor,
                 );
+
+                if (isEditable) {
+                  return GestureDetector(
+                    onLongPress: () {
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (ctx) {
+                          return SafeArea(
+                            child: Wrap(
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.edit, color: primaryColor),
+                                  title: const Text('Edit Message'),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    _editMessage(index, msg['id']);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.delete, color: Colors.red),
+                                  title: const Text('Delete Message'),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    _deleteMessage(index, msg['id']);
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    child: bubble,
+                  );
+                }
+                return bubble;
               },
             ),
           ),
@@ -154,44 +364,56 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(16.r),
             topRight: Radius.circular(16.r),
-            bottomLeft: isMe ? Radius.circular(16.r) : Radius.zero,
-            bottomRight: isMe ? Radius.zero : Radius.circular(16.r),
+            bottomLeft: isMe ? Radius.circular(16.r) : Radius.circular(3.r),
+            bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(16.r),
           ),
+          border: isMe ? null : Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Text(
-              sender,
-              style: TextStyle(
-                fontSize: 10.sp,
-                fontWeight: FontWeight.bold,
-                color: isMe ? Colors.white70 : Colors.grey.shade600,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isMe) ...[
+                  const Icon(Icons.support_agent_rounded, size: 14, color: Color(0xFF00694C)),
+                  SizedBox(width: 4.w),
+                ],
+                Text(
+                  sender,
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.bold,
+                    color: isMe ? Colors.white70 : const Color(0xFF00694C),
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: 4.h),
             Text(
               message,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: 13.5.sp,
                 color: isMe ? Colors.white : Colors.black87,
               ),
             ),
-            SizedBox(height: 6.h),
-            Text(
-              date,
-              style: TextStyle(
-                fontSize: 9.sp,
-                color: isMe ? Colors.white54 : Colors.grey.shade500,
+            if (date.isNotEmpty) ...[
+              SizedBox(height: 5.h),
+              Text(
+                date,
+                style: TextStyle(
+                  fontSize: 9.sp,
+                  color: isMe ? Colors.white60 : Colors.grey.shade500,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

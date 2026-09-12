@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/no_internet_or_data_widget.dart';
 import '../data/rx.dart';
 import '../model/get_staff_history_model.dart';
 
@@ -14,6 +16,7 @@ class WeeklyShiftScreen extends StatefulWidget {
 
 class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
   late GetStaffHistoryRx _historyRx;
+  String? _selectedStore;
 
   @override
   void initState() {
@@ -29,6 +32,21 @@ class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
   void dispose() {
     _historyRx.dispose();
     super.dispose();
+  }
+
+  double _parseHours(Shifts s) {
+    if (s.hours != null && s.hours! > 0) return s.hours!;
+    if (s.startTime != null && s.endTime != null) {
+      try {
+        final start = s.startTime!.split(':').map(int.parse).toList();
+        final end = s.endTime!.split(':').map(int.parse).toList();
+        double startH = start[0] + (start.length > 1 ? start[1] / 60.0 : 0.0);
+        double endH = end[0] + (end.length > 1 ? end[1] / 60.0 : 0.0);
+        if (endH < startH) endH += 24.0;
+        return (endH - startH).clamp(0.0, 24.0);
+      } catch (_) {}
+    }
+    return 0.0;
   }
 
   @override
@@ -59,19 +77,84 @@ class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
           stream: _historyRx.valueStreamData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: primaryColor));
+              return const CustomAppLoading.card(message: 'Loading shifts...');
             }
 
-            if (snapshot.hasError || !snapshot.hasData || snapshot.data?.shifts == null) {
-              return const Center(child: Text("Could not load shift history"));
+            if (snapshot.hasError || !snapshot.hasData || snapshot.data?.shifts == null || snapshot.data!.shifts!.isEmpty) {
+              return NoInternetOrDataWidget(
+                title: 'No Shifts Found',
+                message: 'Could not load shift history. Please check your internet connection or try again.',
+                onRetry: () => _historyRx.fetchHistoryData(),
+              );
             }
 
             final data = snapshot.data!;
             final shifts = data.shifts!;
-            final totalHours = data.totalHours ?? 0.0;
+            final uniqueStores = shifts
+                .map((s) => s.storeName)
+                .where((name) => name != null && name.isNotEmpty)
+                .cast<String>()
+                .toSet()
+                .toList();
+
+            final filteredShifts = _selectedStore == null
+                ? shifts
+                : shifts.where((s) => s.storeName == _selectedStore).toList();
+
+            final filteredHours = _selectedStore == null
+                ? (data.totalHours ?? filteredShifts.fold<double>(0.0, (sum, s) => sum + _parseHours(s)))
+                : filteredShifts.fold<double>(0.0, (sum, s) => sum + _parseHours(s));
 
             return Column(
               children: [
+                // Store Filter Chips
+                if (uniqueStores.isNotEmpty)
+                  Container(
+                    height: 38.h,
+                    margin: EdgeInsets.only(left: 20.w, right: 20.w, top: 8.h),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All Stores'),
+                          selected: _selectedStore == null,
+                          selectedColor: primaryColor.withOpacity(0.15),
+                          labelStyle: TextStyle(
+                            color: _selectedStore == null ? primaryColor : Colors.grey.shade700,
+                            fontWeight: _selectedStore == null ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 12.sp,
+                          ),
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedStore = null;
+                              });
+                            }
+                          },
+                        ),
+                        SizedBox(width: 8.w),
+                        ...uniqueStores.map((storeName) => Padding(
+                          padding: EdgeInsets.only(right: 8.w),
+                          child: ChoiceChip(
+                            label: Text(storeName),
+                            selected: _selectedStore == storeName,
+                            selectedColor: primaryColor.withOpacity(0.15),
+                            labelStyle: TextStyle(
+                              color: _selectedStore == storeName ? primaryColor : Colors.grey.shade700,
+                              fontWeight: _selectedStore == storeName ? FontWeight.bold : FontWeight.normal,
+                              fontSize: 12.sp,
+                            ),
+                            onSelected: (selected) {
+                              setState(() {
+                                _selectedStore = selected ? storeName : null;
+                              });
+                            },
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+
                 // Hours Calculation Card Header
                 Container(
                   margin: EdgeInsets.all(20.r),
@@ -105,7 +188,7 @@ class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
                           ),
                           SizedBox(height: 6.h),
                           Text(
-                            '${totalHours.toStringAsFixed(1)} Hours',
+                            '${filteredHours.toStringAsFixed(1)} Hours',
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 24.sp,
@@ -129,11 +212,18 @@ class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
 
                 // Daily shifts list
                 Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w),
-                    itemCount: shifts.length,
-                    itemBuilder: (context, index) {
-                      final shift = shifts[index];
+                  child: filteredShifts.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No shifts for this store.',
+                            style: TextStyle(color: Colors.grey.shade500, fontSize: 14.sp),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.symmetric(horizontal: 20.w),
+                          itemCount: filteredShifts.length,
+                          itemBuilder: (context, index) {
+                            final shift = filteredShifts[index];
                       final isOffDay = (shift.status?.toLowerCase() == 'day off') || (shift.status?.toLowerCase() == 'off');
                       
                       return Container(
@@ -207,10 +297,10 @@ class _WeeklyShiftScreenState extends State<WeeklyShiftScreen> {
                                             style: TextStyle(color: Colors.grey.shade600, fontSize: 12.sp),
                                           ),
                                           SizedBox(height: 4.h),
-                                          Text(
-                                            'Shift: ${shift.startTime ?? ''} - ${shift.endTime ?? ''}',
-                                            style: TextStyle(color: Colors.grey, fontSize: 11.sp),
-                                          )
+                                           Text(
+                                             'Shift: ${shift.startTime ?? ''} - ${shift.endTime ?? ''}${shift.breakTime != null ? '  •  Break: ${shift.breakTime}' : ''}',
+                                             style: TextStyle(color: Colors.grey, fontSize: 11.sp),
+                                           )
                                         ]
                                       ],
                                     ),

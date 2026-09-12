@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 import 'package:el_arbol/featuers/employee_self_service/data/rx.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -41,7 +42,7 @@ class _StaffColleaguesScreenState extends State<StaffColleaguesScreen> {
         stream: _colleaguesRx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const CustomAppLoading(message: 'Loading colleagues...');
           }
           final data = snapshot.data;
           if (data == null) {

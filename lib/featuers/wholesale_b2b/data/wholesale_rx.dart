@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
 import 'dart:developer';
 import 'dart:io';
+import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
 
 class WholesaleProfileRx extends RxResponseInt<Map<String, dynamic>> {
   final api = WholesaleApi.instance;
@@ -200,6 +201,15 @@ class WholesaleTicketsRx extends RxResponseInt<Map<String, dynamic>> {
   Future<void> fetchTickets() async {
     try {
       final data = await api.getTickets();
+      List<dynamic> list = [];
+      if (data['results'] is List) {
+        list = data['results'] as List;
+      } else if (data['data'] is List) {
+        list = data['data'] as List;
+      } else if (data['tickets'] is List) {
+        list = data['tickets'] as List;
+      }
+      SupportTicketUnreadManager.instance.updateWholesaleTickets(list);
       await handleSuccessWithReturn(data);
     } catch (e) {
       log('WholesaleTicketsRx fetchTickets error: $e');
@@ -210,18 +220,44 @@ class WholesaleTicketsRx extends RxResponseInt<Map<String, dynamic>> {
   Future<bool> createTicket(Map<String, dynamic> payload) async {
     try {
       await EasyLoading.show(status: 'Creating Ticket...');
-      final data = await api.createTicket(payload);
-      // Optional: you can fetch again or append to stream, but for now we just return true.
+      await api.createTicket(payload);
       AppToast.success("Ticket Created Successfully!");
-      fetchTickets();
+      await fetchTickets();
       return true;
     } catch (e) {
       log('WholesaleTicketsRx createTicket error: $e');
       String message = "Failed to create ticket";
-      if (e is DioException) {
-        if (e.response?.data is Map) {
-          message = e.response?.data["message"] ?? message;
+      if (e is DioException && e.response?.data != null) {
+        final resData = e.response!.data;
+        if (resData is Map) {
+          message = resData["message"]?.toString() ?? 
+                    resData["detail"]?.toString() ?? 
+                    resData["error"]?.toString() ?? 
+                    (resData.values.isNotEmpty ? resData.values.first.toString() : message);
+        } else if (resData is String) {
+          message = resData;
         }
+      }
+      AppToast.error(message);
+      return false;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  Future<bool> deleteTicket(String ticketId) async {
+    try {
+      await EasyLoading.show(status: 'Deleting Ticket...');
+      await api.deleteTicket(ticketId);
+      AppToast.success("Ticket deleted successfully!");
+      await fetchTickets();
+      return true;
+    } catch (e) {
+      log('WholesaleTicketsRx deleteTicket error: $e');
+      String message = "Failed to delete ticket";
+      if (e is DioException && e.response?.data is Map) {
+        final map = e.response!.data as Map;
+        message = map["message"]?.toString() ?? map["detail"]?.toString() ?? message;
       }
       AppToast.error(message);
       return false;
@@ -248,13 +284,15 @@ class WholesaleSingleTicketRx extends RxResponseInt<Map<String, dynamic>> {
 
   ValueStream get valueStreamData => dataFetcher.stream;
 
-  Future<void> fetchSingleTicket(String id) async {
+  Future<void> fetchSingleTicket(String id, {bool silent = false}) async {
     try {
       final data = await api.getSingleTicket(id);
       await handleSuccessWithReturn(data);
     } catch (e) {
       log('WholesaleSingleTicketRx fetchSingleTicket error: $e');
-      await handleErrorWithReturn(e);
+      if (!silent) {
+        await handleErrorWithReturn(e);
+      }
     }
   }
 
@@ -319,7 +357,7 @@ class WholesaleNotificationsRx extends RxResponseInt<Map<String, dynamic>> {
   }
 }
 
-class WholesaleDailyReportsRx extends RxResponseInt<Map<String, dynamic>> {
+class WholesaleDailyReportsRx extends RxResponseInt<dynamic> {
   final api = WholesaleApi.instance;
 
   WholesaleDailyReportsRx({required super.empty, required super.dataFetcher});
@@ -359,7 +397,7 @@ class WholesaleDailyReportsRx extends RxResponseInt<Map<String, dynamic>> {
   }
 
   @override
-  Future<void> handleSuccessWithReturn(Map<String, dynamic> data) async {
+  Future<void> handleSuccessWithReturn(dynamic data) async {
     dataFetcher.sink.add(data);
   }
 
@@ -378,7 +416,7 @@ class WholesaleCreateProductRx extends RxResponseInt<void> {
     return;
   }
 
-  Future<bool> createProduct(Map<String, dynamic> payload) async {
+  Future<bool> createProduct(dynamic payload) async {
     try {
       await EasyLoading.show(status: 'Creating Product...');
       await api.createProduct(payload);
@@ -389,7 +427,25 @@ class WholesaleCreateProductRx extends RxResponseInt<void> {
       String message = "Failed to create product";
       if (e is DioException) {
         if (e.response?.data is Map) {
-          message = e.response?.data["message"] ?? message;
+          final data = e.response!.data as Map;
+          if (data.containsKey("errors")) {
+            final errs = data["errors"];
+            if (errs is List && errs.isNotEmpty) {
+              message = errs.map((it) => it.toString()).join("\n");
+            } else if (errs is Map && errs.isNotEmpty) {
+              message = errs.entries.map((entry) => "${entry.key}: ${entry.value}").join("\n");
+            } else {
+              message = errs.toString();
+            }
+          } else if (data.containsKey("error")) {
+            message = data["error"].toString();
+          } else if (data.containsKey("message")) {
+            message = data["message"].toString();
+          } else if (data.containsKey("detail")) {
+            message = data["detail"].toString();
+          } else {
+            message = data.entries.map((entry) => "${entry.key}: ${entry.value}").join(", ");
+          }
         }
       }
       AppToast.error(message);
@@ -397,6 +453,64 @@ class WholesaleCreateProductRx extends RxResponseInt<void> {
     } finally {
       EasyLoading.dismiss();
     }
+  }
+}
+
+class WholesaleCheckoutOrderRx extends RxResponseInt<dynamic> {
+  final api = WholesaleApi.instance;
+  WholesaleCheckoutOrderRx({required super.empty, required super.dataFetcher});
+
+  ValueStream get valueStreamData => dataFetcher.stream;
+
+  Future<dynamic> createOrder(Map<String, dynamic> payload) async {
+    try {
+      await EasyLoading.show(status: 'Submitting wholesale order...');
+      final response = await api.createOrder(payload);
+      await handleSuccessWithReturn(response);
+      AppToast.success("Wholesale Order Placed Successfully!");
+      return response;
+    } catch (e) {
+      log('WholesaleCheckoutOrderRx error: $e');
+      String message = "Failed to submit wholesale order";
+      if (e is DioException) {
+        if (e.response?.data is Map) {
+          final data = e.response!.data as Map;
+          if (data.containsKey("errors")) {
+            final errs = data["errors"];
+            if (errs is List && errs.isNotEmpty) {
+              message = errs.map((it) => it.toString()).join("\n");
+            } else if (errs is Map && errs.isNotEmpty) {
+              message = errs.entries.map((entry) => "${entry.key}: ${entry.value}").join("\n");
+            } else {
+              message = errs.toString();
+            }
+          } else if (data.containsKey("error")) {
+            message = data["error"].toString();
+          } else if (data.containsKey("message")) {
+            message = data["message"].toString();
+          } else if (data.containsKey("detail")) {
+            message = data["detail"].toString();
+          } else {
+            message = data.entries.map((entry) => "${entry.key}: ${entry.value}").join(", ");
+          }
+        }
+      }
+      AppToast.error(message);
+      await handleErrorWithReturn(e);
+      return null;
+    } finally {
+      EasyLoading.dismiss();
+    }
+  }
+
+  @override
+  Future<void> handleSuccessWithReturn(dynamic data) async {
+    dataFetcher.sink.add(data);
+  }
+
+  @override
+  Future<void> handleErrorWithReturn(dynamic error) async {
+    dataFetcher.sink.addError(error);
   }
 }
 

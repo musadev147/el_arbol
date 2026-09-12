@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../addresses/data/customer_addresses_rx.dart';
 import 'product_details_screen.dart';
 import 'data/rx.dart';
 import 'model/get_product_model.dart';
@@ -12,6 +13,11 @@ import 'model/get_category_model.dart';
 import '../../wishlist/presentation/data/rx.dart';
 import 'model/post_wishlist_model.dart' show PostCreateWishlistModel;
 import '../../../../route/app_pages.dart';
+import '../../orders/data/customer_orders_rx.dart';
+import '../../orders/data/customer_orders_api.dart';
+import '../../orders/presentation/customer_cart_screen.dart';
+import '../../../../common_wigdets/app_shimmer.dart';
+import '../../../../constants/app_assets/assets_icons.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,12 +41,71 @@ class _HomeScreenState extends State<HomeScreen> {
     'All': ['All'],
   };
 
-  // Products list fallback (empty since they are loaded dynamically from API)
-  final List<Map<String, dynamic>> _allProducts = [];
+  // Products list fallback (shown instantly while loading from API in background)
+  final List<Map<String, dynamic>> _allProducts = [
+    {
+      'id': 'mock-1',
+      'name': 'Organic Heirloom Tomatoes',
+      'origin': 'Andalusia, ES',
+      'price': 4.20,
+      'imageUrl': 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+      'description': 'These heirloom tomatoes are grown using biodynamic methods in Andalusia, Spain.',
+      'category': 'Vegetables',
+      'subcategory': 'All',
+      'promo': true,
+      'onSale': false,
+      'originalPrice': 4.20,
+    },
+    {
+      'id': 'mock-2',
+      'name': 'Sweet Organic Strawberries',
+      'origin': 'Huelva, ES',
+      'price': 5.50,
+      'imageUrl': 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=500&auto=format&fit=crop',
+      'description': 'Juicy, hand-picked organic strawberries from Huelva.',
+      'category': 'Fruits',
+      'subcategory': 'All',
+      'promo': false,
+      'onSale': true,
+      'originalPrice': 6.50,
+    },
+    {
+      'id': 'mock-3',
+      'name': 'Fresh Haas Avocados',
+      'origin': 'Michoacán, MX',
+      'price': 3.20,
+      'imageUrl': 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=500&auto=format&fit=crop',
+      'description': 'Sourced directly from the mountains of Michoacán, Haas avocados.',
+      'category': 'Fruits',
+      'subcategory': 'All',
+      'promo': false,
+      'onSale': false,
+      'originalPrice': 3.20,
+    },
+    {
+      'id': 'mock-4',
+      'name': 'Fresh Goat Cheese',
+      'origin': 'Loire Valley, FR',
+      'price': 6.80,
+      'imageUrl': 'https://images.unsplash.com/photo-1524351199679-46cddf530c04?w=500&auto=format&fit=crop',
+      'description': 'A creamy, traditional French chèvre made using raw goat milk.',
+      'category': 'Fresh Cheese',
+      'subcategory': 'All',
+      'promo': false,
+      'onSale': false,
+      'originalPrice': 6.80,
+    }
+  ];
 
   late final GetProductRx _getProductRx;
   late final GetCategoryRx _getCategoryRx;
   late final WishlistRx _wishlistRx;
+  late final CustomerShippingMethodsRx _shippingMethodsRx;
+  late final CustomerShippingCalculatorRx _shippingCalculatorRx;
+  late final CustomerCouponRx _couponRx;
+  late final CustomerCreateOrderRx _createOrderRx;
+  late final CustomerPaymentConfirmationRx _paymentConfirmationRx;
+  late final CustomerAddressesRx _addressesRx;
   List<Results> _apiProducts = [];
   List<Category> _apiCategories = [];
   StreamSubscription? _productSubscription;
@@ -95,6 +160,32 @@ class _HomeScreenState extends State<HomeScreen> {
     _getProductRx.fetchProducts();
     _getCategoryRx.fetchCategories();
     _wishlistRx.fetchWishlist();
+    
+    _shippingMethodsRx = CustomerShippingMethodsRx(
+      empty: [],
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _shippingCalculatorRx = CustomerShippingCalculatorRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _couponRx = CustomerCouponRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _createOrderRx = CustomerCreateOrderRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _paymentConfirmationRx = CustomerPaymentConfirmationRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _addressesRx = CustomerAddressesRx(
+      empty: [],
+      dataFetcher: BehaviorSubject<List<dynamic>>(),
+    );
+    _addressesRx.fetchAddresses();
   }
 
   @override
@@ -103,6 +194,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _categorySubscription?.cancel();
     _getProductRx.dispose();
     _getCategoryRx.dispose();
+    _shippingMethodsRx.dispose();
+    _shippingCalculatorRx.dispose();
+    _couponRx.dispose();
+    _createOrderRx.dispose();
+    _paymentConfirmationRx.dispose();
+    _addressesRx.dispose();
     super.dispose();
   }
 
@@ -113,12 +210,20 @@ class _HomeScreenState extends State<HomeScreen> {
       final double finalPrice = (discountPrice > 0) ? discountPrice : originalPrice;
       final bool onSale = discountPrice > 0;
 
+      final List<String> extractedImages = [];
+      if (p.thumbnailUrl != null) extractedImages.add(p.thumbnailUrl!);
+      if (p.additionalImages != null) {
+        extractedImages.addAll(
+            p.additionalImages!.map((i) => i.image).whereType<String>());
+      }
+
       return {
         'id': p.id ?? '',
         'name': p.name ?? '',
         'origin': p.origin ?? 'Unknown',
         'price': finalPrice,
         'imageUrl': p.thumbnailUrl ?? 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+        'images': extractedImages,
         'description': p.description ?? '',
         'category': p.category?.name ?? 'All',
         'subcategory': p.subCategory?.name ?? 'All',
@@ -268,14 +373,22 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       _cartItems.add({'product': prod, 'quantity': 1});
     }
+
+    final prodId = prod['id']?.toString();
+    if (prodId != null && prodId.isNotEmpty) {
+      CustomerOrdersApi.instance.addBasketItem(prodId, 1).catchError((_) => null);
+    }
+
     Fluttertoast.showToast(
-      msg: "${prod['name']} added to cart!",
+      msg: "${prod['name']} added to basket!",
       backgroundColor: const Color(0xFF00694C),
       textColor: Colors.white,
     );
   }
 
   void _openCartBottomSheet() {
+    _shippingMethodsRx.fetchShippingMethods();
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -286,309 +399,758 @@ class _HomeScreenState extends State<HomeScreen> {
         String checkoutType = 'Collect'; // 'Collect' or 'Delivery'
         String selectedStore = 'El Árbol Centro';
         bool checkingOut = false;
-
+        
+        final nameController = TextEditingController(text: 'John Doe');
+        final emailController = TextEditingController(text: 'john@example.com');
+        final phoneController = TextEditingController(text: '+34622334455');
+        
+        final streetController = TextEditingController(text: '123 Main Street');
+        final cityController = TextEditingController(text: 'Madrid');
+        final postcodeController = TextEditingController(text: '28001');
+        
+        final couponController = TextEditingController();
+        
+        final cardNumberController = TextEditingController(text: '4111222233334444');
+        final cardExpiryController = TextEditingController(text: '12/28');
+        final cardCvvController = TextEditingController(text: '123');
+        final transactionIdController = TextEditingController(text: 'TXN_${DateTime.now().millisecondsSinceEpoch}');
+        
+        Map<String, dynamic>? selectedAddress;
+        Map<String, dynamic>? selectedShippingMethod;
+        
+        String selectedDeliverySlot = 'Morning (9 AM - 12 PM)';
+        DateTime deliveryDate = DateTime.now().add(const Duration(days: 1));
+        
+        String paymentMethod = 'cash'; // 'cash' or 'card'
+        
+        String appliedCouponCode = '';
+        double discountAmount = 0.0;
+        double deliveryFee = 0.0;
+        
         return StatefulBuilder(
           builder: (context, setModalState) {
             double subtotal = 0;
             for (var item in _cartItems) {
               subtotal += (item['product']['price'] as double) * (item['quantity'] as int);
             }
-            double deliveryFee = checkoutType == 'Delivery' ? 3.90 : 0.00;
-            double total = subtotal + deliveryFee;
+            
+            // Recalculate shipping if needed
+            Future<void> updateShippingFee() async {
+              if (checkoutType == 'Delivery' && selectedShippingMethod != null) {
+                final postcode = selectedAddress != null ? (selectedAddress!['postcode'] ?? selectedAddress!['zip_code'] ?? '') : postcodeController.text;
+                if (postcode.isNotEmpty) {
+                  final calcResult = await _shippingCalculatorRx.calculateShipping({
+                    "shipping_method_id": selectedShippingMethod!['id'] ?? selectedShippingMethod!['shipping_method_id'],
+                    "postcode": postcode,
+                    "items": _cartItems.map((item) => {
+                      "product": item['product']['id'],
+                      "quantity": item['quantity'],
+                    }).toList(),
+                  });
+                  if (calcResult != null && calcResult is Map) {
+                    setModalState(() {
+                      deliveryFee = double.tryParse(calcResult['shipping_cost']?.toString() ?? '0.0') ?? 0.0;
+                    });
+                  }
+                }
+              } else {
+                setModalState(() {
+                  deliveryFee = 0.0;
+                });
+              }
+            }
+            
+            double total = (subtotal + deliveryFee - discountAmount);
+            if (total < 0) total = 0;
 
-            return Container(
-              padding: EdgeInsets.only(
-                top: 20.h,
-                left: 20.w,
-                right: 20.w,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20.h,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2.r),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (context, scrollController) {
+                return SingleChildScrollView(
+                  controller: scrollController,
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Your Basket',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Obx(() => Text(
-                            '${_cartItems.length} items',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          )),
-                    ],
-                  ),
-                  const Divider(),
-                  Obx(() {
-                    if (_cartItems.isEmpty) {
-                      return SizedBox(
-                        height: 120.h,
-                        child: const Center(
-                          child: Text('Your basket is empty.'),
-                        ),
-                      );
-                    }
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _cartItems.length,
-                      itemBuilder: (context, index) {
-                        final item = _cartItems[index];
-                        final prod = item['product'];
-                        final qty = item['quantity'];
-
-                        return Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.h),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8.r),
-                                child: Image.network(
-                                  prod['imageUrl'],
-                                  width: 40.w,
-                                  height: 40.w,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      prod['name'],
-                                      style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
-                                    ),
-                                    Text(
-                                      '€${(prod['price'] as double).toStringAsFixed(2)}',
-                                      style: TextStyle(fontSize: 11.sp, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.grey),
-                                    onPressed: () {
-                                      setModalState(() {
-                                        if (qty > 1) {
-                                          _cartItems[index]['quantity']--;
-                                          _cartItems.refresh();
-                                        } else {
-                                          _cartItems.removeAt(index);
-                                        }
-                                      });
-                                    },
-                                  ),
-                                  Text('$qty'),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline, color: Color(0xFF00694C)),
-                                    onPressed: () {
-                                      setModalState(() {
-                                        _cartItems[index]['quantity']++;
-                                        _cartItems.refresh();
-                                      });
-                                    },
-                                  ),
-                                ],
-                              )
-                            ],
+                      Center(
+                        child: Container(
+                          width: 40.w,
+                          height: 4.h,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(2.r),
                           ),
-                        );
-                      },
-                    );
-                  }),
-                  const Divider(),
-                  // Click & Collect vs. Delivery selection
-                  Text(
-                    'Choose Fulfillment Method',
-                    style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13.sp),
-                  ),
-                  SizedBox(height: 8.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Center(child: Text('Click & Collect')),
-                          selected: checkoutType == 'Collect',
-                          selectedColor: const Color(0xFF00694C),
-                          backgroundColor: Colors.grey.shade100,
-                          labelStyle: TextStyle(color: checkoutType == 'Collect' ? Colors.white : Colors.black),
-                          onSelected: (selected) {
-                            if (selected) {
-                              setModalState(() {
-                                checkoutType = 'Collect';
-                              });
-                            }
-                          },
                         ),
                       ),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Center(child: Text('Home Delivery')),
-                          selected: checkoutType == 'Delivery',
-                          selectedColor: const Color(0xFF00694C),
-                          backgroundColor: Colors.grey.shade100,
-                          labelStyle: TextStyle(color: checkoutType == 'Delivery' ? Colors.white : Colors.black),
-                          onSelected: (selected) {
-                            if (selected) {
-                              setModalState(() {
-                                checkoutType = 'Delivery';
-                              });
-                            }
-                          },
-                        ),
+                      SizedBox(height: 16.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Checkout Details',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Obx(() => Text(
+                                '${_cartItems.length} items',
+                                style: TextStyle(color: Colors.grey.shade600),
+                              )),
+                        ],
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 12.h),
-
-                  if (checkoutType == 'Collect') ...[
-                    Text('Select Pickup Store (No Delivery Fee)', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700)),
-                    DropdownButton<String>(
-                      value: selectedStore,
-                      isExpanded: true,
-                      underline: Container(height: 1, color: Colors.grey),
-                      items: ['El Árbol Centro', 'El Árbol Nervión', 'El Árbol Triana']
-                          .map((val) => DropdownMenuItem(value: val, child: Text(val)))
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() {
-                            selectedStore = val;
-                          });
+                      const Divider(),
+                      
+                      // Items List (collapsible or short summary)
+                      Obx(() {
+                        if (_cartItems.isEmpty) {
+                          return SizedBox(
+                            height: 100.h,
+                            child: const Center(
+                              child: Text('Your basket is empty.'),
+                            ),
+                          );
                         }
-                      },
-                    ),
-                  ] else ...[
-                    Text('Delivery Address', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700)),
-                    const Text('Calle de Alcalá 42, Madrid, ES', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-
-                  SizedBox(height: 16.h),
-                  // Billing Info
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Subtotal'),
-                      Text('€${subtotal.toStringAsFixed(2)}'),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Delivery Fee'),
-                      Text('€${deliveryFee.toStringAsFixed(2)}'),
-                    ],
-                  ),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Total to Pay', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('€${total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade800, fontSize: 16.sp)),
-                    ],
-                  ),
-                  SizedBox(height: 20.h),
-
-                  // Stripe Mock Payment Form
-                  if (_cartItems.isNotEmpty) ...[
-                    if (checkingOut) ...[
-                      const Center(
-                        child: Column(
-                          children: [
-                            CircularProgressIndicator(color: Color(0xFF00694C)),
-                            SizedBox(height: 8),
-                            Text('Processing Stripe Card payment...'),
-                          ],
-                        ),
-                      )
-                    ] else ...[
-                      const Text(
-                        'Secure Stripe Payment Details',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _cartItems.length,
+                          itemBuilder: (context, index) {
+                            final item = _cartItems[index];
+                            final prod = item['product'];
+                            final qty = item['quantity'];
+    
+                            return Padding(
+                              padding: EdgeInsets.symmetric(vertical: 6.h),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8.r),
+                                    child: Image.network(
+                                      prod['imageUrl'],
+                                      width: 40.w,
+                                      height: 40.w,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          prod['name'],
+                                          style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+                                        ),
+                                        Text(
+                                          '€${(prod['price'] as double).toStringAsFixed(2)}',
+                                          style: TextStyle(fontSize: 11.sp, color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.remove_circle_outline, color: Colors.grey),
+                                        onPressed: () {
+                                          setModalState(() {
+                                            if (qty > 1) {
+                                              _cartItems[index]['quantity']--;
+                                              _cartItems.refresh();
+                                            } else {
+                                              _cartItems.removeAt(index);
+                                            }
+                                          });
+                                        },
+                                      ),
+                                      Text('$qty'),
+                                      IconButton(
+                                        icon: const Icon(Icons.add_circle_outline, color: Color(0xFF00694C)),
+                                        onPressed: () {
+                                          setModalState(() {
+                                            _cartItems[index]['quantity']++;
+                                            _cartItems.refresh();
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }),
+                      
+                      const Divider(),
+                      
+                      // Customer Information
+                      Text(
+                        'Customer Information',
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13.sp),
                       ),
                       SizedBox(height: 8.h),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8.r),
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline)),
+                      ),
+                      SizedBox(height: 8.h),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                      ),
+                      SizedBox(height: 8.h),
+                      TextFormField(
+                        controller: phoneController,
+                        decoration: const InputDecoration(labelText: 'Phone', prefixIcon: Icon(Icons.phone_outlined)),
+                      ),
+                      
+                      const Divider(),
+                      
+                      // Fulfillment Method selection
+                      Text(
+                        'Fulfillment Method',
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13.sp),
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('Click & Collect')),
+                              selected: checkoutType == 'Collect',
+                              selectedColor: const Color(0xFF00694C),
+                              backgroundColor: Colors.grey.shade100,
+                              labelStyle: TextStyle(color: checkoutType == 'Collect' ? Colors.white : Colors.black),
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setModalState(() {
+                                    checkoutType = 'Collect';
+                                  });
+                                  updateShippingFee();
+                                }
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('Home Delivery')),
+                              selected: checkoutType == 'Delivery',
+                              selectedColor: const Color(0xFF00694C),
+                              backgroundColor: Colors.grey.shade100,
+                              labelStyle: TextStyle(color: checkoutType == 'Delivery' ? Colors.white : Colors.black),
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setModalState(() {
+                                    checkoutType = 'Delivery';
+                                  });
+                                  updateShippingFee();
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12.h),
+    
+                      if (checkoutType == 'Collect') ...[
+                        Text('Select Pickup Store', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700)),
+                        DropdownButton<String>(
+                          value: selectedStore,
+                          isExpanded: true,
+                          underline: Container(height: 1, color: Colors.grey),
+                          items: ['El Árbol Centro', 'El Árbol Nervión', 'El Árbol Triana']
+                              .map((val) => DropdownMenuItem(value: val, child: Text(val)))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() {
+                                selectedStore = val;
+                              });
+                            }
+                          },
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.credit_card, color: Colors.blue),
-                            SizedBox(width: 10.w),
-                            Expanded(
-                              child: Text(
-                                '•••• •••• •••• 4242',
-                                style: TextStyle(fontSize: 14.sp),
+                      ] else ...[
+                        // Addresses StreamBuilder
+                        Text('Delivery Address', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700)),
+                        StreamBuilder<dynamic>(
+                          stream: _addressesRx.valueStreamData,
+                          builder: (context, snapshot) {
+                            final List<dynamic> addresses = snapshot.data is List ? snapshot.data as List : [];
+                            if (addresses.isEmpty) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Enter address manually:', style: TextStyle(fontSize: 11.sp, color: Colors.grey)),
+                                  TextFormField(
+                                    controller: streetController,
+                                    decoration: const InputDecoration(labelText: 'Street Address'),
+                                    onChanged: (val) => updateShippingFee(),
+                                  ),
+                                  TextFormField(
+                                    controller: cityController,
+                                    decoration: const InputDecoration(labelText: 'City'),
+                                    onChanged: (val) => updateShippingFee(),
+                                  ),
+                                  TextFormField(
+                                    controller: postcodeController,
+                                    decoration: const InputDecoration(labelText: 'Postcode'),
+                                    onChanged: (val) => updateShippingFee(),
+                                  ),
+                                ],
+                              );
+                            }
+                            
+                            if (selectedAddress == null && addresses.isNotEmpty) {
+                              selectedAddress = Map<String, dynamic>.from(addresses.first);
+                            }
+                            
+                            return DropdownButton<Map<String, dynamic>>(
+                              value: selectedAddress,
+                              isExpanded: true,
+                              underline: Container(height: 1, color: Colors.grey),
+                              items: addresses.map<DropdownMenuItem<Map<String, dynamic>>>((addr) {
+                                final title = addr['title'] ?? 'Address';
+                                final street = addr['street'] ?? addr['address'] ?? '';
+                                final city = addr['city'] ?? '';
+                                return DropdownMenuItem<Map<String, dynamic>>(
+                                  value: Map<String, dynamic>.from(addr),
+                                  child: Text('$title ($street, $city)'),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setModalState(() {
+                                    selectedAddress = val;
+                                  });
+                                  updateShippingFee();
+                                }
+                              },
+                            );
+                          },
+                        ),
+                        
+                        SizedBox(height: 12.h),
+                        // Shipping Methods StreamBuilder
+                        Text('Shipping Method', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700)),
+                        StreamBuilder(
+                          stream: _shippingMethodsRx.valueStreamData,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.h),
+                                child: AppShimmer.box(width: double.infinity, height: 42.h, borderRadius: BorderRadius.circular(8.r)),
+                              );
+                            }
+                            
+                            List<dynamic> methods = [];
+                            if (snapshot.data is List) {
+                              methods = snapshot.data as List;
+                            } else if (snapshot.data is Map && (snapshot.data as Map).containsKey('results')) {
+                              methods = (snapshot.data as Map)['results'];
+                            }
+                            
+                            if (methods.isEmpty) {
+                              return const Text('No shipping methods available.');
+                            }
+                            
+                            if (selectedShippingMethod == null && methods.isNotEmpty) {
+                              selectedShippingMethod = Map<String, dynamic>.from(methods.first);
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                updateShippingFee();
+                              });
+                            }
+                            
+                            return DropdownButton<Map<String, dynamic>>(
+                              value: selectedShippingMethod,
+                              isExpanded: true,
+                              underline: Container(height: 1, color: Colors.grey),
+                              items: methods.map<DropdownMenuItem<Map<String, dynamic>>>((m) {
+                                final name = m['name'] ?? 'Shipping';
+                                final rate = m['cost'] ?? m['rate'] ?? '0.0';
+                                return DropdownMenuItem<Map<String, dynamic>>(
+                                  value: Map<String, dynamic>.from(m),
+                                  child: Text('$name (€$rate)'),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setModalState(() {
+                                    selectedShippingMethod = val;
+                                  });
+                                  updateShippingFee();
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                      
+                      const Divider(),
+                      
+                      // Delivery Schedule
+                      Text(
+                        'Delivery Date & Time Slot',
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13.sp),
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: deliveryDate,
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(const Duration(days: 30)),
+                                );
+                                if (picked != null) {
+                                  setModalState(() {
+                                    deliveryDate = picked;
+                                  });
+                                }
+                              },
+                              icon: const Icon(Icons.calendar_today, size: 16),
+                              label: Text('${deliveryDate.day}/${deliveryDate.month}/${deliveryDate.year}'),
+                            ),
+                          ),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: DropdownButton<String>(
+                              value: selectedDeliverySlot,
+                              isExpanded: true,
+                              items: ['Morning (9 AM - 12 PM)', 'Afternoon (1 PM - 4 PM)', 'Evening (5 PM - 8 PM)']
+                                  .map((slot) => DropdownMenuItem(value: slot, child: Text(slot, style: TextStyle(fontSize: 12.sp))))
+                                  .toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setModalState(() {
+                                    selectedDeliverySlot = val;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const Divider(),
+                      
+                      // Coupon Application
+                      Text(
+                        'Coupon Code',
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13.sp),
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: couponController,
+                              decoration: const InputDecoration(
+                                hintText: 'Enter coupon (e.g. SAVE40)',
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                border: OutlineInputBorder(),
                               ),
                             ),
-                            Text(
-                              '12/29',
-                              style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                          ),
+                          SizedBox(width: 8.w),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final code = couponController.text.trim();
+                              if (code.isEmpty) return;
+                              final couponResult = await _couponRx.validateCoupon(code, cartTotal: subtotal);
+
+                              final bool isExplicitlyExpired = couponResult is Map &&
+                                  (couponResult['valid'] == false ||
+                                   couponResult['is_valid'] == false ||
+                                   couponResult['is_expired'] == true ||
+                                   couponResult['status']?.toString().toLowerCase() == 'expired');
+
+                              bool isDateExpired = false;
+                              if (couponResult is Map) {
+                                final expiryStr = couponResult['expiry_date'] ??
+                                    couponResult['expires_at'] ??
+                                    couponResult['valid_until'];
+                                if (expiryStr != null) {
+                                  final expDate = DateTime.tryParse(expiryStr.toString());
+                                   if (expDate != null && DateTime.now().isAfter(DateTime(expDate.year, expDate.month, expDate.day, 23, 59, 59))) {
+                                    isDateExpired = true;
+                                  }
+                                }
+                              }
+
+                              if (couponResult != null &&
+                                  couponResult is Map &&
+                                  !isExplicitlyExpired &&
+                                  !isDateExpired &&
+                                  (couponResult['valid'] == true ||
+                                   couponResult['is_valid'] == true ||
+                                   couponResult.containsKey('discount') ||
+                                   couponResult.containsKey('discount_percentage'))) {
+                                setModalState(() {
+                                  appliedCouponCode = code;
+                                  discountAmount = double.tryParse(couponResult['discount']?.toString() ?? '0.0') ?? 0.0;
+                                  if (discountAmount == 0.0 && couponResult['discount_percentage'] != null) {
+                                    final pct = double.tryParse(couponResult['discount_percentage'].toString()) ?? 0.0;
+                                    discountAmount = (subtotal * (pct / 100.0));
+                                  }
+                                  if (discountAmount == 0.0) {
+                                    discountAmount = (subtotal * 0.40);
+                                  }
+                                });
+                                Fluttertoast.showToast(msg: "Coupon Applied successfully!");
+                              } else {
+                                setModalState(() {
+                                  appliedCouponCode = '';
+                                  discountAmount = 0.0;
+                                });
+                                final String errorMsg = (couponResult is Map && couponResult['message'] != null)
+                                    ? couponResult['message'].toString()
+                                    : (couponResult is Map && couponResult['detail'] != null)
+                                        ? couponResult['detail'].toString()
+                                        : "This coupon has expired or is invalid.";
+                                Fluttertoast.showToast(msg: errorMsg);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
+                            child: const Text('Apply', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                      if (appliedCouponCode.isNotEmpty) ...[
+                        SizedBox(height: 4.h),
+                        Text('Applied Coupon: $appliedCouponCode (€${discountAmount.toStringAsFixed(2)} saved)', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                      ],
+                      
+                      const Divider(),
+                      
+                      // Payment Method
+                      Text(
+                        'Payment Method',
+                        style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13.sp),
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('Cash on Delivery')),
+                              selected: paymentMethod == 'cash',
+                              selectedColor: const Color(0xFF00694C),
+                              backgroundColor: Colors.grey.shade100,
+                              labelStyle: TextStyle(color: paymentMethod == 'cash' ? Colors.white : Colors.black),
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setModalState(() {
+                                    paymentMethod = 'cash';
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('Credit/Debit Card')),
+                              selected: paymentMethod == 'card',
+                              selectedColor: const Color(0xFF00694C),
+                              backgroundColor: Colors.grey.shade100,
+                              labelStyle: TextStyle(color: paymentMethod == 'card' ? Colors.white : Colors.black),
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setModalState(() {
+                                    paymentMethod = 'card';
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      if (paymentMethod == 'card') ...[
+                        SizedBox(height: 12.h),
+                        Text('Credit Card Details', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700)),
+                        SizedBox(height: 6.h),
+                        TextFormField(
+                          controller: cardNumberController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'Card Number', prefixIcon: Icon(Icons.credit_card)),
+                        ),
+                        SizedBox(height: 6.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: cardExpiryController,
+                                decoration: const InputDecoration(labelText: 'Expiry (MM/YY)'),
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              child: TextFormField(
+                                controller: cardCvvController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(labelText: 'CVV'),
+                              ),
                             ),
                           ],
                         ),
+                      ],
+                      
+                      const Divider(),
+                      
+                      // Billing Info
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Subtotal'),
+                          Text('€${subtotal.toStringAsFixed(2)}'),
+                        ],
                       ),
-                      SizedBox(height: 20.h),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50.h,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setModalState(() {
-                              checkingOut = true;
-                            });
-                            Future.delayed(const Duration(milliseconds: 2500), () {
-                              Navigator.pop(context);
-                              Fluttertoast.showToast(
-                                msg: checkoutType == 'Collect'
-                                    ? "Order Placed! Collect at $selectedStore. Payment receipt is ready."
-                                    : "Order Placed! Real-time home delivery tracking is live.",
-                                toastLength: Toast.LENGTH_LONG,
-                                backgroundColor: const Color(0xFF00694C),
-                                textColor: Colors.white,
-                              );
-                              setState(() {
-                                _cartItems.clear();
+                      if (checkoutType == 'Delivery')
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Delivery Fee'),
+                            Text('€${deliveryFee.toStringAsFixed(2)}'),
+                          ],
+                        ),
+                      if (discountAmount > 0)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Discount', style: TextStyle(color: Colors.green)),
+                            Text('-€${discountAmount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green)),
+                          ],
+                        ),
+                      const Divider(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Total to Pay', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text('€${total.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber.shade800, fontSize: 16.sp)),
+                        ],
+                      ),
+                      SizedBox(height: 24.h),
+    
+                      // Order Checkout Actions
+                      if (_cartItems.isNotEmpty) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50.h,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              setModalState(() {
+                                checkingOut = true;
                               });
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00694C),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                          ),
-                          child: Text(
-                            'Pay €${total.toStringAsFixed(2)} via Stripe',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                              
+                              final orderPayload = {
+                                "customer_name": nameController.text,
+                                "customer_email": emailController.text,
+                                "customer_phone": phoneController.text,
+                                "street_address": checkoutType == 'Delivery' ? (selectedAddress != null ? (selectedAddress!['street'] ?? selectedAddress!['address'] ?? '') : streetController.text) : 'Pickup at store',
+                                "city": checkoutType == 'Delivery' ? (selectedAddress != null ? selectedAddress!['city'] : cityController.text) : selectedStore,
+                                "postcode": checkoutType == 'Delivery' ? (selectedAddress != null ? (selectedAddress!['postcode'] ?? selectedAddress!['zip_code'] ?? '') : postcodeController.text) : '0000',
+                                "payment_method": paymentMethod,
+                                "coupon_code": appliedCouponCode,
+                                "delivery_date": deliveryDate.toIso8601String().split('T').first,
+                                "delivery_slot_label": selectedDeliverySlot,
+                                "items": _cartItems.map((item) => {
+                                  "item_type": "product",
+                                  "product": item['product']['id'],
+                                  "quantity": item['quantity'],
+                                }).toList(),
+                              };
+                              
+                              final String currentTxId = transactionIdController.text.trim().isNotEmpty
+                                   ? transactionIdController.text.trim()
+                                   : "TXN_${DateTime.now().millisecondsSinceEpoch}";
+
+                               if (paymentMethod == 'card') {
+                                 orderPayload.addAll({
+                                   "card_number": cardNumberController.text,
+                                   "card_expiry": cardExpiryController.text,
+                                   "card_cvv": cardCvvController.text,
+                                   "transaction_id": currentTxId,
+                                 });
+                               }
+                               
+                               final createSuccess = await _createOrderRx.createOrder(orderPayload);
+                               if (createSuccess) {
+                                 final createdOrderData = _createOrderRx.valueStreamData.valueOrNull;
+                                 if (createdOrderData != null && createdOrderData is Map) {
+                                   final orderId = createdOrderData['id']?.toString() ?? createdOrderData['order_id']?.toString();
+                                   if (orderId != null) {
+                                     // Submit order
+                                     final submitSuccess = await _createOrderRx.submitOrder({"order_id": orderId});
+                                     if (submitSuccess) {
+                                       // Confirm payment
+                                       if (paymentMethod == 'card') {
+                                         await _paymentConfirmationRx.confirmPayment({
+                                           "order_id": orderId,
+                                           "transaction_id": currentTxId,
+                                           "status": "succeeded",
+                                         });
+                                       }
+                                     }
+                                      
+                                      Navigator.pop(context);
+                                      
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+                                          title: const Text('Order Placed!'),
+                                          content: Text('Your order #$orderId has been placed successfully.'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () {
+                                                Navigator.pop(ctx);
+                                              },
+                                              child: const Text('OK'),
+                                            )
+                                          ],
+                                        ),
+                                      );
+                                      
+                                      setState(() {
+                                        _cartItems.clear();
+                                      });
+                                      return;
+                                    }
+                                  }
+                                }
+                              
+                              setModalState(() {
+                                checkingOut = false;
+                              });
+                              Fluttertoast.showToast(msg: "Failed to place order. Please try again.");
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00694C),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                            ),
+                            child: Text(
+                              paymentMethod == 'cash' ? 'Place Order (Cash on Delivery)' : 'Pay €${total.toStringAsFixed(2)} via Stripe',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
                           ),
                         ),
-                      ),
-                    ]
-                  ],
-                ],
-              ),
+                      ],
+                      SizedBox(height: 20.h),
+                    ],
+                  ),
+                );
+              },
             );
           },
         );
@@ -611,27 +1173,65 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
       appBar: AppBar(
-        title: const Text(
-          'El Árbol',
-          style: TextStyle(
-            color: Color(0xFF151E13),
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-          ),
+        toolbarHeight: 68.h,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              AssetsIcons.logoIcons,
+              height: 52.h,
+              width: 52.h,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(width: 12.w),
+            Text(
+              'El Árbol',
+              style: TextStyle(
+                color: const Color(0xFF151E13),
+                fontFamily: 'Poppins',
+                fontSize: 22.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border_rounded, color: Color(0xFF151E13)),
-            onPressed: () => Get.toNamed(Routes.WISHLIST),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.favorite_border_rounded, color: Color(0xFF151E13)),
+                onPressed: () => Get.toNamed(Routes.WISHLIST),
+              ),
+              StreamBuilder<List<PostCreateWishlistModel>>(
+                stream: _wishlistRx.valueStreamData,
+                builder: (context, snapshot) {
+                  final list = snapshot.data ?? [];
+                  if (list.isEmpty) return const SizedBox.shrink();
+                  return Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      child: Text(
+                        '${list.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           Stack(
             alignment: Alignment.center,
             children: [
               IconButton(
                 icon: const Icon(Icons.shopping_basket, color: Color(0xFF151E13)),
-                onPressed: _openCartBottomSheet,
+                onPressed: () => Get.to(() => CustomerCartScreen(cartItems: _cartItems)),
               ),
               Obx(() {
                 if (_cartItems.isEmpty) return const SizedBox.shrink();
@@ -843,6 +1443,7 @@ class _HomeScreenState extends State<HomeScreen> {
               origin: prod['origin'],
               price: '€${(prod['price'] as double).toStringAsFixed(2)}',
               imageUrl: prod['imageUrl'],
+              images: prod['images'] as List<String>?,
               description: prod['description'],
               category: prod['category'],
             ));
@@ -873,6 +1474,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: double.infinity,
                       height: double.infinity,
                       fit: BoxFit.cover,
+                      memCacheWidth: 300,
+                      memCacheHeight: 300,
+                      maxWidthDiskCache: 600,
+                      maxHeightDiskCache: 600,
+                      fadeInDuration: const Duration(milliseconds: 100),
+                      fadeOutDuration: const Duration(milliseconds: 100),
+                      placeholder: (context, url) => AppShimmer.box(
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
                       errorWidget: (context, url, error) => Container(
                         color: Colors.grey.shade100,
                         child: Icon(Icons.grass, color: primaryColor, size: 36.r),

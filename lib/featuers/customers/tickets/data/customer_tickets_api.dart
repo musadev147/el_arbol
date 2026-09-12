@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../../../../../networks/dio/dio.dart';
 import '../../../../../networks/endpoints.dart';
 import '../../../../../networks/exception_handler/data_source.dart';
@@ -63,6 +62,19 @@ class CustomerTicketsApi {
   Future<dynamic> deleteMessage(String ticketId, String messageId) async {
     try {
       final response = await deleteHttp(Endpoints.customerTicketMessage(ticketId, messageId));
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+        return response.data;
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<dynamic> deleteTicket(String ticketId) async {
+    try {
+      final response = await deleteHttp("auth/tickets/$ticketId/");
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
         return response.data;
       } else {

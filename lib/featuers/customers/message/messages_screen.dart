@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import '../../../route/app_pages.dart';
 
 class MessagesScreen extends StatefulWidget {
-  const MessagesScreen({super.key});
+  final bool isWholesale;
+  const MessagesScreen({super.key, this.isWholesale = false});
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -108,20 +109,27 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         return Align(
                           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                           child: Container(
-                            margin: EdgeInsets.symmetric(vertical: 4.h),
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                            margin: EdgeInsets.only(
+                              bottom: 8.h,
+                              left: isMe ? 48.w : 0,
+                              right: isMe ? 0 : 48.w,
+                            ),
                             padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
                             decoration: BoxDecoration(
                               color: isMe ? const Color(0xFF00694C) : Colors.white,
                               borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(12.r),
-                                topRight: Radius.circular(12.r),
-                                bottomLeft: isMe ? Radius.circular(12.r) : Radius.zero,
-                                bottomRight: isMe ? Radius.zero : Radius.circular(12.r),
+                                topLeft: Radius.circular(14.r),
+                                topRight: Radius.circular(14.r),
+                                bottomLeft: isMe ? Radius.circular(14.r) : Radius.circular(3.r),
+                                bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(14.r),
                               ),
+                              border: isMe ? null : Border.all(color: Colors.grey.shade200),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.01),
+                                  color: Colors.black.withValues(alpha: 0.03),
                                   blurRadius: 4,
+                                  offset: const Offset(0, 1),
                                 )
                               ],
                             ),
@@ -220,9 +228,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
       appBar: AppBar(
-        title: const Text(
-          'Inbox',
-          style: TextStyle(
+        title: Text(
+          widget.isWholesale == true ? 'Business Hub' : 'Inbox',
+          style: const TextStyle(
             color: Color(0xFF151E13),
             fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
@@ -234,72 +242,254 @@ class _MessagesScreenState extends State<MessagesScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.all(16.r),
-                itemCount: _chats.length,
-                itemBuilder: (context, index) {
-                  final chat = _chats[index];
-                  final bool isUnread = chat['unread'] == true;
-
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 12.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: Colors.grey.shade100),
-                    ),
-                    child: ListTile(
-                      onTap: () => _openChatDetail(chat),
-                      leading: Stack(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: chat['avatarColor'].withOpacity(0.1),
-                            child: Icon(chat['avatarIcon'], color: chat['avatarColor']),
+            if (widget.isWholesale == true) ...[
+              // Welcome / Status Card
+              Container(
+                margin: EdgeInsets.all(16.r),
+                padding: EdgeInsets.all(20.r),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00694C), Color(0xFF004D37)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF00694C).withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    )
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12.r),
                           ),
-                          if (isUnread)
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                width: 10.w,
-                                height: 10.w,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.verified, color: Colors.amber, size: 14),
+                              SizedBox(width: 4.w),
+                              Text(
+                                "B2B Partner",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      title: Text(
-                        chat['name'],
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-                          fontSize: 14.sp,
-                          color: const Color(0xFF151E13),
+                            ],
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        chat['lastMessage'],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: isUnread ? const Color(0xFF151E13) : Colors.grey,
-                          fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                        Text(
+                          "Active Session",
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10.sp,
+                            fontFamily: 'Poppins',
+                          ),
                         ),
-                      ),
-                      trailing: Text(
-                        chat['time'],
-                        style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      "Welcome Back!",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
                       ),
                     ),
-                  );
-                },
+                    SizedBox(height: 4.h),
+                    Text(
+                      "Manage your daily business reports, track open support tickets, and contact support directly.",
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 12.sp,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+
+              // Title Section
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Quick Services",
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF151E13),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Large premium cards
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Column(
+                  children: [
+                    // Support Tickets Card
+                    GestureDetector(
+                      onTap: () => Get.toNamed(Routes.WHOLESALE_SUPPORT_TICKETS_SCREEN),
+                      child: Container(
+                        padding: EdgeInsets.all(18.r),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(color: Colors.grey.shade100),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.015),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(12.r),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00694C).withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.support_agent_rounded, color: Color(0xFF00694C), size: 28),
+                            ),
+                            SizedBox(width: 16.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Support Tickets",
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 15.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF151E13),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  Text(
+                                    "Create and track support requests & tickets",
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 11.sp,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (widget.isWholesale != true) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                child: const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Recent Chats',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF151E13),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: EdgeInsets.all(16.r),
+                  itemCount: _chats.length,
+                  itemBuilder: (context, index) {
+                    final chat = _chats[index];
+                    final bool isUnread = chat['unread'] == true;
+
+                    return Container(
+                      margin: EdgeInsets.only(bottom: 12.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: Colors.grey.shade100),
+                      ),
+                      child: ListTile(
+                        onTap: () => _openChatDetail(chat),
+                        leading: Stack(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: chat['avatarColor'].withOpacity(0.1),
+                              child: Icon(chat['avatarIcon'], color: chat['avatarColor']),
+                            ),
+                            if (isUnread)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: 10.w,
+                                  height: 10.w,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        title: Text(
+                          chat['name'],
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                            fontSize: 14.sp,
+                            color: const Color(0xFF151E13),
+                          ),
+                        ),
+                        subtitle: Text(
+                          chat['lastMessage'],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: isUnread ? const Color(0xFF151E13) : Colors.grey,
+                            fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        trailing: Text(
+                          chat['time'],
+                          style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),

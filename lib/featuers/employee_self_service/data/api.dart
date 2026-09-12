@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import '../../../../networks/dio/dio.dart';
 import '../../../../networks/exception_handler/data_source.dart';
@@ -50,8 +51,19 @@ class StaffDashboardApi {
 
   Future<dynamic> getStaffProfile() async {
     try {
-      final response = await getHttp(Endpoints.updateStaffProfile());
+      final response = await getHttp(Endpoints.staffDashboard());
       if (response.statusCode == 200) {
+        final profileData = response.data['profile'];
+        if (profileData != null) {
+          final userData = profileData['user'];
+          return {
+            'name': userData?['name'],
+            'email': userData?['email'],
+            'phone': profileData['phone'] ?? userData?['phone'],
+            'photo': profileData['photo'],
+            'staff_id': profileData['staff_id'],
+          };
+        }
         return response.data;
       } else {
         throw DataSource.DEFAULT.getFailure();
@@ -102,9 +114,12 @@ class StaffDashboardApi {
     }
   }
 
-  Future<dynamic> checkIn(int storeId) async {
+  Future<dynamic> checkIn(int storeId, String storeCode) async {
     try {
-      final response = await postHttp(Endpoints.staffCheckIn(), {'store_id': storeId});
+      final response = await postHttp(Endpoints.staffCheckIn(), {
+        'store_id': storeId,
+        'store_code': storeCode,
+      });
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       } else {
@@ -173,12 +188,50 @@ class StaffDashboardApi {
 
   Future<dynamic> getOrderHistory() async {
     try {
-      final response = await getHttp(Endpoints.staffOrderHistory());
-      if (response.statusCode == 200) {
-        return response.data;
-      } else {
-        throw DataSource.DEFAULT.getFailure();
+      final List<dynamic> allOrders = [];
+      try {
+        final staffOrdersRes = await getHttp(Endpoints.staffOrderHistory());
+        if (staffOrdersRes.statusCode == 200 && staffOrdersRes.data != null) {
+          final sData = staffOrdersRes.data;
+          if (sData is Map && sData['results'] is List) {
+            allOrders.addAll(sData['results']);
+          } else if (sData is List) {
+            allOrders.addAll(sData);
+          }
+        }
+      } catch (e) {
+        log("Staff orders fetch fallback: $e");
       }
+
+      try {
+        final custOrdersRes = await getHttp(Endpoints.customerOrders());
+        if (custOrdersRes.statusCode == 200 && custOrdersRes.data != null) {
+          final cData = custOrdersRes.data;
+          if (cData is Map && cData['results'] is List) {
+            allOrders.addAll(cData['results']);
+          } else if (cData is List) {
+            allOrders.addAll(cData);
+          }
+        }
+      } catch (e) {
+        log("Customer orders fetch fallback: $e");
+      }
+
+      final seenIds = <String>{};
+      final uniqueOrders = <dynamic>[];
+      for (final order in allOrders) {
+        if (order is Map) {
+          final id = order['order_number']?.toString() ?? order['id']?.toString() ?? order.hashCode.toString();
+          if (!seenIds.contains(id)) {
+            seenIds.add(id);
+            uniqueOrders.add(order);
+          }
+        } else {
+          uniqueOrders.add(order);
+        }
+      }
+
+      return uniqueOrders;
     } catch (error) {
       rethrow;
     }
@@ -310,18 +363,96 @@ class StaffDashboardApi {
     }
   }
 
-  Future<List<StaffChatMessage>> getStaffChat() async {
+  Future<List<StaffChatMessage>> getStaffChat({bool fetchAll = true, bool lastPageOnly = false}) async {
     try {
-      final response = await getHttp(Endpoints.staffChat());
+      final endpoint = lastPageOnly 
+          ? '${Endpoints.staffChat()}?page=last' 
+          : Endpoints.staffChat();
+      
+      final response = await getHttp(endpoint);
+      log("GET STAFF CHAT RESPONSE: ${response.data}");
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final dynamic rawData = response.data;
-        List<dynamic> list = [];
-        if (rawData is Map && rawData['results'] is List) {
-          list = rawData['results'];
-        } else if (rawData is List) {
-          list = rawData;
+        dynamic rawData = response.data;
+        if (rawData is String) {
+          try {
+            rawData = jsonDecode(rawData);
+          } catch (_) {}
         }
-        return list.map((json) => StaffChatMessage.fromJson(json)).toList();
+        List<dynamic> list = [];
+        int count = 0;
+        if (rawData is Map) {
+          count = rawData['count'] is int
+              ? rawData['count']
+              : int.tryParse(rawData['count']?.toString() ?? '0') ?? 0;
+          if (rawData['results'] is List) {
+            list = List.from(rawData['results']);
+          } else if (rawData['data'] is List) {
+            list = List.from(rawData['data']);
+          } else if (rawData['messages'] is List) {
+            list = List.from(rawData['messages']);
+          } else if (rawData['chats'] is List) {
+            list = List.from(rawData['chats']);
+          } else if (rawData['result'] is List) {
+            list = List.from(rawData['result']);
+          }
+        } else if (rawData is List) {
+          list = List.from(rawData);
+          count = list.length;
+        }
+
+        // If fetchAll is true and there are multiple pages (DRF page size = 20), fetch remaining pages in parallel
+        if (fetchAll && !lastPageOnly && count > 20) {
+          final totalPages = (count + 19) ~/ 20;
+          final futurePages = <Future<Response<dynamic>?>>[];
+          for (int p = 2; p <= totalPages; p++) {
+            futurePages.add(() async {
+              try {
+                return await getHttp('${Endpoints.staffChat()}?page=$p');
+              } catch (e) {
+                log("Error fetching staff chat page $p: $e");
+                return null;
+              }
+            }());
+          }
+          final pageResponses = await Future.wait(futurePages);
+          for (var pageRes in pageResponses) {
+            if (pageRes != null && (pageRes.statusCode == 200 || pageRes.statusCode == 201)) {
+              dynamic pData = pageRes.data;
+              if (pData is String) {
+                try {
+                  pData = jsonDecode(pData);
+                } catch (_) {}
+              }
+              if (pData is Map && pData['results'] is List) {
+                list.addAll(pData['results']);
+              }
+            }
+          }
+        }
+
+        final parsed = <StaffChatMessage>[];
+        final seenIds = <int>{};
+        for (var item in list) {
+          try {
+            if (item is Map) {
+              final msg = StaffChatMessage.fromJson(Map<String, dynamic>.from(item));
+              if (msg.id != null) {
+                if (seenIds.contains(msg.id)) continue;
+                seenIds.add(msg.id!);
+              }
+              parsed.add(msg);
+            }
+          } catch (e) {
+            log("Error parsing chat item: $e");
+          }
+        }
+        parsed.sort((a, b) {
+          if (a.createdAt != null && b.createdAt != null) {
+            return a.createdAt!.compareTo(b.createdAt!);
+          }
+          return (a.id ?? 0).compareTo(b.id ?? 0);
+        });
+        return parsed;
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
@@ -335,8 +466,30 @@ class StaffDashboardApi {
       final response = await postHttp(Endpoints.staffChat(), {
         "message": message,
       });
+      log("SEND STAFF CHAT RESPONSE: ${response.data}");
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return StaffChatMessage.fromJson(response.data);
+        dynamic resData = response.data;
+        if (resData is String) {
+          try {
+            resData = jsonDecode(resData);
+          } catch (_) {}
+        }
+        if (resData is Map) {
+          final map = Map<String, dynamic>.from(resData);
+          if (map['data'] is Map) {
+            return StaffChatMessage.fromJson(Map<String, dynamic>.from(map['data']));
+          } else if (map['result'] is Map) {
+            return StaffChatMessage.fromJson(Map<String, dynamic>.from(map['result']));
+          } else if (map['message_object'] is Map) {
+            return StaffChatMessage.fromJson(Map<String, dynamic>.from(map['message_object']));
+          }
+          return StaffChatMessage.fromJson(map);
+        }
+        return StaffChatMessage(
+          message: message,
+          sender: 'STAFF',
+          createdAt: DateTime.now().toIso8601String(),
+        );
       } else {
         throw DataSource.DEFAULT.getFailure();
       }

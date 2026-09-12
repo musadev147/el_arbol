@@ -11,6 +11,7 @@ import '../../../../../../networks/rx_base.dart';
 import '../../../../../common_wigdets/app_toast.dart';
 import '../../../../../common_wigdets/user_role.dart';
 import '../../../../../common_wigdets/custom_navigation.dart';
+import '../../../../../route/app_pages.dart';
 import '../model/post_register_model.dart';
 import 'api.dart';
 
@@ -71,22 +72,28 @@ class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
 
   @override
   handleSuccessWithReturn(PostRegisterModel data) async {
-    AppToast.success("Registration Successful!");
-
     final accessToken = data.access ?? "";
     final id = data.user?.id ?? "";
+    final String successMsg = (_selectedRole == 'customer' || _selectedRole.isEmpty)
+        ? "Registration successfully created."
+        : ((data.message != null && data.message!.isNotEmpty)
+            ? data.message!
+            : "Application submitted successfully.");
 
-    await appData.write(kKeyAccessToken, accessToken);
-    await appData.write(kKeyUserID, id.toString());
-    
     if (accessToken.isNotEmpty) {
+      AppToast.success(successMsg);
+      await appData.write(kKeyAccessToken, accessToken);
+      await appData.write(kKeyUserID, id.toString());
       DioSingleton.instance.update(accessToken);
-    }
-    
-    final role = UserRole.fromString(_selectedRole);
-    await appData.write('user_role', role.value);
 
-    Get.offAll(() => CustomNavigation(role: role));
+      final role = UserRole.fromString(_selectedRole);
+      await appData.write('user_role', role.value);
+
+      Get.offAll(() => CustomNavigation(role: role));
+    } else {
+      AppToast.success(successMsg);
+      Get.offNamed(Routes.LOGIN, arguments: _selectedRole);
+    }
   }
 
   @override
@@ -94,10 +101,33 @@ class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
     String message = "Registration failed";
 
     if (error is DioException) {
-      message = error.response?.data["message"] ?? message;
-
       if (error.type == DioExceptionType.connectionError) {
         message = "Check Your Network Connection";
+      } else if (error.response?.data != null) {
+        final resData = error.response!.data;
+        if (resData is Map) {
+          if (resData["message"] != null) {
+            message = resData["message"].toString();
+          } else if (resData["detail"] != null) {
+            message = resData["detail"].toString();
+          } else if (resData["error"] != null) {
+            message = resData["error"].toString();
+          } else {
+            final List<String> fieldErrors = [];
+            resData.forEach((key, val) {
+              if (val is List && val.isNotEmpty) {
+                fieldErrors.add("$key: ${val.join(', ')}");
+              } else if (val is String) {
+                fieldErrors.add("$key: $val");
+              }
+            });
+            if (fieldErrors.isNotEmpty) {
+              message = fieldErrors.join("\n");
+            }
+          }
+        } else if (resData is String) {
+          message = resData;
+        }
       }
     }
 

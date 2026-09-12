@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:el_arbol/constants/app_assets/assets_image.dart';
 
+import 'app_shimmer.dart';
+
 class CustomNetworkImage extends StatelessWidget {
   const CustomNetworkImage({super.key});
 
@@ -12,7 +14,7 @@ class CustomNetworkImage extends StatelessWidget {
       imageUrl: '',
       placeholder:
           (context, url) =>
-              Image.asset(AssetsImages.placeholderImage, fit: BoxFit.fill),
+              AppShimmer.box(height: 148.h, width: 148.w, borderRadius: BorderRadius.circular(8.r)),
       errorWidget:
           (context, url, error) =>
               Image.asset(AssetsImages.editProductImage1, fit: BoxFit.fill),

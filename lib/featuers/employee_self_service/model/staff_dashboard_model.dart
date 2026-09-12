@@ -433,7 +433,10 @@ class ActiveStore {
       });
     }
     provenance = json['provenance'];
-    image = json['image'];
+    image = json['image']?.toString() ?? json['banner']?.toString() ?? json['store_image']?.toString() ?? json['photo']?.toString();
+    if (image != null && image!.isEmpty) {
+      image = null;
+    }
     if (json['leftoverPacks'] != null) {
       leftoverPacks = <dynamic>[];
       json['leftoverPacks'].forEach((v) {

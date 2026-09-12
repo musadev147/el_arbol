@@ -29,48 +29,45 @@ class PostRegisterApi {
     log("Role: $role");
 
     try {
-      final parts = name.trim().split(' ');
-      final firstName = parts.isNotEmpty ? parts.first : name;
-      final lastNameVal = parts.length > 1 ? parts.sublist(1).join(' ') : firstName;
+      final isWholesale = role.toLowerCase() == 'wholesale' || role.toLowerCase() == 'wholesales';
+      final Map<String, dynamic> data;
 
-      final userType = role.toUpperCase(); // e.g. CUSTOMER
+      if (isWholesale) {
+        data = {
+          "email": email.trim(),
+          "password": password,
+          "business_name": (businessName ?? '').trim(),
+          "contact_name": (contactName ?? name).trim(),
+          "trade_license_number": (tradeLicenseNumber ?? '').trim(),
+          "phone": phone.trim(),
+          "postcode": (postcode ?? '').trim(),
+          "business_type": (businessType ?? 'restaurant').trim(),
+          "monthly_volume": (monthlyVolume ?? '1000_3000').trim(),
+        };
+      } else {
+        final parts = name.trim().split(' ');
+        final firstName = parts.isNotEmpty ? parts.first : name;
+        final lastNameVal = parts.length > 1 ? parts.sublist(1).join(' ') : firstName;
+        final userType = role.toUpperCase();
 
-      final data = {
-        "name": name,
-        "first_name": firstName,
-        "last_name": lastNameVal,
-        "firstName": firstName,
-        "lastName": lastNameVal,
-        "fullName": name,
-        "email": email,
-        "username": email,
-        "phone": phone,
-        "password": password,
-        "password_confirmation": passwordConfirm,
-        "passwordConfirm": passwordConfirm,
-        "confirmPassword": passwordConfirm,
-        "role": userType,
-        "user_role": userType,
-        "user_type": userType,
-      };
-
-      if (businessName != null && businessName.isNotEmpty) {
-        data["business_name"] = businessName;
-      }
-      if (contactName != null && contactName.isNotEmpty) {
-        data["contact_name"] = contactName;
-      }
-      if (tradeLicenseNumber != null && tradeLicenseNumber.isNotEmpty) {
-        data["trade_license_number"] = tradeLicenseNumber;
-      }
-      if (postcode != null && postcode.isNotEmpty) {
-        data["postcode"] = postcode;
-      }
-      if (businessType != null && businessType.isNotEmpty) {
-        data["business_type"] = businessType;
-      }
-      if (monthlyVolume != null && monthlyVolume.isNotEmpty) {
-        data["monthly_volume"] = monthlyVolume;
+        data = {
+          "name": name.trim(),
+          "first_name": firstName,
+          "last_name": lastNameVal,
+          "firstName": firstName,
+          "lastName": lastNameVal,
+          "fullName": name.trim(),
+          "email": email.trim(),
+          "username": email.trim(),
+          "phone": phone.trim(),
+          "password": password,
+          "password_confirmation": passwordConfirm,
+          "passwordConfirm": passwordConfirm,
+          "confirmPassword": passwordConfirm,
+          "role": userType,
+          "user_role": userType,
+          "user_type": userType,
+        };
       }
 
       final response = await postHttp(Endpoints.register(role: role), data);

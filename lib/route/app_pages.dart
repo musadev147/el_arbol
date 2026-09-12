@@ -21,6 +21,8 @@ import '../featuers/wholesale_b2b/presentation/wholesale_notifications_screen.da
 import '../featuers/wholesale_b2b/presentation/wholesale_daily_reports_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_support_tickets_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_add_product_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_cart_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_checkout_screen.dart';
 
 part 'app_routes.dart';
 
@@ -123,6 +125,14 @@ class AppPages {
     GetPage(
       name: Routes.WHOLESALE_ADD_PRODUCT,
       page: () => const WholesaleAddProductScreen(),
+    ),
+    GetPage(
+      name: Routes.WHOLESALE_CART,
+      page: () => const WholesaleCartScreen(),
+    ),
+    GetPage(
+      name: Routes.WHOLESALE_CHECKOUT,
+      page: () => const WholesaleCheckoutScreen(),
     ),
   ];
 }

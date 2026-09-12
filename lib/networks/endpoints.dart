@@ -57,8 +57,8 @@ final class Endpoints {
   static String customerAddress(String id) => "auth/addresses/$id/";
 
   // Customer Orders
-  static String customerOrders() => "auth/orders/";
-  static String customerOrderDetails(String id) => "auth/orders/$id/";
+  static String customerOrders() => "orders/";
+  static String customerOrderDetails(String id) => "orders/$id/";
   static String createOrder() => "orders/";
   static String submitOrder() => "orders/submit/";
   static String calculateShipping() => "orders/shipping/calculate/";
@@ -66,6 +66,12 @@ final class Endpoints {
   static String confirmPayment() => "orders/confirm-payment/";
   static String orderInvoice(String orderNumber) => "orders/invoice/$orderNumber/";
   static String shippingMethods() => "orders/shipping-methods/";
+  static String getBasket() => "orders/basket/";
+  static String addBasketItem() => "orders/basket/items/";
+  static String updateBasketItem(String id) => "orders/basket/items/$id/";
+  static String deleteBasketItem(String id) => "orders/basket/items/$id/";
+  static String cancelCheckout() => "orders/checkout/cancel/";
+  static String getStores() => "fulfillment/stores/";
 
   // Customer Tickets
   static String customerTickets() => "auth/tickets/";
@@ -224,4 +230,5 @@ final class Endpoints {
   static String wholesaleDailyReports() => "wholesale/daily-reports/";
   static String wholesaleStatus() => "wholesale/status/";
   static String wholesaleContent() => "wholesale/content/";
+  static String storeLeftoverPacks() => "fulfillment/stores/?feature=leftoverPack";
 }

@@ -5,6 +5,7 @@ import 'package:el_arbol/common_wigdets/user_role.dart';
 import 'package:el_arbol/route/app_pages.dart';
 import 'package:el_arbol/helpers/di.dart';
 import 'package:el_arbol/constants/app_constants.dart';
+import 'package:el_arbol/constants/app_assets/assets_icons.dart';
 import 'package:el_arbol/networks/dio/dio.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
@@ -48,8 +49,13 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.eco, color: primaryBrandColor, size: 28),
-                    SizedBox(width: 6.w),
+                    Image.asset(
+                      AssetsIcons.logoIcons,
+                      width: 56.w,
+                      height: 56.w,
+                      fit: BoxFit.contain,
+                    ),
+                    SizedBox(width: 10.w),
                     Text(
                       'El Árbol',
                       style: TextStyle(

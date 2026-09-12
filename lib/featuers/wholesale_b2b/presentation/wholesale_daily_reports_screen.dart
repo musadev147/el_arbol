@@ -4,6 +4,7 @@ import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import '../../../../common_wigdets/custom_textfiled.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 
 class WholesaleDailyReportsScreen extends StatefulWidget {
   const WholesaleDailyReportsScreen({super.key});
@@ -18,7 +19,7 @@ class _WholesaleDailyReportsScreenState extends State<WholesaleDailyReportsScree
   @override
   void initState() {
     super.initState();
-    _rx = WholesaleDailyReportsRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>());
+    _rx = WholesaleDailyReportsRx(empty: [], dataFetcher: BehaviorSubject<dynamic>());
     _rx.fetchDailyReports();
   }
 
@@ -152,7 +153,7 @@ class _WholesaleDailyReportsScreenState extends State<WholesaleDailyReportsScree
         stream: _rx.valueStreamData,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+            return const CustomAppLoading.list(message: 'Loading daily reports...');
           }
           final data = snapshot.data;
           

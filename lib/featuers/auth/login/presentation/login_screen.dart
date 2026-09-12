@@ -73,12 +73,13 @@ class _SignInScreenState extends State<SignInScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.eco,
-                            color: primaryBrandColor,
-                            size: 32.sp,
+                          Image.asset(
+                            AssetsIcons.logoIcons,
+                            width: 60.w,
+                            height: 60.w,
+                            fit: BoxFit.contain,
                           ),
-                          SizedBox(width: 8.w),
+                          SizedBox(width: 10.w),
                           Text(
                             'El Árbol',
                             style: TextStyle(

@@ -58,7 +58,7 @@ class WholesaleApi {
     }
   }
 
-  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> payload) async {
+  Future<dynamic> createProduct(dynamic payload) async {
     try {
       final response = await postHttp(Endpoints.getProducts(), payload);
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -68,6 +68,20 @@ class WholesaleApi {
       }
     } catch (e) {
       log('Wholesale createProduct error: $e');
+      rethrow;
+    }
+  }
+
+  Future<dynamic> createOrder(Map<String, dynamic> payload) async {
+    try {
+      final response = await postHttp(Endpoints.createOrder(), payload);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data;
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      log('Wholesale createOrder error: $e');
       rethrow;
     }
   }
@@ -146,8 +160,8 @@ class WholesaleApi {
   Future<Map<String, dynamic>> createTicket(Map<String, dynamic> data) async {
     try {
       final response = await postHttp(Endpoints.wholesaleTickets(), data);
-      if (response.statusCode == 201) {
-        return response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data is Map<String, dynamic> ? response.data : Map<String, dynamic>.from(response.data);
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
@@ -157,16 +171,36 @@ class WholesaleApi {
     }
   }
 
-  Future<Map<String, dynamic>> getSingleTicket(String id) async {
+  Future<dynamic> deleteTicket(String id) async {
     try {
-      final response = await getHttp(Endpoints.wholesaleSingleTicket(id));
-      if (response.statusCode == 200) {
+      final response = await deleteHttp(Endpoints.wholesaleSingleTicket(id));
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
         return response.data;
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
     } catch (e) {
-      log('Wholesale getSingleTicket error: $e');
+      log('Wholesale deleteTicket error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getSingleTicket(String id) async {
+    try {
+      final response = await getHttp(Endpoints.wholesaleSingleTicket(id));
+      if (response.statusCode == 200) {
+        return response.data is Map<String, dynamic> ? response.data : Map<String, dynamic>.from(response.data);
+      } else {
+        throw DataSource.DEFAULT.getFailure();
+      }
+    } catch (e) {
+      log('Wholesale getSingleTicket fallback attempt for ticket $id: $e');
+      try {
+        final fallbackRes = await getHttp("auth/tickets/$id/");
+        if (fallbackRes.statusCode == 200) {
+          return fallbackRes.data is Map<String, dynamic> ? fallbackRes.data : Map<String, dynamic>.from(fallbackRes.data);
+        }
+      } catch (_) {}
       rethrow;
     }
   }
@@ -177,13 +211,22 @@ class WholesaleApi {
         Endpoints.wholesaleTicketReply(id),
         {"message": message},
       );
-      if (response.statusCode == 201) {
-        return response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data is Map<String, dynamic> ? response.data : Map<String, dynamic>.from(response.data);
       } else {
         throw DataSource.DEFAULT.getFailure();
       }
     } catch (e) {
-      log('Wholesale createTicketReply error: $e');
+      log('Wholesale createTicketReply error, trying fallback: $e');
+      try {
+        final fallbackRes = await postHttp(
+          Endpoints.customerTicketReply(id),
+          {"message": message},
+        );
+        if (fallbackRes.statusCode == 200 || fallbackRes.statusCode == 201) {
+          return fallbackRes.data is Map<String, dynamic> ? fallbackRes.data : Map<String, dynamic>.from(fallbackRes.data);
+        }
+      } catch (_) {}
       rethrow;
     }
   }
@@ -245,7 +288,7 @@ class WholesaleApi {
   }
 
   // DAILY REPORTS APIs
-  Future<Map<String, dynamic>> getDailyReports() async {
+  Future<dynamic> getDailyReports() async {
     try {
       final response = await getHttp(Endpoints.wholesaleDailyReports());
       if (response.statusCode == 200) {

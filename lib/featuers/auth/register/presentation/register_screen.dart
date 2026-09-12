@@ -33,8 +33,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _contactNameController = TextEditingController();
   final _tradeLicenseController = TextEditingController();
   final _postcodeController = TextEditingController();
-  final _businessTypeController = TextEditingController();
-  final _monthlyVolumeController = TextEditingController();
+  final _monthlyVolumeController = TextEditingController(text: '1000_3000');
+  String _selectedBusinessType = 'restaurant';
+
+  final List<Map<String, String>> _businessTypeOptions = const [
+    {'value': 'restaurant', 'label': 'Restaurant'},
+    {'value': 'food_retail', 'label': 'Food Retail / Grocery'},
+    {'value': 'hotel', 'label': 'Hotel / Lodging'},
+    {'value': 'catering', 'label': 'Catering'},
+    {'value': 'other', 'label': 'Other Business'},
+  ];
 
   late final PostRegisterRx _postRegisterRx;
 
@@ -58,7 +66,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _contactNameController.dispose();
     _tradeLicenseController.dispose();
     _postcodeController.dispose();
-    _businessTypeController.dispose();
     _monthlyVolumeController.dispose();
     _postRegisterRx.dispose();
     super.dispose();
@@ -101,17 +108,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  'Create an account.',
+                  isWholesale ? 'Create a wholesale B2B account.' : 'Create an account.',
                   style: TextFontStyle.textStyle12Poppins400494953.copyWith(
                     fontSize: 14.sp,
                     color: const Color(0xFF6D7A73),
                   ),
                 ),
                 SizedBox(height: 24.h),
-
-
-
-
 
                 if (isWholesale) ...[
                   // Business Name
@@ -129,7 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     hintText: 'e.g. Valencia Food Group S.L.',
                     borderRadius: 8.r,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return 'Please enter business name';
                       }
                       return null;
@@ -152,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     hintText: 'e.g. Mario Silva',
                     borderRadius: 8.r,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return 'Please enter contact name';
                       }
                       return null;
@@ -163,25 +166,92 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   // Trade License
                   Text('Trade License Number', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: const Color(0xFF151E13))),
                   SizedBox(height: 6.h),
-                  CustomTextFormField(controller: _tradeLicenseController, hintText: 'e.g. TL-12345/2023', borderRadius: 8.r),
+                  CustomTextFormField(
+                    controller: _tradeLicenseController,
+                    hintText: 'e.g. TL-12345/2023',
+                    borderRadius: 8.r,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter trade license number';
+                      }
+                      return null;
+                    },
+                  ),
                   SizedBox(height: 16.h),
 
                   // Postcode
                   Text('Postcode', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: const Color(0xFF151E13))),
                   SizedBox(height: 6.h),
-                  CustomTextFormField(controller: _postcodeController, hintText: 'e.g. 1212', borderRadius: 8.r),
+                  CustomTextFormField(
+                    controller: _postcodeController,
+                    hintText: 'e.g. 1212',
+                    borderRadius: 8.r,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter postcode';
+                      }
+                      return null;
+                    },
+                  ),
                   SizedBox(height: 16.h),
 
-                  // Business Type
+                  // Business Type Dropdown
                   Text('Business Type', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: const Color(0xFF151E13))),
                   SizedBox(height: 6.h),
-                  CustomTextFormField(controller: _businessTypeController, hintText: 'e.g. food_retail', borderRadius: 8.r),
+                  DropdownButtonFormField<String>(
+                    value: _selectedBusinessType,
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: const BorderSide(color: Color(0xFF00694C)),
+                      ),
+                    ),
+                    items: _businessTypeOptions.map((opt) {
+                      return DropdownMenuItem(
+                        value: opt['value'],
+                        child: Text(opt['label']!, style: TextStyle(fontSize: 14.sp, color: const Color(0xFF151E13))),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _selectedBusinessType = val);
+                      }
+                    },
+                  ),
                   SizedBox(height: 16.h),
 
                   // Monthly Volume
-                  Text('Monthly Volume', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500, color: const Color(0xFF151E13))),
+                  Text(
+                    'Monthly Volume',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF151E13),
+                    ),
+                  ),
                   SizedBox(height: 6.h),
-                  CustomTextFormField(controller: _monthlyVolumeController, hintText: 'e.g. 1000_3000', borderRadius: 8.r),
+                  CustomTextFormField(
+                    controller: _monthlyVolumeController,
+                    hintText: 'e.g. 1000_3000',
+                    borderRadius: 8.r,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter monthly volume';
+                      }
+                      return null;
+                    },
+                  ),
                   SizedBox(height: 16.h),
                 ],
 
@@ -340,8 +410,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         contactName: isWholesale ? _contactNameController.text : null,
                         tradeLicenseNumber: isWholesale ? _tradeLicenseController.text : null,
                         postcode: isWholesale ? _postcodeController.text : null,
-                        businessType: isWholesale ? _businessTypeController.text : null,
-                        monthlyVolume: isWholesale ? _monthlyVolumeController.text : null,
+                        businessType: isWholesale ? _selectedBusinessType : null,
+                        monthlyVolume: isWholesale ? _monthlyVolumeController.text.trim() : null,
                       );
                     }
                   },

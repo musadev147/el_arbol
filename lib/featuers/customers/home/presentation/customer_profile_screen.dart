@@ -17,6 +17,9 @@ import 'package:el_arbol/featuers/customers/addresses/presentation/customer_addr
 import 'package:el_arbol/featuers/customers/orders/presentation/customer_orders_screen.dart' as el_arbol_order;
 import 'package:el_arbol/featuers/customers/wishlist/presentation/customer_wishlist_screen.dart' as el_arbol_wish;
 import 'package:el_arbol/featuers/customers/notifications/presentation/customer_notifications_screen.dart' as el_arbol_notif;
+import 'leftover_pack_screen.dart';
+import 'package:el_arbol/featuers/customers/notifications/data/customer_notifications_rx.dart';
+import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -33,8 +36,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   String _userGender = 'Male';
   DateTime _userDob = DateTime(1990, 1, 1);
   String? _profileImageUrl;
+  File? _localProfileImage;
 
   late CustomerProfileRx _rx;
+  late CustomerNotificationsRx _notificationsRx;
   final CustomerChangePasswordRx _changePasswordRx = CustomerChangePasswordRx(empty: null, dataFetcher: BehaviorSubject<void>());
 
   @override
@@ -43,13 +48,16 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     _rx = CustomerProfileRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>());
     _rx.fetchProfile();
 
+    _notificationsRx = CustomerNotificationsRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>());
+    _notificationsRx.fetchNotifications();
+
     _rx.valueStreamData.listen((data) {
       if (data != null && mounted) {
         setState(() {
           // Parse user data
-          final first = data['firstName'] ?? '';
-          final last = data['lastName'] ?? '';
-          _userName = data['fullName'] ?? '$first $last'.trim();
+          final first = data['firstName'] ?? data['first_name'] ?? '';
+          final last = data['lastName'] ?? data['last_name'] ?? '';
+          _userName = data['fullName'] ?? data['name'] ?? '$first $last'.trim();
           if (_userName.isEmpty) _userName = 'Customer';
           _userEmail = data['email'] ?? '';
           
@@ -60,19 +68,29 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             } catch (_) {}
           }
 
+          String? rawAvatar = data['resolvedAvatar'] ?? data['avatar'] ?? data['image'] ?? data['profile_image'] ?? data['profileImage'] ?? data['profile_picture'] ?? data['photo'];
           if (data['profile'] != null && data['profile'] is Map) {
             final p = data['profile'];
-            _userPhone = p['phone'] ?? _userPhone;
-            _profileImageUrl = p['resolvedAvatar'] ?? p['avatar'] ?? _profileImageUrl;
-            if (_profileImageUrl != null && _profileImageUrl!.isEmpty) {
-              _profileImageUrl = null;
-            }
+            _userPhone = p['phone'] ?? p['phone_number'] ?? _userPhone;
+            rawAvatar = p['resolvedAvatar'] ?? p['avatar'] ?? p['image'] ?? p['profile_image'] ?? p['profile_picture'] ?? p['photo'] ?? rawAvatar;
             if (p['gender'] != null) _userGender = p['gender'];
             if (p['dob'] != null) {
               try {
                 _userDob = DateTime.parse(p['dob'].toString());
               } catch (_) {}
             }
+          }
+          if (rawAvatar != null && rawAvatar.toString().trim().isNotEmpty) {
+            String avatar = rawAvatar.toString().trim();
+            if (!avatar.startsWith('http://') && !avatar.startsWith('https://')) {
+              const base = 'https://apielarbol.icommerce.com.bd';
+              if (avatar.startsWith('/')) {
+                avatar = '$base$avatar';
+              } else {
+                avatar = '$base/$avatar';
+              }
+            }
+            _profileImageUrl = avatar;
           }
         });
       }
@@ -82,6 +100,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   @override
   void dispose() {
     _rx.dispose();
+    _notificationsRx.dispose();
     _changePasswordRx.dispose();
     super.dispose();
   }
@@ -106,13 +125,65 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
   void _changeProfileImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      final success = await _rx.updateAvatar(File(pickedFile.path));
-      if (success) {
-        Fluttertoast.showToast(msg: 'Profile photo updated!');
-      }
-    }
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(20.r),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Update Profile Photo',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF00694C)),
+                title: const Text('Choose from Gallery'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                  if (pickedFile != null) {
+                    setState(() {
+                      _localProfileImage = File(pickedFile.path);
+                    });
+                    final success = await _rx.updateAvatar(File(pickedFile.path));
+                    if (success) {
+                      Fluttertoast.showToast(msg: 'Profile photo updated!');
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF00694C)),
+                title: const Text('Take Photo (Camera)'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final pickedFile = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+                  if (pickedFile != null) {
+                    setState(() {
+                      _localProfileImage = File(pickedFile.path);
+                    });
+                    final success = await _rx.updateAvatar(File(pickedFile.path));
+                    if (success) {
+                      Fluttertoast.showToast(msg: 'Profile photo updated!');
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _addAddress() {
@@ -330,7 +401,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     final nameController = TextEditingController(text: _userName);
     final phoneController = TextEditingController(text: _userPhone);
     String selectedGender = _userGender;
-    DateTime tempDob = _userDob;
 
     showModalBottomSheet(
       context: context,
@@ -399,39 +469,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ),
                   SizedBox(height: 16.h),
 
-                  const Text('Date of Birth', style: TextStyle(fontWeight: FontWeight.bold)),
-                  SizedBox(height: 6.h),
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: tempDob,
-                        firstDate: DateTime(1920),
-                        lastDate: DateTime.now(),
-                      );
-                      if (picked != null) {
-                        setModalState(() {
-                          tempDob = picked;
-                        });
-                      }
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade400),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(DateFormat('dd MMMM yyyy').format(tempDob)),
-                          const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-
                   const Text('Gender', style: TextStyle(fontWeight: FontWeight.bold)),
                   DropdownButtonFormField<String>(
                     value: selectedGender,
@@ -462,7 +499,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                           "lastName": lastName,
                           "phone": phoneController.text,
                           "gender": selectedGender,
-                          "dob": DateFormat('yyyy-MM-dd').format(tempDob),
                         });
                         if (success) {
                           Navigator.pop(context);
@@ -675,15 +711,45 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     child: Stack(
                       alignment: Alignment.bottomRight,
                       children: [
-                        CircleAvatar(
-                          radius: 36.r,
-                          backgroundColor: primaryColor.withOpacity(0.1),
-                          backgroundImage: _profileImageUrl != null
-                              ? NetworkImage(_profileImageUrl!)
-                              : null,
-                          child: _profileImageUrl == null
-                              ? Icon(Icons.person, color: primaryColor, size: 36.r)
-                              : null,
+                        Container(
+                          width: 72.r,
+                          height: 72.r,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: primaryColor.withOpacity(0.1),
+                          ),
+                          child: ClipOval(
+                            child: _localProfileImage != null
+                                ? Image.file(_localProfileImage!, fit: BoxFit.cover, width: 72.r, height: 72.r)
+                                : (_profileImageUrl != null && _profileImageUrl!.isNotEmpty)
+                                    ? CachedNetworkImage(
+                                        imageUrl: _profileImageUrl!,
+                                        fit: BoxFit.cover,
+                                        width: 72.r,
+                                        height: 72.r,
+                                        memCacheWidth: 200,
+                                        memCacheHeight: 200,
+                                        fadeInDuration: const Duration(milliseconds: 100),
+                                        fadeOutDuration: const Duration(milliseconds: 100),
+                                        placeholder: (context, url) => const Center(
+                                          child: SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                                          ),
+                                        ),
+                                        errorWidget: (context, url, error) => Icon(
+                                          Icons.person,
+                                          color: primaryColor,
+                                          size: 36.r,
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.person,
+                                        color: primaryColor,
+                                        size: 36.r,
+                                      ),
+                          ),
                         ),
                         Container(
                           padding: EdgeInsets.all(4.r),
@@ -718,18 +784,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                           _userEmail,
                           style: TextStyle(fontSize: 11.sp, color: Colors.grey),
                         ),
-                        SizedBox(height: 4.h),
-                        Row(
-                          children: [
-                            Icon(Icons.cake, size: 12.r, color: Colors.grey),
-                            SizedBox(width: 4.w),
-                            Text(
-                              DateFormat('dd MMM yyyy').format(_userDob),
-                              style: TextStyle(fontSize: 11.sp, color: Colors.grey),
-                            ),
-                          ],
-                        ),
-
                       ],
                     ),
                   ),
@@ -781,15 +835,78 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   ListTile(
                     leading: const Icon(Icons.support_agent, color: primaryColor),
                     title: const Text('Support Tickets'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Obx(() {
+                          final unread = SupportTicketUnreadManager.instance.customerUnreadCountRx.value;
+                          if (unread <= 0) return const SizedBox.shrink();
+                          return Container(
+                            margin: EdgeInsets.only(right: 8.w),
+                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF7A00),
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: Text(
+                              unread > 99 ? '99+' : '$unread',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        }),
+                        const Icon(Icons.arrow_forward_ios, size: 14),
+                      ],
+                    ),
                     onTap: () => Get.to(() => const el_arbol.CustomerSupportTicketsScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.food_bank_outlined, color: primaryColor),
+                    title: const Text('Surplus Leftover Packs'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    onTap: () => Get.to(() => const LeftoverPackScreen()),
                   ),
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.notifications_none, color: primaryColor),
                     title: const Text('Notifications'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                    onTap: () => Get.to(() => const el_arbol_notif.CustomerNotificationsScreen()),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        StreamBuilder<List<dynamic>>(
+                          stream: _notificationsRx.valueStreamData,
+                          builder: (context, snapshot) {
+                            final notifs = snapshot.data ?? [];
+                            if (notifs.isEmpty) return const SizedBox.shrink();
+                            return Container(
+                              margin: EdgeInsets.only(right: 8.w),
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                              child: Text(
+                                '${notifs.length}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const Icon(Icons.arrow_forward_ios, size: 14),
+                      ],
+                    ),
+                    onTap: () async {
+                      await Get.to(() => const el_arbol_notif.CustomerNotificationsScreen());
+                      _notificationsRx.fetchNotifications();
+                    },
                   ),
                 ],
               ),

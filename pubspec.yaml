@@ -81,6 +81,8 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^31.2.18
   syncfusion_flutter_pdf: ^31.2.18
   device_info_plus: ^12.1.0
+  google_fonts: ^8.2.1
+  shimmer: ^3.0.0
 #  file_picker: ^8.0.0
 
 
@@ -113,6 +115,7 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/fonts/
+    - assets/lottie/
 
   fonts:
     - family: Roboto

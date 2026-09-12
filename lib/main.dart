@@ -22,6 +22,10 @@ final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<v
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Configure high-performance image cache for instant loading
+  PaintingBinding.instance.imageCache.maximumSize = 1000;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 250 << 20; // 250 MB
+
   await GetStorage.init();
   diSetup();
   initiInternetChecker();
@@ -34,16 +38,29 @@ void configLoading() {
   EasyLoading.instance
     ..displayDuration = const Duration(seconds: 3)
     ..indicatorType = EasyLoadingIndicatorType.fadingCircle
-    ..loadingStyle = EasyLoadingStyle.dark
-    ..indicatorSize = 40.0
-    ..radius = 10.0
-    ..maskType = EasyLoadingMaskType.none
-    ..toastPosition = EasyLoadingToastPosition.top
-    ..backgroundColor = const Color(0xFF00F0FF)
-    ..textColor = Colors.white
+    ..loadingStyle = EasyLoadingStyle.custom
+    ..indicatorSize = 42.0
+    ..radius = 16.0
+    ..maskType = EasyLoadingMaskType.black
+    ..toastPosition = EasyLoadingToastPosition.center
+    ..backgroundColor = const Color(0xFF00694C)
     ..indicatorColor = Colors.white
-    ..userInteractions = true
-    ..dismissOnTap = true;
+    ..textColor = Colors.white
+    ..progressColor = Colors.white
+    ..boxShadow = <BoxShadow>[
+      BoxShadow(
+        color: Colors.black.withOpacity(0.2),
+        blurRadius: 16,
+        offset: const Offset(0, 6),
+      ),
+    ]
+    ..textStyle = const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: Colors.white,
+    )
+    ..userInteractions = false
+    ..dismissOnTap = false;
 }
 
 class MyApp extends StatefulWidget {
@@ -55,7 +72,14 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
+  void initState() {
+    super.initState();
+    configLoading();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    configLoading();
     rotation();
     setInitValue();
     return MultiProvider(
@@ -87,6 +111,17 @@ class UtillScreenMobile extends StatelessWidget {
           getPages: AppPages.routes,
           showPerformanceOverlay: false,
           theme: ThemeData(
+            primaryColor: AppColors.primaryGreen,
+            colorScheme: ColorScheme.fromSwatch().copyWith(
+              primary: AppColors.primaryGreen,
+              secondary: AppColors.accentOrange,
+            ),
+            progressIndicatorTheme: const ProgressIndicatorThemeData(
+              color: Color(0xFF00694C),
+              circularTrackColor: Colors.transparent,
+              linearTrackColor: Colors.transparent,
+              refreshBackgroundColor: Colors.white,
+            ),
             appBarTheme: const AppBarTheme(
               elevation: 0,
               backgroundColor: Colors.transparent,

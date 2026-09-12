@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../home/presentation/product_details_screen.dart';
 import '../../home/presentation/model/post_wishlist_model.dart';
 import 'data/rx.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 
 /// Premium screen displaying user wishlisted items.
 class WishlistScreen extends StatefulWidget {
@@ -56,7 +57,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           stream: _wishlistRx.valueStreamData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting && (!snapshot.hasData || snapshot.data!.isEmpty)) {
-              return const Center(child: CircularProgressIndicator(color: primaryColor));
+              return const CustomAppLoading.grid(message: 'Loading wishlist...');
             }
 
             final items = snapshot.data ?? [];
@@ -162,6 +163,13 @@ class _WishlistScreenState extends State<WishlistScreen> {
     final double discountPrice = double.tryParse(product.discountPrice ?? '') ?? 0.0;
     final double finalPrice = (discountPrice > 0) ? discountPrice : originalPrice;
     final bool onSale = discountPrice > 0;
+    
+    final List<String> extractedImages = [];
+    if (product.thumbnailUrl != null) extractedImages.add(product.thumbnailUrl!);
+    if (product.additionalImages != null) {
+      extractedImages.addAll(
+          product.additionalImages!.map((i) => i.image).whereType<String>());
+    }
 
     return GestureDetector(
       onTap: () {
@@ -171,6 +179,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               origin: product.origin ?? 'Unknown',
               price: '€${finalPrice.toStringAsFixed(2)}',
               imageUrl: product.thumbnailUrl ?? 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
+              images: extractedImages,
               description: product.description ?? '',
               category: product.category?.name ?? 'All',
             ));
