@@ -19,18 +19,29 @@ class PostSignInApi {
     log("Role: $role");
 
     try {
-      final userType = role.toUpperCase(); // e.g. CUSTOMER
-
-      final data = {
-        "email": email,
-        "username": email,
-        "password": password,
+      final trimmedEmail = email.trim();
+      final Map<String, dynamic> data = {
+        "email": trimmedEmail,
       };
 
-      final response = await postHttp(Endpoints.signIn(role: role), data);
+      if (password.trim().isNotEmpty) {
+        data["password"] = password;
+        data["username"] = trimmedEmail;
+      }
+
+      final endpoint = Endpoints.signIn(role: role);
+      log("Login calling endpoint: $endpoint");
+
+      final response = await postHttp(endpoint, data);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return PostSignInModel.fromJson(response.data);
+        if (response.data is Map<String, dynamic>) {
+          return PostSignInModel.fromJson(response.data);
+        } else if (response.data is Map) {
+          return PostSignInModel.fromJson(Map<String, dynamic>.from(response.data));
+        } else {
+          return PostSignInModel();
+        }
       } else {
         throw DataSource.DEFAULT.getFailure();
       }

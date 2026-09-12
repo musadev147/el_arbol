@@ -23,4 +23,5 @@ abstract class Routes {
   static const WHOLESALE_ADD_PRODUCT = '/wholesale_add_product';
   static const WHOLESALE_CART = '/wholesale_cart';
   static const WHOLESALE_CHECKOUT = '/wholesale_checkout';
+  static const WHOLESALE_ORDER_DETAILS = '/wholesale_order_details';
 }

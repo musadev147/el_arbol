@@ -318,37 +318,36 @@ class WholesaleCartScreen extends StatelessWidget {
                                           ),
                                           Padding(
                                             padding: EdgeInsets.symmetric(horizontal: 10.w),
-                                            child: Obx(() => Text(
+                                            child: Text(
                                               '${item.quantity.value.toInt()}',
                                               style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
-                                            )),
+                                            ),
                                           ),
-                                          Obx(() {
-                                            final bool canAddMore = item.stock == null || item.quantity.value < item.stock!;
-                                            return IconButton(
-                                              padding: EdgeInsets.all(4.r),
-                                              constraints: const BoxConstraints(),
-                                              icon: Icon(
-                                                Icons.add,
-                                                size: 16,
-                                                color: canAddMore ? primaryColor : Colors.grey.shade400,
-                                              ),
-                                              onPressed: canAddMore
-                                                  ? () {
-                                                      WholesaleCartState.updateQuantity(
-                                                        item.id.isNotEmpty ? item.id : item.name,
-                                                        item.quantity.value + 1,
-                                                      );
-                                                    }
-                                                  : null,
-                                            );
-                                          }),
+                                          IconButton(
+                                            padding: EdgeInsets.all(4.r),
+                                            constraints: const BoxConstraints(),
+                                            icon: Icon(
+                                              Icons.add,
+                                              size: 16,
+                                              color: (item.stock == null || item.quantity.value < item.stock!)
+                                                  ? primaryColor
+                                                  : Colors.grey.shade400,
+                                            ),
+                                            onPressed: (item.stock == null || item.quantity.value < item.stock!)
+                                                ? () {
+                                                    WholesaleCartState.updateQuantity(
+                                                      item.id.isNotEmpty ? item.id : item.name,
+                                                      item.quantity.value + 1,
+                                                    );
+                                                  }
+                                                : null,
+                                          ),
                                         ],
                                       ),
                                     ),
 
                                     // Line total
-                                    Obx(() => Text(
+                                    Text(
                                       '€ ${item.subtotal.toStringAsFixed(2)}',
                                       style: TextStyle(
                                         fontFamily: 'Poppins',
@@ -356,7 +355,7 @@ class WholesaleCartScreen extends StatelessWidget {
                                         fontWeight: FontWeight.bold,
                                         color: primaryColor,
                                       ),
-                                    )),
+                                    ),
                                   ],
                                 ),
                               ],

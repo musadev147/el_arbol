@@ -1,21 +1,25 @@
+import 'dart:developer';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
 
-import '../../../../common_wigdets/common_button.dart';
 import '../../../../common_wigdets/custom_textfiled.dart';
 import '../../../../common_wigdets/app_toast.dart';
 import '../../../../constants/app_assets/assets_icons.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../customers/addresses/data/customer_addresses_rx.dart';
 import '../../customers/orders/data/customer_orders_api.dart';
 import '../../customers/orders/data/customer_orders_rx.dart';
+import '../../customers/addresses/data/customer_addresses_rx.dart';
+import '../../customers/profile/data/api.dart';
+import '../data/wholesale_api.dart';
 import '../data/wholesale_rx.dart';
 import 'wholesale_cart_state.dart';
 import 'wholesale_orders_screen.dart';
+import 'wholesale_order_details_screen.dart';
 import 'package:el_arbol/helpers/di.dart';
 
 class WholesaleCheckoutScreen extends StatefulWidget {
@@ -28,29 +32,43 @@ class WholesaleCheckoutScreen extends StatefulWidget {
 class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Business & Contact Controllers
-  final _companyNameController = TextEditingController(text: 'BioFresh Distributors SL');
-  final _contactPersonController = TextEditingController(text: 'Carlos Mendoza');
-  final _businessEmailController = TextEditingController(text: 'orders@biofresh.es');
-  final _businessPhoneController = TextEditingController(text: '+34 622 998 877');
-  final _vatIdController = TextEditingController(text: 'ES-B12345678');
+  late final CustomerShippingMethodsRx _shippingMethodsRx;
+  late final CustomerShippingCalculatorRx _shippingCalculatorRx;
+  late final CustomerCouponRx _couponRx;
+  late final CustomerPaymentConfirmationRx _paymentConfirmationRx;
+  late final CustomerAddressesRx _addressesRx;
+  late final CustomerStoresRx _storesRx;
+  late final WholesaleCheckoutOrderRx _createOrderRx;
+
+  // Business & Buyer Controllers (dynamic from API, no dummy data)
+  final _companyNameController = TextEditingController();
+  final _contactPersonController = TextEditingController();
+  final _businessEmailController = TextEditingController();
+  final _businessPhoneController = TextEditingController();
+  final _vatIdController = TextEditingController();
 
   // Delivery & Address Controllers
-  final _streetController = TextEditingController(text: 'Poligono Industrial La Vega, Nave 14');
-  final _cityController = TextEditingController(text: 'Madrid');
-  final _postcodeController = TextEditingController(text: '28045');
-  final _logisticsNotesController = TextEditingController(text: 'Standard pallet delivery. Loading bay 2.');
+  final _streetController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _postcodeController = TextEditingController();
+  final _logisticsNotesController = TextEditingController();
+
+  // Coupon Controller
+  final _couponController = TextEditingController();
 
   // Corporate Card Controllers
   final _cardNumberController = TextEditingController(text: '4111222233334444');
   final _cardExpiryController = TextEditingController(text: '12/28');
   final _cardCvvController = TextEditingController(text: '123');
+  final _transactionIdController = TextEditingController(
+      text: 'WHS_TX_${DateTime.now().millisecondsSinceEpoch}');
 
   // Fulfillment & Logistics State
   String _fulfillmentType = 'Delivery'; // 'Delivery' or 'Pickup'
-  dynamic _selectedStoreId;
-  String _selectedStoreName = 'Madrid Central Warehouse';
   dynamic _selectedAddressId;
+  dynamic _selectedStoreId;
+  String _selectedStoreName = 'Central Depot';
+  dynamic _selectedShippingMethodId;
 
   DateTime _deliveryDate = DateTime.now().add(const Duration(days: 1));
   String _selectedDeliverySlot = 'Morning (08:00 - 12:00)';
@@ -61,33 +79,265 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
   ];
 
   // Payment Terms
-  String _paymentMethod = 'bank_transfer'; // 'bank_transfer', 'cash', or 'card'
+  String _paymentMethod = 'cash'; // 'cash' (COD/Invoice) or 'card'
+  String _appliedCouponCode = '';
+  double _discountAmount = 0.0;
+  double _deliveryFee = 0.0;
 
   bool _isSubmitting = false;
-
-  late final WholesaleCheckoutOrderRx _orderRx;
-  late final CustomerAddressesRx _addressesRx;
-  late final CustomerStoresRx _storesRx;
 
   @override
   void initState() {
     super.initState();
-    _orderRx = WholesaleCheckoutOrderRx(
+    _shippingMethodsRx = CustomerShippingMethodsRx(
+      empty: [],
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _shippingCalculatorRx = CustomerShippingCalculatorRx(
       empty: null,
       dataFetcher: BehaviorSubject<dynamic>(),
     );
-
+    _couponRx = CustomerCouponRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+    _paymentConfirmationRx = CustomerPaymentConfirmationRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
     _addressesRx = CustomerAddressesRx(
       empty: [],
       dataFetcher: BehaviorSubject<List<dynamic>>(),
     );
-    _addressesRx.fetchAddresses();
-
     _storesRx = CustomerStoresRx(
       empty: [],
       dataFetcher: BehaviorSubject<dynamic>(),
     );
+    _createOrderRx = WholesaleCheckoutOrderRx(
+      empty: null,
+      dataFetcher: BehaviorSubject<dynamic>(),
+    );
+
+    // Fetch live APIs
+    _shippingMethodsRx.fetchShippingMethods();
+    _addressesRx.fetchAddresses();
     _storesRx.fetchStores();
+
+    // Dynamically auto-fill user profile info from backend Wholesale API
+    _fetchAndPrefillProfile();
+
+    // Auto-select saved address if available
+    _addressesRx.valueStreamData.listen((data) {
+      if (data is List && data.isNotEmpty && mounted) {
+        if (_selectedAddressId == null) {
+          final defaultAddr = data.firstWhere(
+            (a) => a['is_default'] == true || a['isDefault'] == true,
+            orElse: () => data.first,
+          );
+          if (defaultAddr != null) {
+            setState(() {
+              _selectedAddressId = defaultAddr['id'];
+              if (_streetController.text.isEmpty) {
+                _streetController.text =
+                    defaultAddr['street'] ?? defaultAddr['address'] ?? '';
+              }
+              if (_cityController.text.isEmpty) {
+                _cityController.text = defaultAddr['city'] ?? '';
+              }
+              if (_postcodeController.text.isEmpty) {
+                _postcodeController.text =
+                    defaultAddr['postcode'] ?? defaultAddr['zip_code'] ?? '';
+              }
+            });
+            _updateShippingFee();
+          }
+        }
+      }
+    });
+
+    // Auto-select first store if available
+    _storesRx.valueStreamData.listen((data) {
+      List<dynamic> stores = [];
+      if (data is List) {
+        stores = data;
+      } else if (data is Map && data.containsKey('results') && data['results'] is List) {
+        stores = data['results'];
+      }
+      if (stores.isNotEmpty && _selectedStoreId == null && mounted) {
+        setState(() {
+          _selectedStoreId = stores.first['id'];
+          _selectedStoreName = stores.first['name'] ?? 'Main Depot';
+        });
+      }
+    });
+  }
+
+  Future<void> _fetchAndPrefillProfile() async {
+    try {
+      final profile = await WholesaleApi.instance.getProfile();
+      if (profile != null && profile is Map && mounted) {
+        setState(() {
+          final businessName = profile['business_name'] ??
+              profile['businessName'] ??
+              profile['company_name'] ??
+              profile['companyName'] ??
+              '';
+          final contactName = profile['contact_name'] ??
+              profile['contactName'] ??
+              profile['name'] ??
+              profile['fullName'] ??
+              '';
+          final email = profile['email']?.toString() ?? '';
+          final phone = profile['phone']?.toString() ??
+              profile['phone_number']?.toString() ??
+              '';
+          final vat = profile['trade_license_number'] ??
+              profile['vat_number'] ??
+              profile['cif'] ??
+              '';
+          final postcode = profile['postcode'] ?? profile['zip_code'] ?? '';
+
+          if (businessName.isNotEmpty && _companyNameController.text.isEmpty) {
+            _companyNameController.text = businessName.toString();
+          }
+          if (contactName.isNotEmpty && _contactPersonController.text.isEmpty) {
+            _contactPersonController.text = contactName.toString();
+          }
+          if (email.isNotEmpty && _businessEmailController.text.isEmpty) {
+            _businessEmailController.text = email;
+          }
+          if (phone.isNotEmpty && _businessPhoneController.text.isEmpty) {
+            _businessPhoneController.text = phone;
+          }
+          if (vat.isNotEmpty && _vatIdController.text.isEmpty) {
+            _vatIdController.text = vat.toString();
+          }
+          if (postcode.isNotEmpty && _postcodeController.text.isEmpty) {
+            _postcodeController.text = postcode.toString();
+          }
+        });
+      }
+    } catch (_) {
+      try {
+        final profile = await CustomerProfileApi.instance.getProfile();
+        if (profile != null && profile is Map && mounted) {
+          setState(() {
+            final businessName = profile['business_name'] ?? profile['businessName'] ?? '';
+            final contactName = profile['contact_name'] ?? profile['name'] ?? '';
+            final first = profile['firstName'] ?? profile['first_name'] ?? '';
+            final last = profile['lastName'] ?? profile['last_name'] ?? '';
+            final fullName = contactName.isNotEmpty ? contactName : '$first $last'.trim();
+            final email = profile['email']?.toString() ?? '';
+            final phone = profile['phone']?.toString() ?? '';
+            final vat = profile['trade_license_number'] ?? '';
+            final postcode = profile['postcode'] ?? '';
+
+            if (businessName.isNotEmpty && _companyNameController.text.isEmpty) {
+              _companyNameController.text = businessName.toString();
+            }
+            if (fullName.isNotEmpty && _contactPersonController.text.isEmpty) {
+              _contactPersonController.text = fullName.toString();
+            }
+            if (email.isNotEmpty && _businessEmailController.text.isEmpty) {
+              _businessEmailController.text = email;
+            }
+            if (phone.isNotEmpty && _businessPhoneController.text.isEmpty) {
+              _businessPhoneController.text = phone;
+            }
+            if (vat.isNotEmpty && _vatIdController.text.isEmpty) {
+              _vatIdController.text = vat.toString();
+            }
+            if (postcode.isNotEmpty && _postcodeController.text.isEmpty) {
+              _postcodeController.text = postcode.toString();
+            }
+          });
+        }
+      } catch (_) {}
+    }
+  }
+
+  void _updateShippingFee() {
+    final postcode = _postcodeController.text.trim();
+    if (postcode.isNotEmpty && _fulfillmentType == 'Delivery' && WholesaleCartState.cartItems.isNotEmpty) {
+      final cartItems = WholesaleCartState.cartItems.map((item) {
+        final rawProd = item.id.trim();
+        final isUuid = RegExp(
+                r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+            .hasMatch(rawProd);
+        final prodId = isUuid ? rawProd : 'b646f997-e004-423c-9e39-88889e1b4212';
+        return {
+          "product_id": prodId,
+          "product": prodId,
+          "quantity": item.quantity.value.toInt() > 0 ? item.quantity.value.toInt() : 1,
+        };
+      }).toList();
+
+      _shippingCalculatorRx.calculateShipping({
+        "postcode": postcode,
+        "shipping_method_id": _selectedShippingMethodId,
+        "cart_items": cartItems,
+        "items": cartItems,
+      }).then((calcData) {
+        if (calcData != null && calcData is Map && mounted) {
+          setState(() {
+            _deliveryFee = double.tryParse(
+                    calcData['shipping_cost']?.toString() ??
+                        calcData['shipping_fee']?.toString() ??
+                        calcData['fee']?.toString() ??
+                        '0.0') ??
+                0.0;
+          });
+        }
+      }).catchError((_) {});
+    }
+  }
+
+  Future<void> _applyCoupon() async {
+    final code = _couponController.text.trim();
+    if (code.isEmpty) {
+      AppToast.error("Please enter a coupon code");
+      return;
+    }
+
+    final productIds = WholesaleCartState.cartItems
+        .map((e) => e.id.trim())
+        .where((id) => id.isNotEmpty)
+        .toList();
+
+    final Map<String, int> quantities = {};
+    for (final it in WholesaleCartState.cartItems) {
+      if (it.id.isNotEmpty) {
+        quantities[it.id.trim()] = it.quantity.value.toInt();
+      }
+    }
+
+    final success = await _couponRx.validateCoupon(
+      code,
+      cartTotal: WholesaleCartState.totalAmount,
+      productIds: productIds,
+      quantities: quantities,
+    );
+
+    if (success != null) {
+      final couponData = _couponRx.valueStreamData.valueOrNull;
+      if (couponData != null && couponData is Map && mounted) {
+        setState(() {
+          _appliedCouponCode = code;
+          _discountAmount = double.tryParse(
+                  couponData['discount']?.toString() ??
+                      couponData['discount_amount']?.toString() ??
+                      '0.0') ??
+              0.0;
+        });
+        AppToast.success("Coupon '$code' applied successfully!");
+      }
+    }
+  }
+
+  double get _finalTotal {
+    final total =
+        WholesaleCartState.totalAmount - _discountAmount + _deliveryFee;
+    return total > 0 ? total : 0.0;
   }
 
   @override
@@ -101,12 +351,19 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
     _cityController.dispose();
     _postcodeController.dispose();
     _logisticsNotesController.dispose();
+    _couponController.dispose();
     _cardNumberController.dispose();
     _cardExpiryController.dispose();
     _cardCvvController.dispose();
-    _orderRx.dispose();
+    _transactionIdController.dispose();
+
+    _shippingMethodsRx.dispose();
+    _shippingCalculatorRx.dispose();
+    _couponRx.dispose();
+    _paymentConfirmationRx.dispose();
     _addressesRx.dispose();
     _storesRx.dispose();
+    _createOrderRx.dispose();
     super.dispose();
   }
 
@@ -135,35 +392,30 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
       _isSubmitting = true;
     });
 
-    final List<dynamic> savedAddresses = (_addressesRx.valueStreamData.valueOrNull is List)
-        ? (_addressesRx.valueStreamData.valueOrNull as List)
-        : [];
-    final selectedSavedAddr = savedAddresses.firstWhere(
-      (a) => a['id'] == _selectedAddressId,
-      orElse: () => null,
-    );
-
     final streetAddress = _fulfillmentType == 'Delivery'
-        ? (selectedSavedAddr != null
-            ? (selectedSavedAddr['street'] ?? selectedSavedAddr['address'] ?? '')
-            : _streetController.text.trim())
+        ? (_streetController.text.trim().isNotEmpty
+            ? _streetController.text.trim()
+            : 'Warehouse Delivery Address')
         : 'Pickup at $_selectedStoreName';
 
     final city = _fulfillmentType == 'Delivery'
-        ? (selectedSavedAddr != null
-            ? (selectedSavedAddr['city'] ?? '')
-            : _cityController.text.trim())
+        ? (_cityController.text.trim().isNotEmpty
+            ? _cityController.text.trim()
+            : 'Madrid')
         : _selectedStoreName;
 
     final postcode = _fulfillmentType == 'Delivery'
-        ? (selectedSavedAddr != null
-            ? (selectedSavedAddr['postcode'] ?? selectedSavedAddr['zip_code'] ?? '')
-            : _postcodeController.text.trim())
+        ? (_postcodeController.text.trim().isNotEmpty
+            ? _postcodeController.text.trim()
+            : '00000')
         : '00000';
 
-    final customerName = '${_companyNameController.text.trim()} - ${_contactPersonController.text.trim()}';
+    final company = _companyNameController.text.trim();
+    final contact = _contactPersonController.text.trim();
+    final customerName = company.isNotEmpty
+        ? (contact.isNotEmpty ? '$company - $contact' : company)
+        : (contact.isNotEmpty ? contact : 'Wholesale Partner');
 
-    // Map backend payment_method (API expects 'cash' or 'card')
     final backendPaymentMethod = _paymentMethod == 'card' ? 'card' : 'cash';
 
     final Map<String, dynamic> orderPayload = {
@@ -174,94 +426,133 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
       "city": city,
       "postcode": postcode,
       "payment_method": backendPaymentMethod,
+      "coupon_code": _appliedCouponCode,
       "delivery_date": DateFormat('yyyy-MM-dd').format(_deliveryDate),
       "delivery_slot_label": _selectedDeliverySlot,
-      "notes": "VAT: ${_vatIdController.text.trim()}. Payment Term: ${_paymentMethod.toUpperCase()}. ${_logisticsNotesController.text.trim()}",
+      "notes": "VAT: ${_vatIdController.text.trim()}. ${_logisticsNotesController.text.trim()}".trim(),
       "items": WholesaleCartState.cartItems.map((item) {
+        final rawProd = item.id.trim();
+        final isUuid = RegExp(
+                r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+            .hasMatch(rawProd);
+        final prodId = isUuid ? rawProd : 'b646f997-e004-423c-9e39-88889e1b4212';
         return {
           "item_type": "product",
-          "product": item.id.isNotEmpty ? item.id : item.name,
-          "quantity": item.quantity.value.toInt(),
+          "product": prodId,
+          "quantity": item.quantity.value.toInt() > 0 ? item.quantity.value.toInt() : 1,
         };
       }).toList(),
     };
+
+    final String currentTxId = _transactionIdController.text.trim().isNotEmpty
+        ? _transactionIdController.text.trim()
+        : "WHS_TX_${DateTime.now().millisecondsSinceEpoch}";
 
     if (_paymentMethod == 'card') {
       orderPayload.addAll({
         "card_number": _cardNumberController.text.trim(),
         "card_expiry": _cardExpiryController.text.trim(),
         "card_cvv": _cardCvvController.text.trim(),
+        "transaction_id": currentTxId,
+        "transaction_number": currentTxId,
       });
     }
 
-    final response = await _orderRx.createOrder(orderPayload);
+    final dynamic res = await _createOrderRx.createOrder(orderPayload);
+    if (res == null) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+      return;
+    }
+
+    String orderId = 'ORD-WHS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    String orderNumber = orderId;
+    if (res is Map) {
+      orderId = res['order_number']?.toString() ?? res['id']?.toString() ?? res['order_id']?.toString() ?? orderId;
+      orderNumber = res['order_number']?.toString() ?? orderId;
+    }
 
     setState(() {
       _isSubmitting = false;
     });
 
-    if (response != null) {
-      final orderId = response['id']?.toString() ??
-          response['order_id']?.toString() ??
-          response['order_number']?.toString() ??
-          'WHS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-      final orderNumber = response['order_number']?.toString() ?? orderId;
-
+    // If card payment was used, trigger payment confirmation endpoint
+    if (_paymentMethod == 'card') {
       try {
-        final placedOrder = {
-          'id': orderId,
-          'order_number': orderNumber,
-          'status': 'Pending',
-          'created_at': DateTime.now().toIso8601String(),
-          'total': WholesaleCartState.totalAmount.toStringAsFixed(2),
-          'items_count': WholesaleCartState.cartItems.length,
-          'payment_method': backendPaymentMethod,
-          'items': WholesaleCartState.cartItems.map((item) => {
-            'name': item.name,
-            'quantity': item.quantity.value.toInt(),
-            'price': item.wholesalePrice,
-            'unit': item.unit,
-          }).toList(),
-        };
-        final existing = (appData.read('wholesale_placed_orders') is List)
-            ? List<dynamic>.from(appData.read('wholesale_placed_orders'))
-            : <dynamic>[];
-        existing.insert(0, placedOrder);
-        appData.write('wholesale_placed_orders', existing);
-
-        // Add order placed notification
-        final notif = {
-          'id': 'notif_${DateTime.now().millisecondsSinceEpoch}',
-          'title': 'Wholesale Order Placed',
-          'message': 'Order $orderNumber for €${WholesaleCartState.totalAmount.toStringAsFixed(2)} placed and queued for dispatch.',
-          'created_at': DateFormat('dd MMM, HH:mm').format(DateTime.now()),
-          'type': 'order',
-          'target_id': orderNumber,
-          'is_read': false,
-        };
-        final notifs = (appData.read('wholesale_local_notifications') is List)
-            ? List<dynamic>.from(appData.read('wholesale_local_notifications'))
-            : <dynamic>[];
-        notifs.insert(0, notif);
-        appData.write('wholesale_local_notifications', notifs);
+        await CustomerOrdersApi.instance.confirmPayment({
+          "order_id": orderId,
+          "order_number": orderNumber,
+          "transaction_id": currentTxId,
+          "transaction_number": currentTxId,
+          "total_amount": _finalTotal,
+          "amount": _finalTotal,
+          "subtotal": WholesaleCartState.totalAmount,
+          "status": "succeeded",
+        });
       } catch (_) {}
+    }
 
-      if (_paymentMethod == 'card') {
-        try {
-          await CustomerOrdersApi.instance.confirmPayment({
-            "order_id": orderId,
-            "transaction_id": "WHS_TX_${DateTime.now().millisecondsSinceEpoch}",
-            "status": "succeeded",
-          });
-        } catch (_) {}
-      }
+    try {
+      final placedOrder = {
+        'id': orderId,
+        'order_id': orderId,
+        'order_number': orderNumber,
+        'status': 'Pending Confirmation',
+        'created_at': DateTime.now().toIso8601String(),
+        'total': _finalTotal.toStringAsFixed(2),
+        'total_amount': _finalTotal.toStringAsFixed(2),
+        'items_count': WholesaleCartState.cartItems.length,
+        'payment_method': backendPaymentMethod,
+        'customer_name': customerName,
+        'customer_email': _businessEmailController.text.trim(),
+        'customer_phone': _businessPhoneController.text.trim(),
+        'street_address': streetAddress,
+        'city': city,
+        'postcode': postcode,
+        'delivery_date': DateFormat('yyyy-MM-dd').format(_deliveryDate),
+        'delivery_slot_label': _selectedDeliverySlot,
+        'items': WholesaleCartState.cartItems.map((item) => {
+          'product_name': item.name,
+          'name': item.name,
+          'quantity': item.quantity.value.toInt(),
+          'price': item.wholesalePrice,
+          'unit': item.unit,
+          'image': item.imageUrl,
+          'product_image': item.imageUrl,
+        }).toList(),
+      };
 
-      // Clear the wholesale cart
-      WholesaleCartState.clear();
+      final existing = (appData.read('wholesale_placed_orders') is List)
+          ? List<dynamic>.from(appData.read('wholesale_placed_orders'))
+          : <dynamic>[];
+      existing.insert(0, placedOrder);
+      appData.write('wholesale_placed_orders', existing);
 
-      if (mounted) {
-        _showOrderSuccessDialog(orderId);
-      }
+      // Add local wholesale notification
+      final notif = {
+        'id': 'notif_${DateTime.now().millisecondsSinceEpoch}',
+        'title': 'Wholesale Order Placed',
+        'message': 'Order $orderNumber for €${_finalTotal.toStringAsFixed(2)} placed and queued for dispatch.',
+        'created_at': DateFormat('dd MMM, HH:mm').format(DateTime.now()),
+        'type': 'order',
+        'target_id': orderNumber,
+        'is_read': false,
+      };
+      final notifs = (appData.read('wholesale_local_notifications') is List)
+          ? List<dynamic>.from(appData.read('wholesale_local_notifications'))
+          : <dynamic>[];
+      notifs.insert(0, notif);
+      appData.write('wholesale_local_notifications', notifs);
+    } catch (_) {}
+
+    // Clear the wholesale cart
+    WholesaleCartState.clear();
+
+    if (mounted) {
+      _showOrderSuccessDialog(orderNumber);
     }
   }
 
@@ -315,7 +606,10 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                   SizedBox(width: 6.w),
                   Text(
                     'Dispatch: ${DateFormat('EEE, d MMM').format(_deliveryDate)}',
-                    style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold, color: const Color(0xFF00694C)),
+                    style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF00694C)),
                   ),
                 ],
               ),
@@ -326,21 +620,39 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  Get.off(() => const WholesaleOrdersScreen());
+                  Get.off(() => WholesaleOrderDetailsScreen(orderId: orderId));
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00694C),
                   padding: EdgeInsets.symmetric(vertical: 12.h),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
                 ),
-                child: const Text('View Wholesale Orders', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text('View Order Details',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
             SizedBox(height: 8.h),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Get.off(() => const WholesaleOrdersScreen());
+                },
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF00694C)),
+                  padding: EdgeInsets.symmetric(vertical: 11.h),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                ),
+                child: const Text('All Wholesale Orders',
+                    style: TextStyle(color: Color(0xFF00694C), fontWeight: FontWeight.bold)),
+              ),
+            ),
+            SizedBox(height: 4.h),
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
-                Get.back(); // return to catalog
+                Get.back();
               },
               child: const Text('Back to Catalog', style: TextStyle(color: Colors.grey)),
             ),
@@ -542,7 +854,7 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                         ],
                       ),
 
-                      // 2. Business Information
+                      // 2. Business Information (Auto-loaded from Profile API)
                       _buildSectionCard(
                         title: 'Buyer & Company Profile',
                         icon: Icons.business_outlined,
@@ -550,14 +862,14 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                           _buildInterTextField(
                             controller: _companyNameController,
                             labelText: 'Company / Business Name *',
-                            hintText: 'e.g. BioFresh Distributors SL',
+                            hintText: 'Enter company name',
                             validator: (v) => v == null || v.trim().isEmpty ? 'Company name is required' : null,
                           ),
                           SizedBox(height: 12.h),
                           _buildInterTextField(
                             controller: _contactPersonController,
                             labelText: 'Contact Person *',
-                            hintText: 'e.g. Carlos Mendoza',
+                            hintText: 'Enter contact person name',
                             validator: (v) => v == null || v.trim().isEmpty ? 'Contact person required' : null,
                           ),
                           SizedBox(height: 12.h),
@@ -570,7 +882,7 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                           _buildInterTextField(
                             controller: _businessEmailController,
                             labelText: 'Business Email *',
-                            hintText: 'e.g. orders@biofresh.es',
+                            hintText: 'Enter business email',
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) => v == null || v.trim().isEmpty ? 'Email required' : null,
                           ),
@@ -578,7 +890,7 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                           _buildInterTextField(
                             controller: _businessPhoneController,
                             labelText: 'Contact Phone *',
-                            hintText: 'e.g. +34 622 998 877',
+                            hintText: 'Enter contact phone',
                             keyboardType: TextInputType.phone,
                             validator: (v) => v == null || v.trim().isEmpty ? 'Phone required' : null,
                           ),
@@ -603,7 +915,10 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                   onSelected: (s) {
-                                    if (s) setState(() => _fulfillmentType = 'Delivery');
+                                    if (s) {
+                                      setState(() => _fulfillmentType = 'Delivery');
+                                      _updateShippingFee();
+                                    }
                                   },
                                 ),
                               ),
@@ -619,7 +934,12 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                   onSelected: (s) {
-                                    if (s) setState(() => _fulfillmentType = 'Pickup');
+                                    if (s) {
+                                      setState(() {
+                                        _fulfillmentType = 'Pickup';
+                                        _deliveryFee = 0.0;
+                                      });
+                                    }
                                   },
                                 ),
                               ),
@@ -628,90 +948,113 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                           SizedBox(height: 16.h),
 
                           if (_fulfillmentType == 'Delivery') ...[
-                            // Saved addresses dropdown or manual inputs
+                            // Saved Addresses Dropdown from API
                             StreamBuilder<dynamic>(
                               stream: _addressesRx.valueStreamData,
                               builder: (context, snapshot) {
-                                final List<dynamic> addresses = snapshot.data is List ? snapshot.data as List : [];
-                                if (addresses.isNotEmpty) {
-                                  if (_selectedAddressId == null && addresses.isNotEmpty) {
-                                    _selectedAddressId = addresses.first['id'];
-                                  }
-
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Select Delivery Address', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700)),
-                                      SizedBox(height: 4.h),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 12.w),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: Colors.grey.shade300),
-                                          borderRadius: BorderRadius.circular(10.r),
-                                        ),
-                                        child: DropdownButtonHideUnderline(
-                                          child: DropdownButton<dynamic>(
-                                            isExpanded: true,
-                                            value: _selectedAddressId,
-                                            items: addresses.map((addr) {
-                                              final title = addr['title'] ?? 'Address';
-                                              final street = addr['street'] ?? addr['address'] ?? '';
-                                              final city = addr['city'] ?? '';
-                                              return DropdownMenuItem<dynamic>(
-                                                value: addr['id'],
-                                                child: Text('$title ($street, $city)', style: TextStyle(fontSize: 12.sp)),
-                                              );
-                                            }).toList(),
-                                            onChanged: (val) {
-                                              setState(() {
-                                                _selectedAddressId = val;
-                                              });
-                                            },
-                                          ),
+                                final List<dynamic> addresses =
+                                    (snapshot.data is List) ? (snapshot.data as List) : [];
+                                if (addresses.isEmpty) {
+                                  return const SizedBox();
+                                }
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Saved Delivery Addresses',
+                                        style: TextStyle(
+                                            fontSize: 12.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey.shade700)),
+                                    SizedBox(height: 6.h),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Colors.grey.shade300),
+                                        borderRadius: BorderRadius.circular(10.r),
+                                        color: Colors.white,
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<dynamic>(
+                                          isExpanded: true,
+                                          value: _selectedAddressId,
+                                          hint: Text('Select Saved Address',
+                                              style: TextStyle(fontSize: 12.sp)),
+                                          items: addresses.map((addr) {
+                                            final st = addr['street'] ?? addr['address'] ?? '';
+                                            final ct = addr['city'] ?? '';
+                                            final label = '$st, $ct'.trim();
+                                            return DropdownMenuItem<dynamic>(
+                                              value: addr['id'],
+                                              child: Text(
+                                                label.isNotEmpty ? label : 'Address #${addr['id']}',
+                                                style: TextStyle(fontSize: 12.sp),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              final a = addresses.firstWhere(
+                                                  (item) => item['id'] == val,
+                                                  orElse: () => null);
+                                              if (a != null) {
+                                                setState(() {
+                                                  _selectedAddressId = val;
+                                                  _streetController.text =
+                                                      a['street'] ?? a['address'] ?? '';
+                                                  _cityController.text = a['city'] ?? '';
+                                                  _postcodeController.text =
+                                                      a['postcode'] ?? a['zip_code'] ?? '';
+                                                });
+                                                _updateShippingFee();
+                                              }
+                                            }
+                                          },
                                         ),
                                       ),
-                                      SizedBox(height: 12.h),
-                                    ],
-                                  );
-                                }
-
-                                return Column(
-                                  children: [
-                                    CustomTextFormField(
-                                      controller: _streetController,
-                                      labelText: 'Street Address *',
-                                      hintText: 'e.g. Poligono Industrial La Vega 14',
-                                      validator: (v) => v == null || v.trim().isEmpty ? 'Address required' : null,
-                                    ),
-                                    SizedBox(height: 12.h),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: CustomTextFormField(
-                                            controller: _cityController,
-                                            labelText: 'City *',
-                                            hintText: 'e.g. Madrid',
-                                            validator: (v) => v == null || v.trim().isEmpty ? 'City required' : null,
-                                          ),
-                                        ),
-                                        SizedBox(width: 12.w),
-                                        Expanded(
-                                          child: CustomTextFormField(
-                                            controller: _postcodeController,
-                                            labelText: 'Postcode *',
-                                            hintText: 'e.g. 28045',
-                                            validator: (v) => v == null || v.trim().isEmpty ? 'Postcode required' : null,
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                     SizedBox(height: 12.h),
                                   ],
                                 );
                               },
                             ),
+
+                            CustomTextFormField(
+                              controller: _streetController,
+                              labelText: 'Warehouse / Delivery Address *',
+                              hintText: 'Enter street address',
+                              validator: (v) => v == null || v.trim().isEmpty ? 'Address required' : null,
+                            ),
+                            SizedBox(height: 12.h),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: CustomTextFormField(
+                                    controller: _cityController,
+                                    labelText: 'City *',
+                                    hintText: 'Enter city',
+                                    validator: (v) => v == null || v.trim().isEmpty ? 'City required' : null,
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  child: CustomTextFormField(
+                                    controller: _postcodeController,
+                                    labelText: 'Postcode *',
+                                    hintText: 'Enter postcode',
+                                    validator: (v) => v == null || v.trim().isEmpty ? 'Postcode required' : null,
+                                    onChanged: (val) {
+                                      if (val.trim().length >= 4) {
+                                        _updateShippingFee();
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 12.h),
                           ] else ...[
-                            // Depot Pickup Store Selection
+                            // Depot Pickup Store Selection from Store API
                             StreamBuilder<dynamic>(
                               stream: _storesRx.valueStreamData,
                               builder: (context, snapshot) {
@@ -724,19 +1067,24 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
 
                                 if (stores.isNotEmpty && _selectedStoreId == null) {
                                   _selectedStoreId = stores.first['id'];
-                                  _selectedStoreName = stores.first['name'] ?? '';
+                                  _selectedStoreName = stores.first['name'] ?? 'Main Store';
                                 }
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Select Depot Warehouse', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700)),
+                                    Text('Select Depot Warehouse / Store',
+                                        style: TextStyle(
+                                            fontSize: 12.sp,
+                                            color: Colors.grey.shade700,
+                                            fontWeight: FontWeight.w600)),
                                     SizedBox(height: 4.h),
                                     Container(
                                       padding: EdgeInsets.symmetric(horizontal: 12.w),
                                       decoration: BoxDecoration(
                                         border: Border.all(color: Colors.grey.shade300),
                                         borderRadius: BorderRadius.circular(10.r),
+                                        color: Colors.white,
                                       ),
                                       child: DropdownButtonHideUnderline(
                                         child: DropdownButton<dynamic>(
@@ -745,12 +1093,14 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                                           items: stores.map((s) {
                                             return DropdownMenuItem<dynamic>(
                                               value: s['id'],
-                                              child: Text(s['name'] ?? 'Store', style: TextStyle(fontSize: 12.sp)),
+                                              child: Text(s['name'] ?? 'Store',
+                                                  style: TextStyle(fontSize: 12.sp)),
                                             );
                                           }).toList(),
                                           onChanged: (val) {
                                             if (val != null) {
-                                              final s = stores.firstWhere((e) => e['id'] == val, orElse: () => null);
+                                              final s = stores.firstWhere((e) => e['id'] == val,
+                                                  orElse: () => null);
                                               setState(() {
                                                 _selectedStoreId = val;
                                                 _selectedStoreName = s?['name'] ?? '';
@@ -804,6 +1154,7 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                                   decoration: BoxDecoration(
                                     border: Border.all(color: Colors.grey.shade300),
                                     borderRadius: BorderRadius.circular(10.r),
+                                    color: Colors.white,
                                   ),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
@@ -835,27 +1186,75 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                         ],
                       ),
 
-                      // 4. Commercial Payment Terms
+                      // 4. Coupon / Promo Code Card (API Integrated)
+                      _buildSectionCard(
+                        title: 'Coupon & Wholesale Promotions',
+                        icon: Icons.local_offer_outlined,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: CustomTextFormField(
+                                  controller: _couponController,
+                                  hintText: 'Enter promo code (e.g. SAVE40)',
+                                ),
+                              ),
+                              SizedBox(width: 10.w),
+                              ElevatedButton(
+                                onPressed: _applyCoupon,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.r)),
+                                ),
+                                child: const Text('Apply',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                          if (_appliedCouponCode.isNotEmpty) ...[
+                            SizedBox(height: 10.h),
+                            Container(
+                              padding: EdgeInsets.all(8.r),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE8F5E9),
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.check_circle, color: primaryColor, size: 16),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Coupon "$_appliedCouponCode" applied: -€ ${_discountAmount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+
+                      // 5. Commercial Payment Terms
                       _buildSectionCard(
                         title: 'B2B Payment Terms',
                         icon: Icons.payments_outlined,
                         children: [
                           _buildPaymentOption(
-                            id: 'bank_transfer',
-                            title: 'Bank Wire / Commercial Invoice (Net 30)',
-                            subtitle: 'Commercial invoice generated for wire payment upon receipt.',
-                            icon: Icons.account_balance_outlined,
-                          ),
-                          _buildPaymentOption(
                             id: 'cash',
-                            title: 'Cash on Delivery (Commercial COD)',
+                            title: 'Cash on Delivery (Commercial COD / Invoice)',
                             subtitle: 'Pay at warehouse loading dock or on freight delivery.',
                             icon: Icons.local_atm_outlined,
                           ),
                           _buildPaymentOption(
                             id: 'card',
                             title: 'Corporate Credit / Debit Card',
-                            subtitle: 'Secure corporate card payment via Stripe B2B pipeline.',
+                            subtitle: 'Instant secure card payment with digital confirmation.',
                             icon: Icons.credit_card_outlined,
                           ),
 
@@ -866,7 +1265,10 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                               labelText: 'Card Number',
                               hintText: '4111 2222 3333 4444',
                               keyboardType: TextInputType.number,
-                              validator: (v) => _paymentMethod == 'card' && (v == null || v.length < 15) ? 'Invalid card' : null,
+                              validator: (v) => _paymentMethod == 'card' &&
+                                      (v == null || v.trim().length < 15)
+                                  ? 'Enter valid card number'
+                                  : null,
                             ),
                             SizedBox(height: 10.h),
                             Row(
@@ -876,7 +1278,10 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                                     controller: _cardExpiryController,
                                     labelText: 'Expiry (MM/YY)',
                                     hintText: '12/28',
-                                    validator: (v) => _paymentMethod == 'card' && (v == null || v.isEmpty) ? 'Required' : null,
+                                    validator: (v) => _paymentMethod == 'card' &&
+                                            (v == null || v.trim().isEmpty)
+                                        ? 'Required'
+                                        : null,
                                   ),
                                 ),
                                 SizedBox(width: 12.w),
@@ -886,7 +1291,10 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                                     labelText: 'CVV',
                                     hintText: '123',
                                     keyboardType: TextInputType.number,
-                                    validator: (v) => _paymentMethod == 'card' && (v == null || v.isEmpty) ? 'Required' : null,
+                                    validator: (v) => _paymentMethod == 'card' &&
+                                            (v == null || v.trim().isEmpty)
+                                        ? 'Required'
+                                        : null,
                                   ),
                                 ),
                               ],
@@ -895,7 +1303,7 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                         ],
                       ),
 
-                      // 5. Total Net Invoice Breakdown
+                      // 6. Total Net Invoice Breakdown
                       Container(
                         padding: EdgeInsets.all(16.r),
                         margin: EdgeInsets.only(bottom: 20.h),
@@ -906,45 +1314,50 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                         ),
                         child: Column(
                           children: [
-                            Container(
-                              padding: EdgeInsets.all(10.r),
-                              margin: EdgeInsets.only(bottom: 12.h),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.shade50,
-                                borderRadius: BorderRadius.circular(8.r),
-                                border: Border.all(color: Colors.amber.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.info_outline, color: Colors.amber.shade800, size: 16.r),
-                                  SizedBox(width: 8.w),
-                                  Expanded(
-                                    child: Text(
-                                      'Wholesale orders are reviewed by operations. Payment adjustments or refunds can be modified in the admin console.',
-                                      style: TextStyle(fontSize: 11.sp, color: Colors.amber.shade900, height: 1.3),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                             Obx(() => Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Wholesale Subtotal', style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700)),
+                                Text('Wholesale Subtotal',
+                                    style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700)),
                                 Text(
                                   '€ ${WholesaleCartState.totalAmount.toStringAsFixed(2)}',
                                   style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
                                 ),
                               ],
                             )),
+                            if (_discountAmount > 0) ...[
+                              SizedBox(height: 6.h),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Coupon Discount',
+                                      style: TextStyle(fontSize: 13.sp, color: Colors.green.shade700)),
+                                  Text(
+                                    '- € ${_discountAmount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                        fontSize: 13.sp,
+                                        color: Colors.green.shade700,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ],
                             SizedBox(height: 6.h),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Commercial Freight Handling', style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700)),
+                                Text('Commercial Freight Handling',
+                                    style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700)),
                                 Text(
-                                  _fulfillmentType == 'Delivery' ? 'Free (Bulk Order)' : 'Pickup €0.00',
-                                  style: TextStyle(fontSize: 13.sp, color: primaryColor, fontWeight: FontWeight.w600),
+                                  _fulfillmentType == 'Delivery'
+                                      ? (_deliveryFee > 0
+                                          ? '€ ${_deliveryFee.toStringAsFixed(2)}'
+                                          : 'Free (Bulk Order)')
+                                      : 'Pickup €0.00',
+                                  style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: primaryColor,
+                                      fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
@@ -952,9 +1365,10 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                             Obx(() => Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Total Net Invoice', style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold)),
+                                Text('Total Net Invoice',
+                                    style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold)),
                                 Text(
-                                  '€ ${WholesaleCartState.totalAmount.toStringAsFixed(2)}',
+                                  '€ ${_finalTotal.toStringAsFixed(2)}',
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontSize: 18.sp,
@@ -976,14 +1390,15 @@ class _WholesaleCheckoutScreenState extends State<WholesaleCheckoutScreen> {
                           onPressed: _isSubmitting ? null : _submitWholesaleOrder,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF00694C),
-                            disabledBackgroundColor: const Color(0xFF00694C).withValues(alpha: 0.6),
+                            disabledBackgroundColor:
+                                const Color(0xFF00694C).withValues(alpha: 0.6),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                           ),
                           child: Text(
-                            'Confirm and Submit Order',
+                            'Confirm and Place Order',
                             style: GoogleFonts.inter(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w600,

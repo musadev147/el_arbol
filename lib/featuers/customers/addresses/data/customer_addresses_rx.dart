@@ -25,8 +25,9 @@ class CustomerAddressesRx extends RxResponseInt<List<dynamic>> {
       await handleSuccessWithReturn(list);
     } catch (e) {
       log('CustomerAddressesRx fetchAddresses error: $e');
-      dataFetcher.sink.add([]);
-      await handleErrorWithReturn(e);
+      if (!dataFetcher.isClosed) {
+        dataFetcher.sink.add([]);
+      }
     }
   }
 

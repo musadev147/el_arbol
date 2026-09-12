@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import '../data/customer_addresses_rx.dart';
 
 class CustomerAddressFormScreen extends StatefulWidget {

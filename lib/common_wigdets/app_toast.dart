@@ -11,6 +11,16 @@ class AppToast {
     required List<Color> gradient,
     required IconData icon,
   }) {
+    String cleanMessage = message.trim();
+    if (cleanMessage.contains('<!DOCTYPE') ||
+        cleanMessage.contains('<html') ||
+        cleanMessage.contains('Traceback (most recent call last)')) {
+      cleanMessage = 'A server error occurred. Please try again later.';
+    }
+    if (cleanMessage.length > 200) {
+      cleanMessage = '${cleanMessage.substring(0, 197)}...';
+    }
+
     Get.closeAllSnackbars();
 
     Get.showSnackbar(GetSnackBar(
@@ -44,7 +54,9 @@ class AppToast {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                message,
+                cleanMessage,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,

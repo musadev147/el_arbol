@@ -101,7 +101,15 @@ final class ErrorHandler implements Exception {
           String errorMessage = error.response?.statusMessage ?? "";
 
           if (responseData is Map<String, dynamic>) {
-            errorMessage = responseData['message'] ??
+            String? detailedErrors;
+            if (responseData['errors'] is List && (responseData['errors'] as List).isNotEmpty) {
+              detailedErrors = (responseData['errors'] as List).map((e) => e.toString()).join('\n');
+            } else if (responseData['errors'] is Map) {
+              detailedErrors = (responseData['errors'] as Map).values.map((v) => v is List ? v.join(', ') : v.toString()).join('\n');
+            }
+
+            errorMessage = detailedErrors ??
+                responseData['message'] ??
                 responseData['detail'] ??
                 responseData['error'] ??
                 responseData['msg'] ??

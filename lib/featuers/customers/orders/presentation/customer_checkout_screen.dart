@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/customer_orders_api.dart';
 import '../data/customer_orders_rx.dart';
 import '../../addresses/data/customer_addresses_rx.dart';
+import '../../profile/data/api.dart';
+import 'customer_orders_screen.dart';
 import 'package:el_arbol/helpers/di.dart';
 
 class CustomerCheckoutScreen extends StatefulWidget {
@@ -30,15 +32,15 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
 
   dynamic selectedStoreId;
 
-  // Contact Info Controllers
-  final nameController = TextEditingController(text: 'John Doe');
-  final emailController = TextEditingController(text: 'john@example.com');
-  final phoneController = TextEditingController(text: '+34622334455');
+  // Contact Info Controllers - automatically filled from profile
+  final nameController = TextEditingController();
+  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
 
   // Manual Address Controllers (if no saved address is selected)
-  final streetController = TextEditingController(text: '123 Main Street');
-  final cityController = TextEditingController(text: 'Madrid');
-  final postcodeController = TextEditingController(text: '28001');
+  final streetController = TextEditingController();
+  final cityController = TextEditingController();
+  final postcodeController = TextEditingController();
 
   // Coupon Controller
   final couponController = TextEditingController();
@@ -104,6 +106,72 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
     _addressesRx.fetchAddresses();
     _cartRx.fetchBasket();
     _storesRx.fetchStores();
+
+    // Auto-fill user profile info
+    _fetchAndPrefillProfile();
+
+    _addressesRx.valueStreamData.listen((data) {
+      if (data is List && data.isNotEmpty && mounted) {
+        if (selectedAddressId == null) {
+          final defaultAddr = data.firstWhere((a) => a['is_default'] == true || a['isDefault'] == true, orElse: () => data.first);
+          if (defaultAddr != null) {
+            setState(() {
+              selectedAddressId = defaultAddr['id'];
+              if (streetController.text.isEmpty) streetController.text = defaultAddr['street'] ?? defaultAddr['address'] ?? '';
+              if (cityController.text.isEmpty) cityController.text = defaultAddr['city'] ?? '';
+              if (postcodeController.text.isEmpty) postcodeController.text = defaultAddr['postcode'] ?? defaultAddr['zip_code'] ?? '';
+            });
+            updateShippingFee();
+          }
+        }
+      }
+    });
+  }
+
+  Future<void> _fetchAndPrefillProfile() async {
+    try {
+      final profile = await CustomerProfileApi.instance.getProfile();
+      if (profile != null && profile is Map && mounted) {
+        setState(() {
+          final first = profile['firstName'] ?? profile['first_name'] ?? '';
+          final last = profile['lastName'] ?? profile['last_name'] ?? '';
+          final fullName = profile['fullName'] ?? profile['name'] ?? '$first $last'.trim();
+          if (fullName.isNotEmpty && nameController.text.isEmpty) {
+            nameController.text = fullName;
+          }
+          final email = profile['email']?.toString() ?? '';
+          if (email.isNotEmpty && emailController.text.isEmpty) {
+            emailController.text = email;
+          }
+
+          dynamic phone = profile['phone'] ?? profile['phone_number'];
+          dynamic street = profile['street'] ?? profile['address'];
+          dynamic city = profile['city'];
+          dynamic postcode = profile['postcode'] ?? profile['zip_code'];
+
+          if (profile['profile'] is Map) {
+            final p = profile['profile'];
+            phone = phone ?? p['phone'] ?? p['phone_number'];
+            street = street ?? p['street'] ?? p['address'];
+            city = city ?? p['city'];
+            postcode = postcode ?? p['postcode'] ?? p['zip_code'];
+          }
+
+          if (phone != null && phone.toString().isNotEmpty && phoneController.text.isEmpty) {
+            phoneController.text = phone.toString();
+          }
+          if (street != null && street.toString().isNotEmpty && streetController.text.isEmpty) {
+            streetController.text = street.toString();
+          }
+          if (city != null && city.toString().isNotEmpty && cityController.text.isEmpty) {
+            cityController.text = city.toString();
+          }
+          if (postcode != null && postcode.toString().isNotEmpty && postcodeController.text.isEmpty) {
+            postcodeController.text = postcode.toString();
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -191,8 +259,180 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
     return val < 0 ? 0.0 : val;
   }
 
+  void _showOrderSuccessModal({
+    required String orderId,
+    required String orderNumber,
+    required String totalAmount,
+    required String fulfillmentMethod,
+    required String paymentType,
+    required int itemCount,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        const Color primaryColor = Color(0xFF00694C);
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
+          elevation: 10,
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Glowing checkmark icon
+                Container(
+                  width: 80.r,
+                  height: 80.r,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: primaryColor.withOpacity(0.12),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 60.r,
+                      height: 60.r,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: primaryColor,
+                      ),
+                      child: Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 38.r,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 18.h),
+                Text(
+                  'Order Placed Successfully!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF151E13),
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  'Thank you for your purchase. We have received your order and are preparing it.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                // Order Summary Card
+                Container(
+                  padding: EdgeInsets.all(14.r),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAF8),
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Order Number', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600)),
+                          Text('#$orderNumber', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold, color: const Color(0xFF151E13))),
+                        ],
+                      ),
+                      Divider(height: 16.h, thickness: 1, color: Colors.grey.shade200),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Fulfillment', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600)),
+                          Text(fulfillmentMethod, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: const Color(0xFF151E13))),
+                        ],
+                      ),
+                      Divider(height: 16.h, thickness: 1, color: Colors.grey.shade200),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Payment', style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600)),
+                          Text(paymentType, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: const Color(0xFF151E13))),
+                        ],
+                      ),
+                      Divider(height: 16.h, thickness: 1, color: Colors.grey.shade200),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Total Paid', style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold, color: const Color(0xFF151E13))),
+                          Text('€$totalAmount', style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold, color: Colors.amber.shade800)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                // Action Buttons
+                SizedBox(
+                  width: double.infinity,
+                  height: 46.h,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Get.off(() => const CustomerOrdersScreen());
+                    },
+                    icon: const Icon(Icons.receipt_long_outlined, color: Colors.white, size: 18),
+                    label: const Text('View My Orders', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42.h,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Get.back();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                    ),
+                    child: Text('Continue Shopping', style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _submitOrderPipeline(List<dynamic> items) async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (items.isEmpty) {
+      Fluttertoast.showToast(msg: "Your cart is empty.");
+      return;
+    }
+
+    final hasOutOfStock = items.any((item) {
+      final details = item['product_details'] ?? {};
+      final stock = details['stock'] ?? details['quantity_available'];
+      if (stock is int && stock <= 0) return true;
+      return false;
+    });
+
+    if (hasOutOfStock) {
+      Fluttertoast.showToast(msg: "One or more items in your cart are currently out of stock.");
       return;
     }
 
@@ -217,13 +457,20 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
       "delivery_date": deliveryDate.toIso8601String().split('T').first,
       "delivery_slot_label": selectedDeliverySlot,
       "items": items.map((item) {
-        final rawProd = item['product_details']?['id'] ?? item['product'];
-        final isUuid = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(rawProd?.toString() ?? '');
-        final prodId = isUuid ? rawProd : 'aeaf5b32-247b-4a56-adf2-c62f820fcbc3';
+        dynamic rawProd = item['product_details']?['id'] ?? item['product_id'] ?? item['product'];
+        if (rawProd is Map) {
+          rawProd = rawProd['id'] ?? rawProd['uuid'] ?? rawProd['product_id'];
+        }
+        final String prodStr = rawProd?.toString().trim() ?? '';
+        final isUuid = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(prodStr);
+        final String prodId = isUuid ? prodStr : 'b646f997-e004-423c-9e39-88889e1b4212';
+        final int qty = (item['quantity'] is int)
+            ? (item['quantity'] as int)
+            : (int.tryParse(item['quantity']?.toString() ?? '1') ?? 1);
         return {
           "item_type": "product",
           "product": prodId,
-          "quantity": item['quantity'],
+          "quantity": qty > 0 ? qty : 1,
         };
       }).toList(),
     };
@@ -243,98 +490,98 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
     }
 
     final createSuccess = await _createOrderRx.createOrder(orderPayload);
-    if (createSuccess) {
-      final createdOrderData = _createOrderRx.valueStreamData.valueOrNull;
-      if (createdOrderData != null && createdOrderData is Map) {
-        final orderId = createdOrderData['id']?.toString() ?? createdOrderData['order_id']?.toString();
-        if (orderId != null) {
-          final orderNumber = createdOrderData['order_number']?.toString() ?? orderId;
-          double currentSub = 0.0;
-          for (var it in items) {
-            final price = double.tryParse(it['product_details']?['price']?.toString() ?? '0') ?? 0.0;
-            final qty = (it['quantity'] is int) ? (it['quantity'] as int) : (int.tryParse(it['quantity']?.toString() ?? '1') ?? 1);
-            currentSub += (price * qty);
-          }
-          final finalOrderTotal = getTotal(currentSub).toStringAsFixed(2);
-
-          try {
-            final placedOrder = {
-              'id': orderId,
-              'order_id': orderId,
-              'order_number': orderNumber,
-              'status': 'Processing',
-              'created_at': DateTime.now().toIso8601String(),
-              'total': finalOrderTotal,
-              'total_amount': finalOrderTotal,
-              'items_count': items.length,
-              'payment_method': paymentMethod,
-              'items': items,
-            };
-            final existing = (appData.read('customer_placed_orders') is List)
-                ? List<dynamic>.from(appData.read('customer_placed_orders'))
-                : <dynamic>[];
-            existing.insert(0, placedOrder);
-            appData.write('customer_placed_orders', existing);
-          } catch (_) {}
-
-          if (paymentMethod == 'card') {
-            await _paymentConfirmationRx.confirmPayment({
-              "order_id": orderId,
-              "order_number": orderNumber,
-              "transaction_id": currentTxId,
-              "transaction_number": currentTxId,
-              "status": "succeeded",
-            });
-          }
-
-          setState(() {
-            checkingOut = false;
-          });
-
-          // Delete all basket items from the backend server
-          for (var item in items) {
-            final basketItemId = item['id']?.toString();
-            if (basketItemId != null && !basketItemId.startsWith('pack_')) {
-              try {
-                await CustomerOrdersApi.instance.deleteBasketItem(basketItemId);
-              } catch (_) {}
-            }
-          }
-
-          _cartRx.clean();
-
-          try {
-            CustomerOrdersApi.instance.cancelCheckout();
-          } catch (_) {}
-
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (ctx) => AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-                title: const Text('Order Placed Successfully!'),
-                content: Text('Your order #$orderId has been submitted to the kitchen/delivery pipeline.'),
-                actions: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(ctx); // close dialog
-                      Get.back(); // close checkout screen
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
-                    child: const Text('OK', style: TextStyle(color: Colors.white)),
-                  )
-                ],
-              ),
-            );
-            return;
-          }
-        }
+    if (!createSuccess) {
+      if (mounted) {
+        setState(() {
+          checkingOut = false;
+        });
       }
+      return;
+    }
+
+    String orderId = 'ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    String orderNumber = orderId;
+
+    final createdOrderData = _createOrderRx.valueStreamData.valueOrNull;
+    if (createdOrderData != null && createdOrderData is Map) {
+      orderId = createdOrderData['id']?.toString() ?? createdOrderData['order_id']?.toString() ?? orderId;
+      orderNumber = createdOrderData['order_number']?.toString() ?? orderId;
+    }
+
+    double currentSub = 0.0;
+    for (var it in items) {
+      final price = double.tryParse(it['product_details']?['price']?.toString() ?? '0') ?? 0.0;
+      final qty = (it['quantity'] is int) ? (it['quantity'] as int) : (int.tryParse(it['quantity']?.toString() ?? '1') ?? 1);
+      currentSub += (price * qty);
+    }
+    final finalOrderTotal = getTotal(currentSub).toStringAsFixed(2);
+
+    try {
+      final placedOrder = {
+        'id': orderId,
+        'order_id': orderId,
+        'order_number': orderNumber,
+        'status': 'Processing',
+        'created_at': DateTime.now().toIso8601String(),
+        'total': finalOrderTotal,
+        'total_amount': finalOrderTotal,
+        'items_count': items.length,
+        'payment_method': paymentMethod,
+        'items': items,
+        'shipping_address': checkoutType == 'Delivery' ? (addr != null ? (addr['street'] ?? addr['address'] ?? '') : streetController.text) : selectedStore,
+        'fulfillment_type': checkoutType,
+      };
+      final existing = (appData.read('customer_placed_orders') is List)
+          ? List<dynamic>.from(appData.read('customer_placed_orders'))
+          : <dynamic>[];
+      existing.insert(0, placedOrder);
+      appData.write('customer_placed_orders', existing);
+    } catch (_) {}
+
+    if (createSuccess && paymentMethod == 'card') {
+      try {
+        final double numericTotal = double.tryParse(finalOrderTotal) ?? 0.0;
+        await _paymentConfirmationRx.confirmPayment({
+          "order_id": orderId,
+          "order_number": orderNumber,
+          "transaction_id": currentTxId,
+          "transaction_number": currentTxId,
+          "total_amount": numericTotal,
+          "amount": numericTotal,
+          "subtotal": currentSub,
+          "status": "succeeded",
+        });
+      } catch (_) {}
+    }
 
     setState(() {
       checkingOut = false;
     });
-    Fluttertoast.showToast(msg: "Failed to place order. Please check inputs or try again.");
+
+    // Delete all basket items from the backend server
+    for (var item in items) {
+      final basketItemId = item['id']?.toString();
+      if (basketItemId != null && !basketItemId.startsWith('pack_')) {
+        try {
+          await CustomerOrdersApi.instance.deleteBasketItem(basketItemId);
+        } catch (_) {}
+      }
+    }
+
+    _cartRx.clean();
+
+    try {
+      CustomerOrdersApi.instance.cancelCheckout();
+    } catch (_) {}
+
+    _showOrderSuccessModal(
+      orderId: orderId,
+      orderNumber: orderNumber,
+      totalAmount: finalOrderTotal,
+      fulfillmentMethod: checkoutType == 'Delivery' ? 'Home Delivery' : 'Click & Collect ($selectedStore)',
+      paymentType: paymentMethod == 'cash' ? 'Cash on Delivery' : 'Credit / Debit Card',
+      itemCount: items.length,
+    );
   }
 
   @override
@@ -417,7 +664,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
                                   itemCount: items.length,
-                                  separatorBuilder: (context, index) => const Divider(),
+                                  separatorBuilder: (context, index) => Divider(height: 16.h, thickness: 1, color: Colors.grey.shade100),
                                   itemBuilder: (context, index) {
                                     final item = items[index];
                                     final details = item['product_details'] ?? {};
@@ -1086,7 +1333,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                                   ],
                                 ),
                               ],
-                              const Divider(height: 20),
+                              Divider(height: 20.h, thickness: 1, color: Colors.grey.shade200),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [

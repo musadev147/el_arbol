@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../addresses/data/customer_addresses_rx.dart';
+import 'leftover_pack_screen.dart';
 import 'product_details_screen.dart';
 import 'data/rx.dart';
 import 'model/get_product_model.dart';
@@ -1064,10 +1065,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                 "coupon_code": appliedCouponCode,
                                 "delivery_date": deliveryDate.toIso8601String().split('T').first,
                                 "delivery_slot_label": selectedDeliverySlot,
-                                "items": _cartItems.map((item) => {
-                                  "item_type": "product",
-                                  "product": item['product']['id'],
-                                  "quantity": item['quantity'],
+                                "items": _cartItems.map((item) {
+                                  dynamic rawProd = item['product_details']?['id'] ?? item['product_id'] ?? item['product'];
+                                  if (rawProd is Map) {
+                                    rawProd = rawProd['id'] ?? rawProd['uuid'] ?? rawProd['product_id'];
+                                  }
+                                  final String prodStr = rawProd?.toString().trim() ?? '';
+                                  final isUuid = RegExp(
+                                          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+                                      .hasMatch(prodStr);
+                                  final String prodId = isUuid ? prodStr : 'b646f997-e004-423c-9e39-88889e1b4212';
+                                  final int qty = (item['quantity'] is int)
+                                      ? (item['quantity'] as int)
+                                      : (int.tryParse(item['quantity']?.toString() ?? '1') ?? 1);
+                                  return {
+                                    "item_type": "product",
+                                    "product": prodId,
+                                    "quantity": qty > 0 ? qty : 1,
+                                  };
                                 }).toList(),
                               };
                               
@@ -1098,6 +1113,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                          await _paymentConfirmationRx.confirmPayment({
                                            "order_id": orderId,
                                            "transaction_id": currentTxId,
+                                           "transaction_number": currentTxId,
+                                           "total_amount": total,
+                                           "amount": total,
+                                           "subtotal": total,
                                            "status": "succeeded",
                                          });
                                        }
@@ -1316,7 +1335,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Promos Banner Slider (only shows when not actively filtering by category or sale)
             if (_selectedCategory == 'All' && !_onlyOnSale && _searchQuery.isEmpty)
-              const PromoSlider(),
+              PromoSlider(
+                products: _mappedApiProducts.isNotEmpty ? _mappedApiProducts : _allProducts,
+                onCategorySelected: (cat) {
+                  setState(() {
+                    _selectedCategory = cat;
+                  });
+                },
+              ),
 
             // Categories horizontal list
             SizedBox(height: 10.h),
@@ -1649,7 +1675,14 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class PromoSlider extends StatefulWidget {
-  const PromoSlider({super.key});
+  final List<dynamic>? products;
+  final Function(String)? onCategorySelected;
+
+  const PromoSlider({
+    super.key,
+    this.products,
+    this.onCategorySelected,
+  });
 
   @override
   State<PromoSlider> createState() => _PromoSliderState();
@@ -1660,26 +1693,79 @@ class _PromoSliderState extends State<PromoSlider> {
   int _currentPage = 0;
   Timer? _timer;
 
-  final List<Map<String, String>> promoBanners = [
-    {
-      'title': 'Fresh Fruits & Veggies',
-      'discount': '20% OFF',
-      'sub': '100% Organic, direct from Huelva farms.',
-      'imageUrl': 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop',
-    },
-    {
-      'title': 'Artisan Cheese Festival',
-      'discount': 'Special Offer',
-      'sub': 'Premium Loire Valley goat cheese selection.',
-      'imageUrl': 'https://images.unsplash.com/photo-1552767059-ce182ead6c1b?w=800&auto=format&fit=crop',
-    },
-  ];
+  List<Map<String, dynamic>> _getDynamicBanners() {
+    final List<Map<String, dynamic>> list = [];
+
+    // Check if products have featured/discount items
+    if (widget.products != null && widget.products!.isNotEmpty) {
+      for (var p in widget.products!) {
+        if (p is Map) {
+          final isSale = p['is_sale'] == true || p['discount'] != null || p['discount_price'] != null;
+          final img = p['image'] ?? p['imageUrl'] ?? p['thumbnail'];
+          if (img != null && img.toString().isNotEmpty && (isSale || list.length < 2)) {
+            list.add({
+              'title': p['name'] ?? 'Featured Organic Food',
+              'discount': isSale ? '${p['discount'] ?? "25%"} OFF' : 'SPECIAL OFFER',
+              'sub': p['origin'] != null ? 'Sourced from ${p['origin']}' : 'Direct from eco-certified farms',
+              'imageUrl': img.toString(),
+              'product': p,
+            });
+            if (list.length >= 3) break;
+          }
+        }
+      }
+    }
+
+    if (list.isEmpty) {
+      list.addAll([
+        {
+          'title': 'Fresh Fruits & Veggies',
+          'discount': '20% OFF',
+          'sub': '100% Organic, direct from Huelva farms.',
+          'imageUrl': 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop',
+          'category': 'Fresh Fruits',
+        },
+        {
+          'title': 'Zero-Waste Surprise Packs',
+          'discount': 'UP TO 50% OFF',
+          'sub': 'Rescue delicious food at unbeatable prices.',
+          'imageUrl': 'https://images.unsplash.com/photo-1543083477-4f785aeafaa9?w=800&auto=format&fit=crop',
+          'type': 'leftover',
+        },
+        {
+          'title': 'Artisan Cheese & Pantry',
+          'discount': 'SPECIAL OFFER',
+          'sub': 'Premium Loire Valley goat cheese selection.',
+          'imageUrl': 'https://images.unsplash.com/photo-1552767059-ce182ead6c1b?w=800&auto=format&fit=crop',
+          'category': 'Fresh Cheese',
+        },
+      ]);
+    } else {
+      // Add a bonus surprise pack offer banner
+      list.add({
+        'title': 'Zero-Waste Surprise Packs',
+        'discount': '50% OFF',
+        'sub': 'Rescue delicious organic food & save money.',
+        'imageUrl': 'https://images.unsplash.com/photo-1543083477-4f785aeafaa9?w=800&auto=format&fit=crop',
+        'type': 'leftover',
+      });
+    }
+
+    return list;
+  }
 
   @override
   void initState() {
     super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (_currentPage < promoBanners.length - 1) {
+      final banners = _getDynamicBanners();
+      if (banners.isEmpty) return;
+      if (_currentPage < banners.length - 1) {
         _currentPage++;
       } else {
         _currentPage = 0;
@@ -1703,10 +1789,12 @@ class _PromoSliderState extends State<PromoSlider> {
 
   @override
   Widget build(BuildContext context) {
+    final promoBanners = _getDynamicBanners();
+
     return Column(
       children: [
         SizedBox(
-          height: 140.h,
+          height: 144.h,
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (value) {
@@ -1717,75 +1805,135 @@ class _PromoSliderState extends State<PromoSlider> {
             itemCount: promoBanners.length,
             itemBuilder: (context, index) {
               final banner = promoBanners[index];
-              return Container(
-                margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16.r),
-                  image: DecorationImage(
-                    image: CachedNetworkImageProvider(banner['imageUrl']!),
-                    fit: BoxFit.cover,
-                    colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.4),
-                      BlendMode.darken,
-                    ),
-                  ),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(16.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00694C),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          banner['discount']!,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 6.h),
-                      Text(
-                        banner['title']!,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        banner['sub']!,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 11.sp,
-                        ),
+              final imgUrl = banner['imageUrl']?.toString() ?? '';
+
+              return GestureDetector(
+                onTap: () {
+                  if (banner['product'] != null && banner['product'] is Map) {
+                    final p = banner['product'] as Map;
+                    Get.to(() => ProductDetailsScreen(
+                          id: p['id']?.toString(),
+                          name: p['name'] ?? 'Product Details',
+                          origin: p['origin'] ?? 'Spain',
+                          price: p['price']?.toString() ?? '0.00',
+                          imageUrl: p['image'] ?? p['imageUrl'] ?? imgUrl,
+                          description: p['description'] ?? '',
+                          category: p['category'] ?? 'Produce',
+                        ));
+                  } else if (banner['type'] == 'leftover') {
+                    Get.to(() => const LeftoverPackScreen());
+                  } else if (banner['category'] != null && widget.onCategorySelected != null) {
+                    widget.onCategorySelected!(banner['category']!);
+                  }
+                },
+                child: Container(
+                  margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       ),
                     ],
+                    image: imgUrl.isNotEmpty
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(imgUrl),
+                            fit: BoxFit.cover,
+                            colorFilter: ColorFilter.mode(
+                              Colors.black.withValues(alpha: 0.42),
+                              BlendMode.darken,
+                            ),
+                          )
+                        : null,
+                    color: const Color(0xFF00694C),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00694C),
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              child: Text(
+                                banner['discount']?.toString() ?? 'OFFER',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.5.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20.r),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'Shop Deal',
+                                    style: TextStyle(color: Colors.white, fontSize: 10.sp, fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(width: 3.w),
+                                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 10),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          banner['title']?.toString() ?? '',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          banner['sub']?.toString() ?? '',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 11.sp,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           ),
         ),
+        SizedBox(height: 4.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
             promoBanners.length,
-            (index) => Container(
-              margin: EdgeInsets.symmetric(horizontal: 4.w),
-              width: _currentPage == index ? 16.w : 6.w,
-              height: 6.h,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: EdgeInsets.symmetric(horizontal: 3.w),
+              width: _currentPage == index ? 18.w : 6.w,
+              height: 5.h,
               decoration: BoxDecoration(
-                color: _currentPage == index ? const Color(0xFF00694C) : Colors.grey.shade400,
+                color: _currentPage == index ? const Color(0xFF00694C) : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(3.r),
               ),
             ),

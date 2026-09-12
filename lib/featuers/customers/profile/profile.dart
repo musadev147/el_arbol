@@ -249,7 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const Divider(),
+              Divider(color: Colors.grey.shade200),
               SizedBox(height: 12.h),
 
               Row(
@@ -483,7 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Link B2B Corporate Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp)),
-                const Divider(),
+                Divider(color: Colors.grey.shade200),
                 TextFormField(
                   controller: cardHolderController,
                   validator: (v) => v!.isEmpty ? 'Enter holder name' : null,
@@ -718,7 +718,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Edit Personal Details', style: TextStyle(fontFamily: 'Poppins', fontSize: 16.sp, fontWeight: FontWeight.bold)),
-                    const Divider(),
+                    Divider(color: Colors.grey.shade200),
                     TextFormField(
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
@@ -792,13 +792,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          if (currentRole != UserRole.wholesale)
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.redAccent),
-              onPressed: _logout,
-            ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -1153,7 +1146,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               stream: _notificationsRx.valueStreamData,
                               builder: (context, snapshot) {
                                 final notifs = snapshot.data ?? [];
-                                if (notifs.isEmpty) return const SizedBox.shrink();
+                                final unreadCount = notifs.where((n) => n is Map && !(n['is_read'] == true || n['read'] == true || n['isRead'] == true)).length;
+                                if (unreadCount <= 0) return const SizedBox.shrink();
                                 return Container(
                                   margin: EdgeInsets.only(right: 8.w),
                                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
@@ -1162,7 +1156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     borderRadius: BorderRadius.circular(10.r),
                                   ),
                                   child: Text(
-                                    '${notifs.length}',
+                                    unreadCount > 99 ? '99+' : '$unreadCount',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 11.sp,

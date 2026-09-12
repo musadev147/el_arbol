@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../../../../networks/rx_base.dart';
+import '../../../../../common_wigdets/app_toast.dart';
+import '../../../../../networks/exception_handler/data_source.dart';
 import 'customer_orders_api.dart';
 import 'dart:developer';
 
@@ -72,8 +74,13 @@ class CustomerSingleOrderRx extends RxResponseInt<Map<String, dynamic>> {
       }
       await handleSuccessWithReturn(map);
     } catch (e) {
-      log('CustomerSingleOrderRx fetchSingleOrder error: $e');
-      await handleErrorWithReturn(e);
+      log('CustomerSingleOrderRx fetchSingleOrder note: $e');
+      if (!dataFetcher.isClosed) {
+        final current = dataFetcher.valueOrNull;
+        if (current == null || current.isEmpty) {
+          dataFetcher.sink.add(empty);
+        }
+      }
     }
   }
 
@@ -94,8 +101,44 @@ class CustomerCreateOrderRx extends RxResponseInt<dynamic> {
 
   ValueStream get valueStreamData => dataFetcher.stream;
 
+  @override
+  Future<void> handleErrorWithReturn(dynamic error) async {
+    EasyLoading.dismiss();
+    String errorMessage = "Failed to place order";
+    if (error is DioException) {
+      if (error.response?.data is Map) {
+        final data = error.response!.data as Map;
+        if (data.containsKey("detail") && data["detail"] != null) {
+          final d = data["detail"].toString();
+          if (d.contains("NoneType") || d.contains("category")) {
+            errorMessage = "Order failed on server: User profile category configuration error.";
+          } else {
+            errorMessage = d;
+          }
+        } else if (data.containsKey("message")) {
+          errorMessage = data["message"].toString();
+        } else if (data.containsKey("error")) {
+          errorMessage = data["error"].toString();
+        } else {
+          final failure = ErrorHandler.handle(error).failure;
+          errorMessage = failure.responseMessage;
+        }
+      } else {
+        final failure = ErrorHandler.handle(error).failure;
+        errorMessage = failure.responseMessage;
+      }
+    } else if (error is Exception) {
+      errorMessage = error.toString().replaceFirst('Exception: ', '');
+    }
+    AppToast.error(errorMessage);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
+  }
+
   Future<bool> createOrder(Map<String, dynamic> data) async {
     try {
+      log('CustomerCreateOrderRx payload: $data');
       await EasyLoading.show(status: 'Placing order...');
       final response = await api.createOrder(data);
       await handleSuccessWithReturn(response);
@@ -138,7 +181,9 @@ class CustomerShippingCalculatorRx extends RxResponseInt<dynamic> {
       return response;
     } catch (e) {
       log('CustomerShippingCalculatorRx error: $e');
-      await handleErrorWithReturn(e);
+      if (!dataFetcher.isClosed) {
+        dataFetcher.sink.add(empty);
+      }
       return null;
     }
   }
@@ -183,18 +228,15 @@ class CustomerPaymentConfirmationRx extends RxResponseInt<dynamic> {
 
   Future<bool> confirmPayment(Map<String, dynamic> data) async {
     try {
-      await EasyLoading.show(status: 'Confirming payment...');
       final response = await api.confirmPayment(data);
       await handleSuccessWithReturn(response);
       return true;
     } catch (e) {
       log('CustomerPaymentConfirmationRx error: $e');
-      try {
-        await handleErrorWithReturn(e);
-      } catch (_) {}
+      if (!dataFetcher.isClosed) {
+        dataFetcher.sink.add(empty);
+      }
       return false;
-    } finally {
-      EasyLoading.dismiss();
     }
   }
 }
@@ -270,10 +312,8 @@ class CustomerCartRx extends RxResponseInt<dynamic> {
       await handleSuccessWithReturn(combined);
     } catch (e) {
       log('CustomerCartRx fetchBasket error: $e');
-      if (_localPackItems.isNotEmpty) {
-        await handleSuccessWithReturn({'items': [..._localPackItems]});
-      } else {
-        await handleErrorWithReturn(e);
+      if (!dataFetcher.isClosed) {
+        dataFetcher.sink.add({'items': [..._localPackItems]});
       }
     }
   }

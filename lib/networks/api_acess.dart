@@ -5,6 +5,8 @@ import '../constants/app_constants.dart';
 import '../route/app_pages.dart';
 import '../networks/dio/dio.dart';
 
+import '../networks/dio/token_storage.dart';
+
 class PostLogoutRX {
   final dynamic empty;
   final BehaviorSubject dataFetcher;
@@ -14,8 +16,10 @@ class PostLogoutRX {
   Future<void> logOut() async {
     try {
       await appData.remove(kKeyAccessToken);
+      await appData.remove(kKeyRefreshToken);
       await appData.remove(kKeyUserID);
       await appData.remove('user_role');
+      await TokenStorage().clearTokens();
       DioSingleton.instance.update('');
     } catch (e) {
       // Ignore errors during local cleanup

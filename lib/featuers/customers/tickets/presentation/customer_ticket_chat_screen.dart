@@ -34,7 +34,11 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     super.initState();
     _rx = CustomerTicketsRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>());
     _loadMessages(widget.ticket);
-    SupportTicketUnreadManager.instance.markTicketAsRead(widget.ticket);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        SupportTicketUnreadManager.instance.markTicketAsRead(widget.ticket);
+      }
+    });
 
     // Poll every 4 seconds for new incoming responses from Admin
     _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
@@ -98,7 +102,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
       final role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '')
           .toString()
           .toLowerCase();
-      final senderStr = (r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
+      final senderStr = (r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
           .toString()
           .toLowerCase();
 
@@ -111,10 +115,11 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
           senderStr.contains('agent') ||
           senderStr.contains('helpdesk') ||
           r['is_admin'] == true ||
+          r['isAdmin'] == true ||
           r['is_support'] == true;
 
       final senderId = (r['user_id'] ?? r['user'] ?? r['sender_id'] ?? r['author_id'])?.toString().trim() ?? '';
-      final senderEmail = (r['email'] ?? r['user_email'] ?? r['sender_email'])?.toString().trim().toLowerCase() ?? '';
+      final senderEmail = (r['senderEmail'] ?? r['sender_email'] ?? r['email'] ?? r['user_email'])?.toString().trim().toLowerCase() ?? '';
 
       final bool isExplicitMe = r['isMe'] == true ||
           r['is_me'] == true ||
@@ -122,9 +127,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
           (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId == currentUserId) ||
           (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail) ||
           _mySentMessages.contains(text) ||
-          role.contains('customer') ||
-          role.contains('wholesale') ||
-          role.contains('buyer');
+          (r['isAdmin'] == false && r['is_admin'] == false && (role == 'customer' || role == 'wholesale'));
 
       bool isMe = false;
       if (isExplicitMe) {
@@ -141,7 +144,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
         'id': r['id']?.toString(),
         'isOriginal': false,
         'message': text,
-        'sender': isMe ? 'You' : 'Support',
+        'sender': isMe ? 'You' : (senderStr.isNotEmpty && !senderStr.contains('you') ? r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? 'Support' : 'Support'),
         'created_at': r['created_at'] ?? '',
         'isMe': isMe,
       });
@@ -176,7 +179,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     final controller = TextEditingController(text: msg['message']);
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogCtx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
           title: const Text('Edit Message'),
@@ -187,7 +190,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
@@ -196,11 +199,13 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
                 if (newText.isEmpty) return;
                 final ticketId = widget.ticket['id']?.toString() ?? '';
                 final success = await _rx.updateMessage(ticketId, messageId, newText);
-                if (success) {
+                if (success && mounted) {
                   setState(() {
                     _messages[index]['message'] = newText;
                   });
-                  Navigator.pop(context);
+                  if (dialogCtx.mounted) {
+                    Navigator.pop(dialogCtx);
+                  }
                   Fluttertoast.showToast(msg: 'Message updated');
                 }
               },
@@ -216,25 +221,27 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
   void _deleteMessage(int index, String messageId) {
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogCtx) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
           title: const Text('Delete Message'),
           content: const Text('Are you sure you want to delete this message?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogCtx),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () async {
                 final ticketId = widget.ticket['id']?.toString() ?? '';
                 final success = await _rx.deleteMessage(ticketId, messageId);
-                if (success) {
+                if (success && mounted) {
                   setState(() {
                     _messages.removeAt(index);
                   });
-                  Navigator.pop(context);
+                  if (dialogCtx.mounted) {
+                    Navigator.pop(dialogCtx);
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -256,7 +263,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     final ticketId = widget.ticket['id']?.toString() ?? '';
     _mySentMessages.add(message);
     final newMsgData = await _rx.replyTicket(ticketId, message);
-    if (newMsgData != null) {
+    if (newMsgData != null && mounted) {
       setState(() {
         _messages.add({
           'id': newMsgData['id']?.toString(),
@@ -357,60 +364,67 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.only(bottom: 12.h, left: isMe ? 40.w : 0, right: isMe ? 0 : 40.w),
-        padding: EdgeInsets.all(12.r),
+        margin: EdgeInsets.only(
+          bottom: 12.h,
+          left: isMe ? 48.w : 0,
+          right: isMe ? 0 : 48.w,
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
           color: isMe ? primaryColor : Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16.r),
-            topRight: Radius.circular(16.r),
-            bottomLeft: isMe ? Radius.circular(16.r) : Radius.circular(3.r),
-            bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(16.r),
+            topLeft: Radius.circular(12.r),
+            topRight: Radius.circular(12.r),
+            bottomLeft: isMe ? Radius.circular(12.r) : Radius.circular(3.r),
+            bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(12.r),
           ),
           border: isMe ? null : Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!isMe) ...[
-                  const Icon(Icons.support_agent_rounded, size: 14, color: Color(0xFF00694C)),
+            if (!isMe) ...[
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.support_agent_rounded, size: 14.r, color: primaryColor),
                   SizedBox(width: 4.w),
-                ],
-                Text(
-                  sender,
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.bold,
-                    color: isMe ? Colors.white70 : const Color(0xFF00694C),
+                  Text(
+                    sender.isNotEmpty && !sender.toLowerCase().contains('you') ? sender : 'admin',
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 4.h),
+                ],
+              ),
+              SizedBox(height: 4.h),
+            ],
             Text(
               message,
               style: TextStyle(
-                fontSize: 13.5.sp,
-                color: isMe ? Colors.white : Colors.black87,
+                fontSize: 13.sp,
+                color: isMe ? Colors.white : const Color(0xFF151E13),
+                fontFamily: 'Poppins',
               ),
             ),
             if (date.isNotEmpty) ...[
-              SizedBox(height: 5.h),
+              SizedBox(height: 4.h),
               Text(
                 date,
                 style: TextStyle(
                   fontSize: 9.sp,
-                  color: isMe ? Colors.white60 : Colors.grey.shade500,
+                  color: isMe ? Colors.white70 : Colors.grey,
                 ),
               ),
             ],
@@ -427,7 +441,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),

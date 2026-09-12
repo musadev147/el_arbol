@@ -3,9 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'product_details_screen.dart';
+import 'store_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../orders/data/customer_orders_rx.dart';
+import '../../../../common_wigdets/custom_app_loading.dart';
 
 class ShopMapScreen extends StatefulWidget {
   const ShopMapScreen({super.key});
@@ -15,11 +17,14 @@ class ShopMapScreen extends StatefulWidget {
 }
 
 class _ShopMapScreenState extends State<ShopMapScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
   String _selectedDistance = 'All';
   String _viewMode = 'list'; // 'list' or 'map'
   Map<String, dynamic>? _selectedShop;
 
   List<Map<String, dynamic>> _allShops = [];
+  bool _isLoading = true;
   late final CustomerStoresRx _storesRx;
 
   double normalizeLat(dynamic raw) {
@@ -35,12 +40,21 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
   }
 
   List<Map<String, dynamic>> get _filteredShops {
-    if (_selectedDistance == '5 km') {
-      return _allShops.where((shop) => ((shop['distance'] as num?)?.toDouble() ?? 0.0) <= 5.0).toList();
-    } else if (_selectedDistance == '10 km') {
-      return _allShops.where((shop) => ((shop['distance'] as num?)?.toDouble() ?? 0.0) <= 10.0).toList();
+    var list = _allShops;
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      list = list.where((shop) {
+        final name = (shop['name'] ?? '').toString().toLowerCase();
+        final addr = (shop['address'] ?? '').toString().toLowerCase();
+        return name.contains(q) || addr.contains(q);
+      }).toList();
     }
-    return _allShops;
+    if (_selectedDistance == '5 km') {
+      return list.where((shop) => ((shop['distance'] as num?)?.toDouble() ?? 0.0) <= 5.0).toList();
+    } else if (_selectedDistance == '10 km') {
+      return list.where((shop) => ((shop['distance'] as num?)?.toDouble() ?? 0.0) <= 10.0).toList();
+    }
+    return list;
   }
 
   @override
@@ -260,6 +274,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
         if (mounted) {
           setState(() {
             _allShops = loaded;
+            _isLoading = false;
             if (_allShops.isNotEmpty) {
               _selectedShop = _allShops.first;
             }
@@ -271,6 +286,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _storesRx.dispose();
     super.dispose();
   }
@@ -368,16 +384,63 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Color(0xFF151E13)),
-            onPressed: () => _storesRx.fetchStores(),
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _storesRx.fetchStores();
+            },
             tooltip: 'Refresh',
           ),
         ],
       ),
       body: Column(
         children: [
+          // Store Search Bar
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 8.h),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.trim();
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Search stores by name or location...',
+                hintStyle: TextStyle(fontSize: 13.sp, color: Colors.grey.shade400),
+                prefixIcon: const Icon(Icons.search, color: primaryColor, size: 20),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 16.w),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: const BorderSide(color: primaryColor, width: 1.5),
+                ),
+              ),
+            ),
+          ),
+
           // View Mode Switcher + Distance Filter
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
             child: Row(
               children: [
                 // View Mode Toggle
@@ -484,9 +547,11 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
 
           // Body depending on ViewMode
           Expanded(
-            child: _viewMode == 'list'
-                ? _buildStoresListView(shops, primaryColor)
-                : _buildMapView(shops, primaryColor),
+            child: _isLoading && _allShops.isEmpty
+                ? const CustomAppLoading(message: 'Loading store locations...')
+                : _viewMode == 'list'
+                    ? _buildStoresListView(shops, primaryColor)
+                    : _buildMapView(shops, primaryColor),
           ),
         ],
       ),
@@ -501,7 +566,20 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
           children: [
             Icon(Icons.storefront_outlined, size: 64.r, color: Colors.grey.shade400),
             SizedBox(height: 12.h),
-            Text('No stores found in this area', style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600)),
+            Text(
+              _searchQuery.isNotEmpty ? 'No stores matching "$_searchQuery"' : 'No stores found in this area',
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
+            ),
+            if (_searchQuery.isNotEmpty) ...[
+              SizedBox(height: 12.h),
+              OutlinedButton(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+                child: Text('Clear Search', style: TextStyle(color: primaryColor)),
+              ),
+            ],
           ],
         ),
       );
@@ -522,17 +600,21 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(16.r),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16.r),
+              onTap: () {
+                Get.to(() => StoreDetailsScreen(store: shop));
+              },
+              child: Padding(
                 padding: EdgeInsets.all(16.r),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,7 +622,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildStoreThumbnail(shop['image'], size: 48),
+                        _buildStoreThumbnail(shop['image'], size: 52),
                         SizedBox(width: 12.w),
                         Expanded(
                           child: Column(
@@ -555,11 +637,11 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                                   color: const Color(0xFF151E13),
                                 ),
                               ),
-                              SizedBox(height: 2.h),
+                              SizedBox(height: 3.h),
                               Row(
                                 children: [
                                   Icon(Icons.location_on_outlined, size: 14.sp, color: Colors.grey.shade600),
-                                  SizedBox(width: 2.w),
+                                  SizedBox(width: 3.w),
                                   Expanded(
                                     child: Text(
                                       shop['address'] ?? '',
@@ -576,7 +658,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
+                            color: primaryColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8.r),
                           ),
                           child: Text(
@@ -596,7 +678,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
+                            color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6.r),
                           ),
                           child: Text(
@@ -605,11 +687,16 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                           ),
                         ),
                         const Spacer(),
-                        if (shop['phone'] != null)
-                          Text(
-                            shop['phone'],
-                            style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              '${products.length} Products',
+                              style: TextStyle(fontSize: 11.sp, color: primaryColor, fontWeight: FontWeight.w600),
+                            ),
+                            SizedBox(width: 4.w),
+                            Icon(Icons.arrow_forward_ios_rounded, size: 11, color: primaryColor),
+                          ],
+                        ),
                       ],
                     ),
                     SizedBox(height: 12.h),
@@ -643,9 +730,11 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
                               padding: EdgeInsets.symmetric(vertical: 8.h),
                             ),
-                            onPressed: () => _launchDirections(shop),
-                            icon: const Icon(Icons.directions, size: 16),
-                            label: const Text('Directions', style: TextStyle(fontSize: 12)),
+                            onPressed: () {
+                              Get.to(() => StoreDetailsScreen(store: shop));
+                            },
+                            icon: const Icon(Icons.storefront_rounded, size: 16),
+                            label: const Text('Store Details', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
@@ -653,102 +742,7 @@ class _ShopMapScreenState extends State<ShopMapScreen> {
                   ],
                 ),
               ),
-
-              // Available Store Products Strip
-              if (products.isNotEmpty) ...[
-                const Divider(height: 1),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(16.r, 12.r, 16.r, 8.r),
-                  child: Text(
-                    'Available In Store (${products.length})',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF151E13),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: 110.h,
-                  child: ListView.separated(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: products.length,
-                    separatorBuilder: (context, index) => SizedBox(width: 10.w),
-                    itemBuilder: (context, pIndex) {
-                      final p = products[pIndex];
-                      return GestureDetector(
-                        onTap: () {
-                          Get.to(() => ProductDetailsScreen(
-                                id: p['id']?.toString(),
-                                name: p['name'],
-                                origin: p['origin'],
-                                price: p['price'],
-                                imageUrl: p['imageUrl'],
-                                description: p['description'],
-                                category: p['category'],
-                              ));
-                        },
-                        child: Container(
-                          width: 160.w,
-                          padding: EdgeInsets.all(8.r),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FBF8),
-                            borderRadius: BorderRadius.circular(10.r),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(6.r),
-                                child: CachedNetworkImage(
-                                  imageUrl: p['imageUrl'] ?? '',
-                                  width: 44.w,
-                                  height: 44.w,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) => Container(
-                                    color: Colors.grey.shade100,
-                                    width: 44.w,
-                                    height: 44.w,
-                                    child: Icon(Icons.grass, color: primaryColor),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 8.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      p['name'] ?? '',
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.sp),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    SizedBox(height: 2.h),
-                                    Text(
-                                      p['price'] ?? '',
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: primaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(height: 8.h),
-              ],
-            ],
+            ),
           ),
         );
       },

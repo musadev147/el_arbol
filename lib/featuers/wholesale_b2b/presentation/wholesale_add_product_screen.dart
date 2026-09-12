@@ -9,8 +9,10 @@ import 'package:rxdart/rxdart.dart';
 
 import '../../../../common_wigdets/common_button.dart';
 import '../../../../common_wigdets/custom_textfiled.dart';
+import '../../../../common_wigdets/app_toast.dart';
 import '../../customers/home/presentation/data/rx.dart';
 import '../../customers/home/presentation/model/get_category_model.dart';
+import '../../customers/orders/data/customer_orders_api.dart';
 import '../data/wholesale_rx.dart';
 
 class WholesaleAddProductScreen extends StatefulWidget {
@@ -32,13 +34,16 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
   final _wholesalePriceController = TextEditingController();
   final _minimumPurchaseController = TextEditingController(text: '5');
   final _stockController = TextEditingController(text: '50');
-  final _shopIdController = TextEditingController(text: '1');
   final _imageUrlController = TextEditingController();
 
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
   int? _selectedCategoryId;
+  int? _selectedSubCategoryId;
+  int _selectedShopId = 1;
+  List<Map<String, dynamic>> _availableShops = [];
+  bool _isLoadingShops = false;
   String _selectedUnit = 'kg';
   bool _isActive = true;
   bool _isAutoSlugEnabled = true;
@@ -71,8 +76,29 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
       dataFetcher: BehaviorSubject<GetCategoryModel>(),
     );
     _categoryRx.fetchCategories();
+    _fetchStores();
 
     _nameController.addListener(_onNameChanged);
+  }
+
+  Future<void> _fetchStores() async {
+    setState(() => _isLoadingShops = true);
+    try {
+      final stores = await CustomerOrdersApi.instance.getStores();
+      if (mounted) {
+        if (stores is List && stores.isNotEmpty) {
+          setState(() {
+            _availableShops = stores.map((s) => Map<String, dynamic>.from(s as Map)).toList();
+            if (_availableShops.isNotEmpty) {
+              _selectedShopId = _availableShops.first['id'] as int? ?? 1;
+            }
+          });
+        }
+      }
+    } catch (_) {}
+    if (mounted) {
+      setState(() => _isLoadingShops = false);
+    }
   }
 
   void _onNameChanged() {
@@ -98,7 +124,6 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
     _wholesalePriceController.dispose();
     _minimumPurchaseController.dispose();
     _stockController.dispose();
-    _shopIdController.dispose();
     _imageUrlController.dispose();
     _createProductRx.dispose();
     _categoryRx.dispose();
@@ -162,16 +187,32 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
 
   void _submitProduct() async {
     if (_formKey.currentState?.validate() ?? false) {
+      if (_selectedCategoryId == null) {
+        AppToast.error("Please select a Category");
+        return;
+      }
+      if (_selectedSubCategoryId == null) {
+        AppToast.error("Please select a Sub Category");
+        return;
+      }
+
       final regularPrice = double.tryParse(_priceController.text.trim()) ?? 0.0;
       final wholesalePrice = double.tryParse(_wholesalePriceController.text.trim()) ?? 0.0;
       final discountPrice = double.tryParse(_discountPriceController.text.trim()) ?? 0.0;
       final minPurchase = int.tryParse(_minimumPurchaseController.text.trim()) ?? 1;
       final stock = int.tryParse(_stockController.text.trim()) ?? 0;
-      final shopId = int.tryParse(_shopIdController.text.trim()) ?? 1;
+      final shopId = _selectedShopId > 0 ? _selectedShopId : 1;
+      String slug = _slugController.text.trim();
+      if (slug.isEmpty) {
+        slug = _nameController.text.trim()
+            .toLowerCase()
+            .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+            .replaceAll(RegExp(r'^-+|-+$'), '');
+      }
 
       final Map<String, dynamic> body = {
         "name": _nameController.text.trim(),
-        "slug": _slugController.text.trim(),
+        "slug": slug,
         "description": _descriptionController.text.trim(),
         "origin": _originController.text.trim(),
         "price": regularPrice,
@@ -187,6 +228,9 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
 
       if (_selectedCategoryId != null) {
         body["category"] = _selectedCategoryId;
+      }
+      if (_selectedSubCategoryId != null) {
+        body["sub_category"] = _selectedSubCategoryId;
       }
 
       dynamic payload;
@@ -232,9 +276,11 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
           )
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             children: [
               Container(
@@ -261,8 +307,9 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
           ...children,
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -322,8 +369,18 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
                             validator: (v) => v == null || v.trim().isEmpty ? 'Slug is required' : null,
                           ),
                         ),
+                        SizedBox(width: 6.w),
+                        IconButton(
+                          tooltip: 'Add unique suffix',
+                          icon: const Icon(Icons.tag, color: primaryColor),
+                          onPressed: () {
+                            final base = _slugController.text.trim().replaceAll(RegExp(r'-\d+$'), '');
+                            final suffix = (DateTime.now().millisecondsSinceEpoch % 10000).toString();
+                            _slugController.text = base.isNotEmpty ? '$base-$suffix' : 'item-$suffix';
+                            setState(() => _isAutoSlugEnabled = false);
+                          },
+                        ),
                         if (!_isAutoSlugEnabled) ...[
-                          SizedBox(width: 8.w),
                           IconButton(
                             tooltip: 'Reset auto slug',
                             icon: const Icon(Icons.autorenew, color: primaryColor),
@@ -333,15 +390,15 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
                               });
                               _onNameChanged();
                             },
-                          )
-                        ]
+                          ),
+                        ],
                       ],
                     ),
                     SizedBox(height: 12.h),
 
-                    // Category Dropdown from API
+                    // Category & Subcategory Dropdowns from API
                     Text(
-                      'Category',
+                      'Category *',
                       style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
                     ),
                     SizedBox(height: 6.h),
@@ -351,34 +408,85 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
                         final GetCategoryModel? model = snapshot.data;
                         final categories = model?.results ?? [];
 
-                        return Container(
-                          padding: EdgeInsets.symmetric(horizontal: 14.w),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(10.r),
-                            color: Colors.white,
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              isExpanded: true,
-                              hint: Text(
-                                categories.isEmpty ? 'Loading categories...' : 'Select Category',
-                                style: TextStyle(fontSize: 13.sp, color: Colors.grey),
+                        final selectedCat = categories.firstWhereOrNull((c) => c.id == _selectedCategoryId);
+                        final subcategories = selectedCat?.subcategories ?? [];
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 14.w),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(10.r),
+                                color: Colors.white,
                               ),
-                              value: _selectedCategoryId,
-                              items: categories.map((cat) {
-                                return DropdownMenuItem<int>(
-                                  value: cat.id,
-                                  child: Text(cat.name ?? '', style: TextStyle(fontSize: 13.sp)),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                setState(() {
-                                  _selectedCategoryId = val;
-                                });
-                              },
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<int>(
+                                  isExpanded: true,
+                                  hint: Text(
+                                    categories.isEmpty ? 'Loading categories...' : 'Select Category',
+                                    style: TextStyle(fontSize: 13.sp, color: Colors.grey),
+                                  ),
+                                  value: _selectedCategoryId,
+                                  items: categories.map((cat) {
+                                    return DropdownMenuItem<int>(
+                                      value: cat.id,
+                                      child: Text(cat.name ?? '', style: TextStyle(fontSize: 13.sp)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _selectedCategoryId = val;
+                                      final newCat = categories.firstWhereOrNull((c) => c.id == val);
+                                      if (newCat != null && (newCat.subcategories?.isNotEmpty ?? false)) {
+                                        _selectedSubCategoryId = newCat.subcategories!.first.id;
+                                      } else {
+                                        _selectedSubCategoryId = null;
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
                             ),
-                          ),
+                            if (subcategories.isNotEmpty) ...[
+                              SizedBox(height: 12.h),
+                              Text(
+                                'Sub Category',
+                                style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                              ),
+                              SizedBox(height: 6.h),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 14.w),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  color: Colors.white,
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    isExpanded: true,
+                                    hint: Text(
+                                      'Select Sub Category',
+                                      style: TextStyle(fontSize: 13.sp, color: Colors.grey),
+                                    ),
+                                    value: _selectedSubCategoryId,
+                                    items: subcategories.map((sub) {
+                                      return DropdownMenuItem<int>(
+                                        value: sub.id,
+                                        child: Text(sub.name ?? '', style: TextStyle(fontSize: 13.sp)),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _selectedSubCategoryId = val;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         );
                       },
                     ),
@@ -538,31 +646,80 @@ class _WholesaleAddProductScreenState extends State<WholesaleAddProductScreen> {
                   title: 'Warehouse & Status',
                   icon: Icons.storefront_outlined,
                   children: [
-                    CustomTextFormField(
-                      controller: _shopIdController,
-                      labelText: 'Shop / Warehouse ID *',
-                      hintText: 'e.g. 1',
-                      keyboardType: TextInputType.number,
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Shop ID is required' : null,
+                    Text(
+                      'Shop / Fulfillment Warehouse *',
+                      style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(height: 6.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 14.w),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(10.r),
+                        color: Colors.white,
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          isExpanded: true,
+                          hint: Text(
+                            _isLoadingShops ? 'Loading shops...' : 'Select Shop',
+                            style: TextStyle(fontSize: 13.sp, color: Colors.grey),
+                          ),
+                          value: _availableShops.any((s) => s['id'] == _selectedShopId)
+                              ? _selectedShopId
+                              : (_availableShops.isNotEmpty ? (_availableShops.first['id'] as int? ?? 1) : 1),
+                          items: _availableShops.isNotEmpty
+                              ? _availableShops.map((shop) {
+                                  final id = shop['id'] as int? ?? 1;
+                                  final name = shop['name']?.toString() ?? 'Shop #$id';
+                                  final city = shop['city']?.toString() ?? '';
+                                  final label = city.isNotEmpty ? '$name ($city)' : name;
+                                  return DropdownMenuItem<int>(
+                                    value: id,
+                                    child: Text(label, style: TextStyle(fontSize: 13.sp)),
+                                  );
+                                }).toList()
+                              : [
+                                  const DropdownMenuItem<int>(
+                                    value: 1,
+                                    child: Text('United Group (ID: 1)', style: TextStyle(fontSize: 13)),
+                                  ),
+                                  const DropdownMenuItem<int>(
+                                    value: 2,
+                                    child: Text('Shopno (ID: 2)', style: TextStyle(fontSize: 13)),
+                                  ),
+                                ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _selectedShopId = val;
+                              });
+                            }
+                          },
+                        ),
+                      ),
                     ),
                     SizedBox(height: 12.h),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        'Active in Wholesale Catalog',
-                        style: TextStyle(fontFamily: 'Poppins', fontSize: 13.sp, fontWeight: FontWeight.bold),
+                    Material(
+                      color: Colors.transparent,
+                      child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'Active in Wholesale Catalog',
+                          style: TextStyle(fontFamily: 'Poppins', fontSize: 13.sp, fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Enable to immediately list this item in the B2B catalog.',
+                          style: TextStyle(fontSize: 11.sp, color: Colors.grey),
+                        ),
+                        value: _isActive,
+                        activeColor: primaryColor,
+                        onChanged: (val) {
+                          setState(() {
+                            _isActive = val;
+                          });
+                        },
                       ),
-                      subtitle: Text(
-                        'Enable to immediately list this item in the B2B catalog.',
-                        style: TextStyle(fontSize: 11.sp, color: Colors.grey),
-                      ),
-                      value: _isActive,
-                      activeColor: primaryColor,
-                      onChanged: (val) {
-                        setState(() {
-                          _isActive = val;
-                        });
-                      },
                     ),
                   ],
                 ),

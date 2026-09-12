@@ -7,23 +7,34 @@ enum UserRole {
   String get value => name;
 
   static UserRole fromString(String? role) {
-    if (role == null || role.isEmpty) {
-      throw Exception("Invalid user role: (empty)");
+    if (role == null || role.trim().isEmpty) {
+      return UserRole.customer;
     }
-    switch (role.toLowerCase()) {
+    final normalized = role.trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+    switch (normalized) {
       case 'customer':
+      case 'user':
+      case 'client':
         return UserRole.customer;
       case 'wholesale':
       case 'wholesales':
+      case 'wholesaler':
+      case 'wholesalers':
+      case 'b2b':
         return UserRole.wholesale;
       case 'employeeselfservice':
-      case 'employee self-service':
+      case 'employee_self_service':
       case 'employee':
         return UserRole.employeeSelfService;
       case 'staff':
+      case 'store_manager':
+      case 'cashier':
+      case 'stock_clerk':
+      case 'delivery_driver':
+      case 'order_picker':
         return UserRole.staff;
       default:
-        throw Exception("Invalid user role: $role");
+        return UserRole.customer;
     }
   }
 }

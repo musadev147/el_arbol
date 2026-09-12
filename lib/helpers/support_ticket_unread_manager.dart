@@ -1,3 +1,5 @@
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import '../../constants/app_constants.dart';
 import 'di.dart';
@@ -23,6 +25,16 @@ class SupportTicketUnreadManager {
   /// Cached list of current wholesale tickets
   List<dynamic> _lastWholesaleTickets = [];
 
+  void _safeUpdate(void Function() updateFn) {
+    if (WidgetsBinding.instance.schedulerPhase == SchedulerPhase.idle) {
+      updateFn();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        updateFn();
+      });
+    }
+  }
+
   /// Checks if a message/reply map was sent by Admin or Support staff
   bool isMessageFromAdmin(Map<String, dynamic> r) {
     final currentUserId = appData.read(kKeyUserID)?.toString().trim() ?? '';
@@ -31,7 +43,7 @@ class SupportTicketUnreadManager {
     final role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '')
         .toString()
         .toLowerCase();
-    final senderStr = (r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
+    final senderStr = (r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
         .toString()
         .toLowerCase();
 
@@ -46,16 +58,18 @@ class SupportTicketUnreadManager {
         senderStr.contains('agent') ||
         senderStr.contains('helpdesk') ||
         r['is_admin'] == true ||
+        r['isAdmin'] == true ||
         r['is_support'] == true;
 
     final senderId = (r['user_id'] ?? r['user'] ?? r['sender_id'] ?? r['author_id'])?.toString().trim() ?? '';
-    final senderEmail = (r['email'] ?? r['user_email'] ?? r['sender_email'])?.toString().trim().toLowerCase() ?? '';
+    final senderEmail = (r['senderEmail'] ?? r['sender_email'] ?? r['email'] ?? r['user_email'])?.toString().trim().toLowerCase() ?? '';
 
     final bool isMe = r['isMe'] == true ||
         r['is_me'] == true ||
         r['sender'] == 'You' ||
         (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId == currentUserId) ||
-        (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail);
+        (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail) ||
+        (r['isAdmin'] == false && r['is_admin'] == false && (role == 'customer' || role == 'wholesale'));
 
     if (isMe) return false;
     if (isExplicitAdminOrStaff) return true;
@@ -66,16 +80,14 @@ class SupportTicketUnreadManager {
     return false;
   }
 
-  /// Calculates the number of unread Admin replies for a ticket
+  /// Calculates the number of unread Admin replies for a ticket (pure calculation, no side-effects)
   int getUnreadCountForTicket(Map<String, dynamic> ticket) {
     final ticketId = ticket['id']?.toString() ?? '';
     if (ticketId.isEmpty) return 0;
 
     // Direct backend unread count if provided
     if (ticket['unread_count'] is int) {
-      final unread = ticket['unread_count'] as int;
-      ticketUnreadMap[ticketId] = unread;
-      return unread;
+      return ticket['unread_count'] as int;
     }
 
     final dynamic storedLastReadId = appData.read('ticket_last_read_reply_id_$ticketId');
@@ -96,11 +108,9 @@ class SupportTicketUnreadManager {
         final updatedAtStr = ticket['updated_at']?.toString() ?? '';
         final updatedAt = DateTime.tryParse(updatedAtStr);
         if (updatedAt != null && (lastReadTime == null || updatedAt.isAfter(lastReadTime))) {
-          ticketUnreadMap[ticketId] = 1;
           return 1;
         }
       }
-      ticketUnreadMap[ticketId] = 0;
       return 0;
     }
 
@@ -133,7 +143,6 @@ class SupportTicketUnreadManager {
       }
     }
 
-    ticketUnreadMap[ticketId] = unread;
     return unread;
   }
 
@@ -162,30 +171,68 @@ class SupportTicketUnreadManager {
     }
     appData.write('ticket_last_read_time_$ticketId', DateTime.now().toIso8601String());
 
-    ticketUnreadMap[ticketId] = 0;
-
-    // Recalculate totals
-    _recalculateCustomerTotal();
-    _recalculateWholesaleTotal();
+    _safeUpdate(() {
+      ticketUnreadMap[ticketId] = 0;
+      _recalculateCustomerTotalInternal();
+      _recalculateWholesaleTotalInternal();
+    });
   }
 
   /// Updates Customer tickets list and calculates unread count
   void updateCustomerTickets(List<dynamic> tickets) {
     _lastCustomerTickets = tickets;
-    _recalculateCustomerTotal();
+    _safeUpdate(() {
+      final Map<String, int> newMap = {};
+      int total = 0;
+      for (var t in _lastCustomerTickets) {
+        if (t is Map) {
+          final tMap = Map<String, dynamic>.from(t);
+          final id = tMap['id']?.toString() ?? '';
+          final count = getUnreadCountForTicket(tMap);
+          if (id.isNotEmpty) {
+            newMap[id] = count;
+          }
+          if (count > 0) {
+            total += count;
+          }
+        }
+      }
+      ticketUnreadMap.addAll(newMap);
+      customerUnreadCountRx.value = total;
+    });
   }
 
   /// Updates Wholesale tickets list and calculates unread count
   void updateWholesaleTickets(List<dynamic> tickets) {
     _lastWholesaleTickets = tickets;
-    _recalculateWholesaleTotal();
+    _safeUpdate(() {
+      final Map<String, int> newMap = {};
+      int total = 0;
+      for (var t in _lastWholesaleTickets) {
+        if (t is Map) {
+          final tMap = Map<String, dynamic>.from(t);
+          final id = tMap['id']?.toString() ?? '';
+          final count = getUnreadCountForTicket(tMap);
+          if (id.isNotEmpty) {
+            newMap[id] = count;
+          }
+          if (count > 0) {
+            total += count;
+          }
+        }
+      }
+      ticketUnreadMap.addAll(newMap);
+      wholesaleUnreadCountRx.value = total;
+    });
   }
 
-  void _recalculateCustomerTotal() {
+  void _recalculateCustomerTotalInternal() {
     int total = 0;
     for (var t in _lastCustomerTickets) {
       if (t is Map) {
-        final count = getUnreadCountForTicket(Map<String, dynamic>.from(t));
+        final tMap = Map<String, dynamic>.from(t);
+        final id = tMap['id']?.toString() ?? '';
+        final count = ticketUnreadMap[id] ?? getUnreadCountForTicket(tMap);
         if (count > 0) {
           total += count;
         }
@@ -194,11 +241,13 @@ class SupportTicketUnreadManager {
     customerUnreadCountRx.value = total;
   }
 
-  void _recalculateWholesaleTotal() {
+  void _recalculateWholesaleTotalInternal() {
     int total = 0;
     for (var t in _lastWholesaleTickets) {
       if (t is Map) {
-        final count = getUnreadCountForTicket(Map<String, dynamic>.from(t));
+        final tMap = Map<String, dynamic>.from(t);
+        final id = tMap['id']?.toString() ?? '';
+        final count = ticketUnreadMap[id] ?? getUnreadCountForTicket(tMap);
         if (count > 0) {
           total += count;
         }

@@ -231,8 +231,13 @@ class WholesaleApi {
     }
   }
 
+  Future<Map<String, dynamic>> replyTicket(String id, Map<String, dynamic> data) async {
+    final message = (data["message"] ?? data["content"] ?? data["text"] ?? "").toString();
+    return createTicketReply(id, message);
+  }
+
   // NOTIFICATIONS APIs
-  Future<Map<String, dynamic>> getNotifications() async {
+  Future<dynamic> getNotifications() async {
     try {
       final response = await getHttp(Endpoints.wholesaleNotifications());
       if (response.statusCode == 200) {
@@ -246,7 +251,7 @@ class WholesaleApi {
     }
   }
 
-  Future<Map<String, dynamic>> getNotificationUnreadCount() async {
+  Future<dynamic> getNotificationUnreadCount() async {
     try {
       final response = await getHttp(Endpoints.wholesaleNotificationUnreadCount());
       if (response.statusCode == 200) {

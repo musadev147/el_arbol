@@ -27,6 +27,7 @@ const String kKeyData = 'data';
 const String kKeyCode = 'code';
 const String kKeyIsLoggedIn = 'is_logged_in';
 const String kKeyAccessToken = 'access_token';
+const String kKeyRefreshToken = 'refresh_token';
 const String kPhone = 'phone_number';
 const String kKeySelectedLocation = 'selected_location';
 const String kKeySelectedLat = 'selected_lot';

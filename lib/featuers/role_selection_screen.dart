@@ -8,6 +8,8 @@ import 'package:el_arbol/constants/app_constants.dart';
 import 'package:el_arbol/constants/app_assets/assets_icons.dart';
 import 'package:el_arbol/networks/dio/dio.dart';
 
+import 'package:el_arbol/networks/dio/token_storage.dart';
+
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
 
@@ -26,8 +28,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
   Future<void> _clearOldSession() async {
     await appData.remove(kKeyAccessToken);
+    await appData.remove(kKeyRefreshToken);
     await appData.remove(kKeyUserID);
     await appData.remove('user_role');
+    await TokenStorage().clearTokens();
     DioSingleton.instance.update('');
   }
 

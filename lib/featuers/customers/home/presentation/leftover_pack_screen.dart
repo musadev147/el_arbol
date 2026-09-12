@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -38,8 +39,11 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
   }
 
   void _reservePack(LeftoverPack pack, LeftoverStoreModel store) {
-    final maxStock = pack.stock ?? 1;
-    if (maxStock <= 0) return;
+    final maxStock = pack.stock ?? 0;
+    if (maxStock <= 0) {
+      Get.snackbar('Unavailable', 'This leftover pack is currently sold out.', backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
 
     final double price = pack.price ?? 0.0;
     final double originalPrice = pack.originalPrice ?? 0.0;
@@ -129,7 +133,32 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                       ],
                     ),
 
-                    SizedBox(height: 6.h),
+                    SizedBox(height: 12.h),
+
+                    // Product Image Banner in Modal
+                    if (pack.image != null && pack.image!.isNotEmpty) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: CachedNetworkImage(
+                          imageUrl: pack.image!,
+                          height: 120.h,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            height: 120.h,
+                            color: Colors.grey.shade100,
+                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00694C))),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            height: 120.h,
+                            color: Colors.grey.shade100,
+                            child: const Icon(Icons.food_bank_outlined, size: 48, color: Color(0xFF00694C)),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                    ],
+
                     Row(
                       children: [
                         Icon(Icons.storefront, size: 16.r, color: Colors.grey.shade600),
@@ -154,7 +183,7 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                     ],
 
                     SizedBox(height: 16.h),
-                    const Divider(height: 1, color: Color(0xFFF0F1F3)),
+                    Divider(height: 1, color: Colors.grey.shade200),
                     SizedBox(height: 16.h),
 
                     // Price & Stock
@@ -278,6 +307,7 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                             packId: pack.id ?? 0,
                             name: pack.name ?? 'Surplus Food Pack',
                             price: price,
+                            imageUrl: pack.image,
                             storeName: store.name,
                             quantity: quantity,
                           );
@@ -329,6 +359,7 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                             packId: pack.id ?? 0,
                             name: pack.name ?? 'Surplus Food Pack',
                             price: price,
+                            imageUrl: pack.image,
                             storeName: store.name,
                             quantity: quantity,
                           );
@@ -489,6 +520,7 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                       final bool outOfStock = stock <= 0 && !isReserved;
                       final double price = pack.price ?? 0.0;
                       final double originalPrice = pack.originalPrice ?? 0.0;
+                      final String? imageUrl = pack.image;
 
                       return Container(
                         margin: EdgeInsets.only(bottom: 12.h),
@@ -499,8 +531,9 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                           border: Border.all(color: Colors.grey.shade100),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.01),
-                              blurRadius: 10,
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             )
                           ],
                         ),
@@ -508,62 +541,109 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    pack.name ?? 'Surplus Food Pack',
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 15.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF151E13),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                // Product Image thumbnail
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  child: (imageUrl != null && imageUrl.isNotEmpty)
+                                      ? CachedNetworkImage(
+                                          imageUrl: imageUrl,
+                                          width: 72.w,
+                                          height: 72.w,
+                                          fit: BoxFit.cover,
+                                          placeholder: (context, url) => Container(
+                                            width: 72.w,
+                                            height: 72.w,
+                                            color: Colors.grey.shade100,
+                                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor)),
+                                          ),
+                                          errorWidget: (context, url, error) => Container(
+                                            width: 72.w,
+                                            height: 72.w,
+                                            color: const Color(0xFFE8F5E9),
+                                            child: const Icon(Icons.food_bank_outlined, color: primaryColor, size: 36),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: 72.w,
+                                          height: 72.w,
+                                          color: const Color(0xFFE8F5E9),
+                                          child: const Icon(Icons.food_bank_outlined, color: primaryColor, size: 36),
+                                        ),
                                 ),
-                                Row(
-                                  children: [
-                                    if (originalPrice > 0)
+                                SizedBox(width: 12.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              pack.name ?? 'Surplus Food Pack',
+                                              style: TextStyle(
+                                                fontFamily: 'Poppins',
+                                                fontSize: 14.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color: const Color(0xFF151E13),
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              if (originalPrice > 0)
+                                                Text(
+                                                  '€${originalPrice.toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                    decoration: TextDecoration.lineThrough,
+                                                    color: Colors.grey,
+                                                    fontSize: 11.sp,
+                                                  ),
+                                                ),
+                                              SizedBox(width: 4.w),
+                                              Text(
+                                                '€${price.toStringAsFixed(2)}',
+                                                style: TextStyle(
+                                                  fontFamily: 'Poppins',
+                                                  fontSize: 15.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.amber.shade800,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 4.h),
                                       Text(
-                                        '€${originalPrice.toStringAsFixed(2)}',
+                                        'Shop: ${store.name ?? ''}',
                                         style: TextStyle(
-                                          decoration: TextDecoration.lineThrough,
-                                          color: Colors.grey,
-                                          fontSize: 12.sp,
+                                          fontSize: 11.sp,
+                                          color: Colors.grey.shade600,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    SizedBox(width: 6.w),
-                                    Text(
-                                      '€${price.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.amber.shade800,
-                                      ),
-                                    ),
-                                  ],
+                                      if (pack.description != null && pack.description!.isNotEmpty) ...[
+                                        SizedBox(height: 4.h),
+                                        Text(
+                                          pack.description!,
+                                          style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade500),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 4.h),
-                            Text(
-                              'Shop: ${store.name ?? ''} (${store.address ?? ''})',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            if (pack.description != null && pack.description!.isNotEmpty) ...[
-                              SizedBox(height: 6.h),
-                              Text(
-                                pack.description!,
-                                style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
-                              ),
-                            ],
                             SizedBox(height: 12.h),
+                            Divider(height: 1, color: Colors.grey.shade100),
+                            SizedBox(height: 10.h),
                             if (isReserved) ...[
                               Container(
                                 padding: EdgeInsets.all(12.r),
@@ -616,24 +696,47 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    outOfStock ? 'Sold Out' : '$stock packs left today',
-                                    style: TextStyle(
-                                      fontSize: 13.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: outOfStock ? Colors.red : primaryColor,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 8.r,
+                                        height: 8.r,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: outOfStock ? Colors.red : Colors.green,
+                                        ),
+                                      ),
+                                      SizedBox(width: 6.w),
+                                      Text(
+                                        outOfStock ? 'Sold Out' : '$stock packs left',
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: outOfStock ? Colors.red : primaryColor,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   ElevatedButton(
                                     onPressed: outOfStock ? null : () => _reservePack(pack, store),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: primaryColor,
+                                      disabledBackgroundColor: Colors.grey.shade300,
+                                      disabledForegroundColor: Colors.grey.shade600,
+                                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        borderRadius: BorderRadius.circular(10.r),
                                       ),
                                       elevation: 0,
                                     ),
-                                    child: const Text('Reserve Now'),
+                                    child: Text(
+                                      outOfStock ? 'Sold Out' : 'Reserve Pack',
+                                      style: TextStyle(
+                                        color: outOfStock ? Colors.grey.shade600 : Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.sp,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -652,3 +755,4 @@ class _LeftoverPackScreenState extends State<LeftoverPackScreen> {
     );
   }
 }
+

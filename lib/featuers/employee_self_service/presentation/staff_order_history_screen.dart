@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
 import 'package:el_arbol/featuers/employee_self_service/data/rx.dart';
 import 'package:rxdart/rxdart.dart';
+import '../../customers/orders/presentation/customer_single_order_screen.dart';
 
 class StaffOrderHistoryScreen extends StatefulWidget {
   const StaffOrderHistoryScreen({super.key});
@@ -81,7 +83,6 @@ class _StaffOrderHistoryScreenState extends State<StaffOrderHistoryScreen> {
               
               return Container(
                 margin: EdgeInsets.only(bottom: 12.h),
-                padding: EdgeInsets.all(16.r),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12.r),
@@ -94,47 +95,63 @@ class _StaffOrderHistoryScreenState extends State<StaffOrderHistoryScreen> {
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Order #$displayId',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(20.r),
-                            border: Border.all(color: Colors.green.shade200),
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(12.r),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12.r),
+                    onTap: () {
+                      Get.to(() => CustomerSingleOrderScreen(
+                            orderId: displayId.toString(),
+                            orderData: order is Map ? Map<String, dynamic>.from(order) : null,
+                          ));
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.all(16.r),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Order #$displayId',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
+                              ),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius: BorderRadius.circular(20.r),
+                                  border: Border.all(color: Colors.green.shade200),
+                                ),
+                                child: Text(
+                                  status.toString().toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.green.shade800,
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            ],
                           ),
-                          child: Text(
-                            status.toString().toUpperCase(),
-                            style: TextStyle(
-                              color: Colors.green.shade800,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Total: €$total', style: TextStyle(color: const Color(0xFF00694C), fontSize: 14.sp, fontWeight: FontWeight.bold)),
+                              if (date.isNotEmpty)
+                                Text(
+                                  date.length > 10 ? date.substring(0, 10) : date,
+                                  style: TextStyle(color: Colors.grey, fontSize: 12.sp)
+                                ),
+                            ],
                           ),
-                        )
-                      ],
+                        ],
+                      ),
                     ),
-                    SizedBox(height: 8.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Total: €$total', style: TextStyle(color: const Color(0xFF00694C), fontSize: 14.sp, fontWeight: FontWeight.bold)),
-                        if (date.isNotEmpty)
-                           Text(
-                             date.length > 10 ? date.substring(0, 10) : date,
-                             style: TextStyle(color: Colors.grey, fontSize: 12.sp)
-                           ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               );
             },

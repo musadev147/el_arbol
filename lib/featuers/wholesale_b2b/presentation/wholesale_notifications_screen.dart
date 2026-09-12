@@ -24,49 +24,11 @@ class _WholesaleNotificationsScreenState extends State<WholesaleNotificationsScr
   @override
   void initState() {
     super.initState();
-    _seedNotificationsIfEmpty();
     _rx = WholesaleNotificationsRx(
       empty: {},
-      dataFetcher: BehaviorSubject<Map<String, dynamic>>(),
+      dataFetcher: BehaviorSubject<dynamic>(),
     );
     _rx.fetchNotifications();
-  }
-
-  void _seedNotificationsIfEmpty() {
-    try {
-      final existing = appData.read('wholesale_local_notifications');
-      if (existing == null || (existing is List && existing.isEmpty)) {
-        appData.write('wholesale_local_notifications', [
-          {
-            'id': 'notif_1',
-            'title': 'Wholesale Order Dispatched',
-            'message': 'Order ORD002154195 is out for commercial freight delivery.',
-            'created_at': 'Today, 09:30 AM',
-            'type': 'order',
-            'target_id': 'ORD002154195',
-            'is_read': false,
-          },
-          {
-            'id': 'notif_2',
-            'title': 'Support Ticket Update',
-            'message': 'Operations admin replied to Ticket #12 regarding pallet loading bay specs.',
-            'created_at': 'Yesterday, 04:15 PM',
-            'type': 'ticket',
-            'target_id': '12',
-            'is_read': false,
-          },
-          {
-            'id': 'notif_3',
-            'title': 'Wholesale Order Confirmed',
-            'message': 'Order #38 has been verified by Madrid Central dispatch.',
-            'created_at': '2 days ago',
-            'type': 'order',
-            'target_id': '38',
-            'is_read': true,
-          },
-        ]);
-      }
-    } catch (_) {}
   }
 
   @override

@@ -40,7 +40,7 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
-      Get.offAll(() => const CustomNavigation(role: UserRole.customer, selectedIndex: 0));
+      Get.offAll(() => const CustomNavigation(role: UserRole.customer, initialIndex: 0));
     }
   }
 

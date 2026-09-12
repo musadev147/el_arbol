@@ -6,6 +6,7 @@ import 'package:rxdart/rxdart.dart';
 import '../../../../../../constants/app_constants.dart';
 import '../../../../../../helpers/di.dart';
 import '../../../../../../networks/dio/dio.dart';
+import '../../../../../../networks/dio/token_storage.dart';
 import '../../../../../../networks/rx_base.dart';
 
 import '../../../../../common_wigdets/app_toast.dart';
@@ -84,6 +85,12 @@ class PostRegisterRx extends RxResponseInt<PostRegisterModel> {
       AppToast.success(successMsg);
       await appData.write(kKeyAccessToken, accessToken);
       await appData.write(kKeyUserID, id.toString());
+
+      final tokenStorage = TokenStorage();
+      await tokenStorage.saveAccessToken(accessToken);
+      if (data.refresh != null && data.refresh!.isNotEmpty) {
+        await tokenStorage.saveRefreshToken(data.refresh!);
+      }
       DioSingleton.instance.update(accessToken);
 
       final role = UserRole.fromString(_selectedRole);

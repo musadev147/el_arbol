@@ -248,11 +248,11 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
             if (text.isEmpty) continue;
 
             final senderId = (r['user'] ?? r['user_id'] ?? r['sender_id'] ?? r['author_id'])?.toString().trim() ?? '';
-            final senderEmail = (r['email'] ?? r['user_email'] ?? r['sender_email'])?.toString().trim().toLowerCase() ?? '';
+            final senderEmail = (r['senderEmail'] ?? r['sender_email'] ?? r['email'] ?? r['user_email'])?.toString().trim().toLowerCase() ?? '';
             final role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '')
                 .toString()
                 .toLowerCase();
-            final senderName = (r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
+            final senderName = (r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
                 .toString()
                 .toLowerCase();
 
@@ -269,6 +269,7 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
                 senderName.contains('helpdesk') ||
                 r['is_staff'] == true ||
                 r['is_admin'] == true ||
+                r['isAdmin'] == true ||
                 r['is_support'] == true ||
                 r['is_superuser'] == true;
 
@@ -279,26 +280,23 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
                 (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId == currentUserId) ||
                 (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail) ||
                 _mySentMessageTexts.contains(text) ||
-                role.contains('customer') ||
-                role.contains('wholesale') ||
-                role.contains('buyer');
+                (r['isAdmin'] == false && r['is_admin'] == false && (role == 'customer' || role == 'wholesale'));
 
             // Any message sent by ME is on the RIGHT side; any reply from someone else / Admin is on the LEFT side
             bool isMe = false;
-            if (isExplicitAdminOrStaff) {
-              isMe = false;
-            } else if (isExplicitMe) {
+            if (isExplicitMe) {
               isMe = true;
+            } else if (isExplicitAdminOrStaff) {
+              isMe = false;
             } else if (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId != currentUserId) {
               isMe = false;
             } else {
-              // A reply on the ticket not sent by the user is from the support team -> LEFT side
               isMe = false;
             }
 
             allMessages.add({
               'message': text,
-              'sender': isMe ? 'You' : 'Admin Support',
+              'sender': isMe ? 'You' : (senderName.isNotEmpty && !senderName.contains('you') ? (r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? 'Admin Support') : 'Admin Support'),
               'created_at': r['created_at'] ?? r['timestamp'] ?? '',
               'isMe': isMe,
             });
@@ -417,60 +415,62 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
           left: isMe ? 48.w : 0,
           right: isMe ? 0 : 48.w,
         ),
-        padding: EdgeInsets.all(12.r),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
           color: isMe ? primaryColor : Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16.r),
-            topRight: Radius.circular(16.r),
-            bottomLeft: isMe ? Radius.circular(16.r) : Radius.circular(3.r),
-            bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(16.r),
+            topLeft: Radius.circular(12.r),
+            topRight: Radius.circular(12.r),
+            bottomLeft: isMe ? Radius.circular(12.r) : Radius.circular(3.r),
+            bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(12.r),
           ),
           border: isMe ? null : Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!isMe) ...[
-                  const Icon(Icons.support_agent_rounded, size: 14, color: Color(0xFF00694C)),
+            if (!isMe) ...[
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.support_agent_rounded, size: 14.r, color: primaryColor),
                   SizedBox(width: 4.w),
-                ],
-                Text(
-                  isOriginal ? '$sender (Initial Request)' : sender,
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.bold,
-                    color: isMe ? Colors.white70 : const Color(0xFF00694C),
+                  Text(
+                    sender.isNotEmpty && !sender.toLowerCase().contains('you') ? sender : 'admin',
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 5.h),
+                ],
+              ),
+              SizedBox(height: 4.h),
+            ],
             Text(
               message,
               style: TextStyle(
-                fontSize: 13.5.sp,
+                fontSize: 13.sp,
                 color: isMe ? Colors.white : const Color(0xFF151E13),
-                height: 1.3,
+                fontFamily: 'Poppins',
               ),
             ),
             if (date.isNotEmpty) ...[
-              SizedBox(height: 6.h),
+              SizedBox(height: 4.h),
               Text(
                 date,
                 style: TextStyle(
                   fontSize: 9.sp,
-                  color: isMe ? Colors.white60 : Colors.grey.shade500,
+                  color: isMe ? Colors.white70 : Colors.grey,
                 ),
               ),
             ],

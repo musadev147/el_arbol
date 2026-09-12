@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
 import '../data/customer_orders_rx.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
@@ -39,20 +40,66 @@ class _CustomerSingleOrderScreenState extends State<CustomerSingleOrderScreen> {
     super.dispose();
   }
 
+  String _formatDateTimeOnly(dynamic raw) {
+    if (raw == null || raw.toString().isEmpty) return '';
+    try {
+      final dt = DateTime.parse(raw.toString()).toLocal();
+      return DateFormat('d MMM yyyy, h:mm a').format(dt);
+    } catch (_) {
+      return raw.toString();
+    }
+  }
+
+  String _formatStatus(String raw) {
+    final s = raw.toLowerCase().trim();
+    if (s == 'canceled' || s == 'cancelled' || s == 'cancel' || s == 'rejected') {
+      return 'Cancelled';
+    }
+    if (s == 'confirmed') return 'Confirmed';
+    if (s == 'processing') return 'Processing';
+    if (s == 'delivered') return 'Delivered';
+    if (s == 'pending') return 'Pending';
+    return raw;
+  }
+
   Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
+    final s = status.toLowerCase().trim();
+    switch (s) {
       case 'pending':
-        return Colors.orange;
+        return Colors.orange.shade800;
       case 'confirmed':
-        return Colors.blue;
+        return Colors.blue.shade700;
       case 'processing':
-        return Colors.purple;
+        return Colors.purple.shade700;
       case 'delivered':
-        return Colors.green;
+        return const Color(0xFF00694C);
       case 'cancelled':
-        return Colors.red;
+      case 'canceled':
+      case 'cancel':
+      case 'rejected':
+      case 'returned':
+        return Colors.red.shade700;
       default:
         return const Color(0xFF00694C);
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    final s = status.toLowerCase().trim();
+    switch (s) {
+      case 'cancelled':
+      case 'canceled':
+      case 'cancel':
+      case 'rejected':
+        return Icons.cancel_outlined;
+      case 'delivered':
+        return Icons.check_circle_outline_rounded;
+      case 'processing':
+        return Icons.hourglass_top_rounded;
+      case 'confirmed':
+        return Icons.verified_outlined;
+      default:
+        return Icons.inventory_2_outlined;
     }
   }
 
@@ -151,7 +198,7 @@ class _CustomerSingleOrderScreenState extends State<CustomerSingleOrderScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Status Header
+                // Status Header Card
                 Container(
                   padding: EdgeInsets.all(16.r),
                   decoration: BoxDecoration(
@@ -160,7 +207,7 @@ class _CustomerSingleOrderScreenState extends State<CustomerSingleOrderScreen> {
                     border: Border.all(color: Colors.grey.shade200),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -171,26 +218,60 @@ class _CustomerSingleOrderScreenState extends State<CustomerSingleOrderScreen> {
                       Container(
                         padding: EdgeInsets.all(12.r),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(status).withOpacity(0.1),
+                          color: _getStatusColor(status).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.inventory_2_outlined, color: _getStatusColor(status), size: 28.sp),
+                        child: Icon(_getStatusIcon(status), color: _getStatusColor(status), size: 28.sp),
                       ),
                       SizedBox(width: 16.w),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Order Status', style: TextStyle(color: Colors.grey.shade600, fontSize: 12.sp)),
-                            SizedBox(height: 4.h),
-                            Text(
-                              status,
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp, color: _getStatusColor(status)),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Order #${widget.orderId}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14.sp,
+                                    color: const Color(0xFF151E13),
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(status).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12.r),
+                                  ),
+                                  child: Text(
+                                    _formatStatus(status),
+                                    style: TextStyle(
+                                      color: _getStatusColor(status),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11.sp,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            if (dateStr.toString().isNotEmpty) ...[
-                              SizedBox(height: 2.h),
-                              Text('Placed: $dateStr', style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp)),
-                            ],
+                            SizedBox(height: 6.h),
+                            if (dateStr.toString().isNotEmpty)
+                              Row(
+                                children: [
+                                  Icon(Icons.access_time_rounded, size: 13.sp, color: Colors.grey.shade500),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    _formatDateTimeOnly(dateStr),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ),

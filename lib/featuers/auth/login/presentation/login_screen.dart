@@ -5,13 +5,11 @@ import 'package:provider/provider.dart';
 
 import '../../../../common_wigdets/custom_textfiled.dart';
 import '../../../../common_wigdets/common_button.dart';
-import '../../../../common_wigdets/social_login_button.dart';
 import '../../../../common_wigdets/user_role.dart';
 import '../../../../constants/text_font_style.dart';
 import '../../../../constants/app_assets/assets_icons.dart';
 import '../../../../provider/singnup_provider.dart';
 import '../../../../route/app_pages.dart';
-import '../../../wholesale_b2b/presentation/wholesale_registration_screen.dart';
 import 'package:rxdart/rxdart.dart';
 import 'data/rx.dart';
 import 'model/post_sign_in_model.dart';
@@ -50,13 +48,37 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Target brand color from website: #00694C
     const Color primaryBrandColor = Color(0xFF00694C);
-    final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee' || widget.role == 'staff' || widget.role == UserRole.staff.value;
-    final isSpecialPortal = isEmployee;
+    final userRoleEnum = UserRole.fromString(widget.role);
+    final isWholesale = userRoleEnum == UserRole.wholesale;
+    final isStaff = userRoleEnum == UserRole.staff || userRoleEnum == UserRole.employeeSelfService;
+
+    final String portalTitle = isWholesale
+        ? 'Wholesale Log In'
+        : isStaff
+            ? 'Staff Log In'
+            : 'Log In';
+
+    final String portalSubtitle = isWholesale
+        ? 'Wholesale B2B & Merchant Portal'
+        : isStaff
+            ? 'Staff & Operations Portal'
+            : 'Artisan produce, delivered with care.';
+
+    final String identifierLabel = isWholesale
+        ? 'Business Email'
+        : isStaff
+            ? 'Staff Email / Username'
+            : 'Email Address';
+
+    final String identifierHint = isWholesale
+        ? 'e.g. orders@restaurant.com'
+        : isStaff
+            ? 'e.g. staff@elarbol.com or username'
+            : 'e.g. jane@example.com';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAF8), // matching web body bg
+      backgroundColor: const Color(0xFFFAFAF8),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
@@ -65,7 +87,7 @@ class _SignInScreenState extends State<SignInScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 40.h),
+                SizedBox(height: 30.h),
                 // Brand Header/Logo
                 Center(
                   child: Column(
@@ -75,8 +97,8 @@ class _SignInScreenState extends State<SignInScreen> {
                         children: [
                           Image.asset(
                             AssetsIcons.logoIcons,
-                            width: 60.w,
-                            height: 60.w,
+                            width: 54.w,
+                            height: 54.w,
                             fit: BoxFit.contain,
                           ),
                           SizedBox(width: 10.w),
@@ -84,7 +106,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             'El Árbol',
                             style: TextStyle(
                               fontFamily: 'Poppins',
-                              fontSize: 28.sp,
+                              fontSize: 26.sp,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF151E13),
                             ),
@@ -93,22 +115,20 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       SizedBox(height: 8.h),
                       Text(
-                        isEmployee
-                            ? 'Employee Self-Service Portal'
-                            : 'Artisan produce, delivered with care.',
+                        portalSubtitle,
                         style: TextFontStyle.textStyle12Poppins400494953.copyWith(
-                          fontSize: 14.sp,
+                          fontSize: 13.sp,
                           color: const Color(0xFF6D7A73),
                         ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 40.h),
+                SizedBox(height: 36.h),
 
-                // Welcome back text
+                // Welcome header text
                 Text(
-                  isSpecialPortal ? 'Staff Log In' : 'Log In',
+                  portalTitle,
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 24.sp,
@@ -118,23 +138,17 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  isEmployee
-                      ? 'Please enter your Member ID.'
-                      : 'Welcome back! Please enter your details.',
+                  'Welcome back! Please enter your credentials to log in.',
                   style: TextFontStyle.textStyle12Poppins400494953.copyWith(
-                    fontSize: 14.sp,
+                    fontSize: 13.sp,
                     color: const Color(0xFF6D7A73),
                   ),
                 ),
                 SizedBox(height: 24.h),
 
-
-
-                // Email / Employee ID / Member ID Field
+                // Email / Member ID Field
                 Text(
-                  isEmployee
-                      ? 'Member ID'
-                      : 'Email Address',
+                  identifierLabel,
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
@@ -144,38 +158,36 @@ class _SignInScreenState extends State<SignInScreen> {
                 SizedBox(height: 6.h),
                 CustomTextFormField(
                   controller: _emailController,
-                  hintText: isEmployee
-                      ? 'MEM-8902'
-                      : 'jane@example.com',
-                  keyboardType: isSpecialPortal ? TextInputType.text : TextInputType.emailAddress,
+                  hintText: identifierHint,
+                  keyboardType: isStaff ? TextInputType.text : TextInputType.emailAddress,
                   borderRadius: 8.r,
                   fillColor: const Color(0xFFECF7E4),
                   borderColor: const Color(0xFF00694C).withOpacity(0.2),
                   focusBorderColor: const Color(0xFF00694C),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return isEmployee
+                    if (value == null || value.trim().isEmpty) {
+                      return isStaff
                           ? 'Please enter your Member ID'
-                          : 'Please enter your email';
+                          : 'Please enter your $identifierLabel';
                     }
-                    if (!isSpecialPortal && !GetUtils.isEmail(value)) {
-                      return 'Please enter a valid email';
+                    if (!isStaff && !GetUtils.isEmail(value.trim())) {
+                      return 'Please enter a valid email address';
                     }
                     return null;
                   },
                 ),
                 SizedBox(height: 16.h),
 
-                // Password Field
-                if (!isEmployee) ...[
-                      Text(
-                        'Password',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF151E13),
-                        ),
-                      ),
+                // Password Field (Hidden for Staff login)
+                if (!isStaff) ...[
+                  Text(
+                    'Password',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF151E13),
+                    ),
+                  ),
                   SizedBox(height: 6.h),
                   CustomTextFormField(
                     controller: _passwordController,
@@ -209,22 +221,22 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 24.h),
+                  SizedBox(height: 12.h),
                 ],
+                SizedBox(height: 16.h),
 
                 // Log In Button
                 CommonButton(
-                  text: 'Log In',
+                  text: isStaff ? 'Access Portal' : 'Log In',
                   backgroundColor: primaryBrandColor,
                   borderRadius: 8.r,
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      // Save login email to signup provider/session if needed
                       final provider = Provider.of<SignupProvider>(context, listen: false);
-                      provider.setLoginEmail(_emailController.text);
+                      provider.setLoginEmail(_emailController.text.trim());
                       
                       _postSignInRx.loginFunc(
-                        email: _emailController.text,
+                        email: _emailController.text.trim(),
                         password: _passwordController.text,
                         role: widget.role ?? 'customer',
                       );
@@ -233,8 +245,60 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                // Sign Up Toggle Link
-                if (!isEmployee)
+                // Sign Up Toggle Link / Staff Notice
+                if (isWholesale) ...[
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        Get.toNamed(Routes.REGISTER, arguments: widget.role);
+                      },
+                      child: RichText(
+                        text: TextSpan(
+                          text: "Don't have a Wholesale account? ",
+                          style: TextStyle(
+                            color: const Color(0xFF6D7A73),
+                            fontSize: 13.sp,
+                            fontFamily: 'Poppins',
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Apply for Wholesale',
+                              style: TextStyle(
+                                color: primaryBrandColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else if (isStaff) ...[
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline, size: 15.r, color: const Color(0xFF6D7A73)),
+                          SizedBox(width: 6.w),
+                          Flexible(
+                            child: Text(
+                              'Staff accounts are registered by administrator.',
+                              style: TextStyle(
+                                color: const Color(0xFF6D7A73),
+                                fontSize: 12.sp,
+                                fontFamily: 'Poppins',
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else ...[
                   Center(
                     child: GestureDetector(
                       onTap: () {
@@ -261,6 +325,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ),
+                ],
               ],
             ),
           ),

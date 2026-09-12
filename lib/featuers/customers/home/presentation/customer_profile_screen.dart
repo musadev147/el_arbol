@@ -272,7 +272,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Divider(),
+                    Divider(color: Colors.grey.shade200),
                     SizedBox(height: 12.h),
 
                     // Cardholder Name
@@ -652,10 +652,10 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             children: [
               Text('Q: How much does home delivery cost?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.sp)),
               Text('A: A standard delivery fee of €3.90 is applied to all delivery orders.', style: TextStyle(fontSize: 11.sp)),
-              const Divider(),
+              Divider(color: Colors.grey.shade200),
               Text('Q: What is Click & Collect?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.sp)),
               Text('A: Order online, select the nearest store, and collect in person. Zero delivery fees!', style: TextStyle(fontSize: 11.sp)),
-              const Divider(),
+              Divider(color: Colors.grey.shade200),
               Text('Q: What are leftover packs?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.sp)),
               Text('A: To reduce food waste, shops offer surplus organic food at €5. Packs must be picked up in person.', style: TextStyle(fontSize: 11.sp)),
             ],
@@ -881,7 +881,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                           stream: _notificationsRx.valueStreamData,
                           builder: (context, snapshot) {
                             final notifs = snapshot.data ?? [];
-                            if (notifs.isEmpty) return const SizedBox.shrink();
+                            final unreadCount = notifs.where((n) => n is Map && !(n['is_read'] == true || n['read'] == true || n['isRead'] == true)).length;
+                            if (unreadCount <= 0) return const SizedBox.shrink();
                             return Container(
                               margin: EdgeInsets.only(right: 8.w),
                               padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
@@ -890,7 +891,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                                 borderRadius: BorderRadius.circular(10.r),
                               ),
                               child: Text(
-                                '${notifs.length}',
+                                unreadCount > 99 ? '99+' : '$unreadCount',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 11.sp,
@@ -1002,19 +1003,28 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Delete Account', style: TextStyle(color: Colors.red)),
-                          content: const Text('Are you sure you want to permanently delete your El Árbol account? This cannot be undone.'),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
+                          title: const Text('Delete Account?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          content: const Text('Are you sure you want to delete your account?'),
+                          actionsPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                           actions: [
-                            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text('Cancel', style: TextStyle(color: Colors.grey.shade700)),
+                            ),
                             ElevatedButton(
                               onPressed: () {
                                 Navigator.pop(context);
                                 Get.offAllNamed(Routes.ROLE_SELECTION);
                                 Fluttertoast.showToast(msg: 'Account deleted.');
                               },
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                              child: const Text('Delete Permanently'),
-                            )
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                              ),
+                              child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
                           ],
                         ),
                       );

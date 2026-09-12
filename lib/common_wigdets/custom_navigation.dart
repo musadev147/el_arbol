@@ -7,7 +7,7 @@ import '../constants/app_assets/assets_icons.dart';
 import '../constants/app_colors.dart';
 import '../featuers/customers/home/presentation/home_screen.dart';
 import '../featuers/customers/home/presentation/shop_map_screen.dart';
-import '../featuers/customers/home/presentation/customer_orders_screen.dart';
+import '../featuers/customers/orders/presentation/customer_orders_screen.dart';
 import '../featuers/customers/home/presentation/customer_profile_screen.dart';
 import '../featuers/customers/orders/presentation/customer_cart_screen.dart';
 import '../featuers/customers/orders/data/customer_orders_rx.dart';
@@ -21,14 +21,22 @@ import '../featuers/employee_self_service/model/staff_chat_model.dart';
 import '../helpers/support_ticket_unread_manager.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_catalog_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_orders_screen.dart';
+import '../featuers/customers/tickets/data/customer_tickets_rx.dart';
+import '../featuers/wholesale_b2b/data/wholesale_rx.dart';
+import 'package:rxdart/rxdart.dart';
+import '../helpers/di.dart';
+
+import '../featuers/customers/tickets/presentation/customer_chat_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_chat_screen.dart';
 
 class CustomNavigation extends StatefulWidget {
-  final UserRole? role;
-  final int selectedIndex;
+  final int initialIndex;
+  final UserRole role;
 
-
-  const CustomNavigation({super.key, this.role,
-    this.selectedIndex = 0,
+  const CustomNavigation({
+    super.key,
+    this.initialIndex = 0,
+    this.role = UserRole.customer,
   });
 
   @override
@@ -36,34 +44,35 @@ class CustomNavigation extends StatefulWidget {
 }
 
 class _CustomNavigationState extends State<CustomNavigation> {
-  final RxInt _selectedIndex = 0.obs;
-
-
+  late final RxInt _selectedIndex;
+  late UserRole role;
+  CustomerCartRx? _cartRx;
+  Timer? _chatPollingTimer;
 
   late final Map<UserRole, List<dynamic>> roleIcons = {
     UserRole.customer: [
       AssetsIcons.homeIcons,
       Icons.storefront_rounded,
-      AssetsIcons.shoppingIcons,
       Icons.receipt_long_rounded,
+      AssetsIcons.messagenavIcons,
       AssetsIcons.usernavIcons,
     ],
     UserRole.wholesale: [
       AssetsIcons.homeIcons,
-      Icons.storefront_rounded,
       Icons.receipt_long_rounded,
+      AssetsIcons.messagenavIcons,
       AssetsIcons.usernavIcons,
     ],
     UserRole.employeeSelfService: [
       AssetsIcons.homeIcons,
-      AssetsIcons.messagenavIcons,
       Icons.price_change_outlined,
+      AssetsIcons.messagenavIcons,
       AssetsIcons.usernavIcons,
     ],
     UserRole.staff: [
       AssetsIcons.homeIcons,
-      AssetsIcons.messagenavIcons,
       Icons.price_change_outlined,
+      AssetsIcons.messagenavIcons,
       AssetsIcons.usernavIcons,
     ],
   };
@@ -72,94 +81,126 @@ class _CustomNavigationState extends State<CustomNavigation> {
     UserRole.customer: [
       "Shop",
       "Stores",
-      "Cart",
       "Orders",
+      "Messages",
       "Profile",
     ],
     UserRole.wholesale: [
       "Market",
-      "Store",
       "Orders",
+      "Messages",
       "Profile",
     ],
     UserRole.employeeSelfService: [
       "Staff Dashboard",
-      "Messages",
       "Prices",
+      "Messages",
       "Profile",
     ],
     UserRole.staff: [
       "Staff Dashboard",
-      "Messages",
       "Prices",
+      "Messages",
       "Profile",
     ],
   };
-
-  late final Map<UserRole, List<Widget>> roleScreens = {
-    UserRole.customer: [
-      const HomeScreen(),
-      const ShopMapScreen(),
-      CustomerCartScreen(cartItems: RxList<Map<String, dynamic>>([])),
-      const CustomerOrdersScreen(),
-      const CustomerProfileScreen(),
-    ],
-    UserRole.wholesale: [
-      const WholesaleCatalogScreen(),
-      const ShopMapScreen(),
-      const WholesaleOrdersScreen(),
-      const ProfileScreen(role: UserRole.wholesale),
-    ],
-    UserRole.employeeSelfService: [
-      const EmployeeDashboardScreen(),
-      const StaffChatScreen(),
-      const PriceListScreen(),
-      const ProfileScreen(role: UserRole.employeeSelfService),
-    ],
-    UserRole.staff: [
-      const EmployeeDashboardScreen(),
-      const StaffChatScreen(),
-      const PriceListScreen(),
-      const ProfileScreen(role: UserRole.staff),
-    ],
-  };
-
-  Timer? _staffChatPollingTimer;
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex.value = widget.selectedIndex;
-    if (widget.role == null || widget.role == UserRole.customer) {
-      CustomerCartRx.instance.fetchBasket();
+    _selectedIndex = widget.initialIndex.obs;
+    final savedRoleStr = appData.read('user_role')?.toString();
+    if (widget.role != UserRole.customer) {
+      role = widget.role;
+    } else if (savedRoleStr != null && savedRoleStr.isNotEmpty) {
+      role = UserRole.fromString(savedRoleStr);
+    } else {
+      role = widget.role;
     }
-    if (widget.role == UserRole.employeeSelfService || widget.role == UserRole.staff) {
+
+    if (role == UserRole.customer || role == UserRole.staff || role == UserRole.employeeSelfService) {
+      _cartRx = CustomerCartRx.instance;
+      _cartRx?.fetchBasket();
+    }
+
+    // Initial fetch for tickets & chats
+    if (role == UserRole.customer) {
+      CustomerTicketsRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>()).fetchTickets();
+    } else if (role == UserRole.wholesale) {
+      WholesaleTicketsRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>()).fetchTickets();
+    } else if (role == UserRole.staff || role == UserRole.employeeSelfService) {
       StaffChatRx.instance.fetchChatMessages(silent: true);
-      _staffChatPollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-        if (mounted) {
+    }
+
+    // Set up periodic polling for real-time unread messages & notifications across all roles
+    _chatPollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (mounted) {
+        if (role == UserRole.staff || role == UserRole.employeeSelfService) {
           StaffChatRx.instance.fetchChatMessages(silent: true);
+        } else if (role == UserRole.customer) {
+          CustomerTicketsRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>()).fetchTickets();
+        } else if (role == UserRole.wholesale) {
+          WholesaleTicketsRx(empty: {}, dataFetcher: BehaviorSubject<Map<String, dynamic>>()).fetchTickets();
         }
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomNavigation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.role != widget.role) {
+      setState(() {
+        role = widget.role;
       });
     }
   }
 
   @override
   void dispose() {
-    _staffChatPollingTimer?.cancel();
+    _chatPollingTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final role = widget.role ?? UserRole.customer;
+    List<Widget> screens = [];
 
-    final icons = roleIcons[role] ?? roleIcons[UserRole.customer]!;
-    final labels = roleLabels[role] ?? roleLabels[UserRole.customer]!;
-    final screens = roleScreens[role] ?? roleScreens[UserRole.customer]!;
+    switch (role) {
+      case UserRole.customer:
+        screens = [
+          const HomeScreen(),
+          const ShopMapScreen(),
+          const CustomerOrdersScreen(),
+          const CustomerChatScreen(),
+          const CustomerProfileScreen(),
+        ];
+        break;
+      case UserRole.wholesale:
+        screens = [
+          const WholesaleCatalogScreen(),
+          const WholesaleOrdersScreen(),
+          const WholesaleChatScreen(),
+          const ProfileScreen(role: UserRole.wholesale),
+        ];
+        break;
+      case UserRole.staff:
+      case UserRole.employeeSelfService:
+        screens = [
+          const EmployeeDashboardScreen(),
+          const PriceListScreen(),
+          const StaffChatScreen(),
+          const ProfileScreen(role: UserRole.staff),
+        ];
+        break;
+    }
 
     if (_selectedIndex.value >= screens.length) {
       _selectedIndex.value = 0;
     }
+
+    final icons = roleIcons[role] ?? roleIcons[UserRole.customer]!;
+    final labels = roleLabels[role] ?? roleLabels[UserRole.customer]!;
 
     return Obx(() => WillPopScope(
       onWillPop: () async {
@@ -169,72 +210,89 @@ class _CustomNavigationState extends State<CustomNavigation> {
           builder: (context) {
             return Dialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(20.r),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(20.r),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.all(14.r),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: const Color(0xFF00694C).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.logout, color: Colors.blue, size: 30),
+                      child: const Icon(Icons.logout_rounded, color: Color(0xFF00694C), size: 32),
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16.h),
 
-                    const Text(
+                    Text(
                       "Exit App",
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        color: const Color(0xFF151E13),
                       ),
                     ),
 
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
 
-                    const Text(
-                      "Are you sure you want to exit?",
+                    Text(
+                      "Are you sure you want to exit El Árbol?",
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
+                        fontSize: 13.sp,
+                        color: Colors.grey.shade600,
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: 24.h),
 
                     Row(
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: () =>
-                                Navigator.of(context).pop(false),
+                            onPressed: () => Navigator.of(context).pop(false),
                             style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 12.h),
+                              side: BorderSide(color: Colors.grey.shade300),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12.r),
                               ),
                             ),
-                            child: const Text("No"),
+                            child: Text(
+                              "No",
+                              style: TextStyle(
+                                color: Colors.grey.shade800,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14.sp,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        SizedBox(width: 12.w),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () =>
-                                Navigator.of(context).pop(true),
+                            onPressed: () => Navigator.of(context).pop(true),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
+                              backgroundColor: const Color(0xFF00694C),
+                              padding: EdgeInsets.symmetric(vertical: 12.h),
+                              elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12.r),
                               ),
                             ),
-                            child: const Text("Yes"),
+                            child: Text(
+                              "Yes",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14.sp,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -245,10 +303,9 @@ class _CustomNavigationState extends State<CustomNavigation> {
             );
           },
         );
-
         return shouldExit ?? false;
       },
-        child:Scaffold(
+      child: Scaffold(
       body: screens[_selectedIndex.value],
       bottomNavigationBar: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
@@ -277,8 +334,10 @@ class _CustomNavigationState extends State<CustomNavigation> {
               return InkWell(
                 onTap: () {
                   _selectedIndex.value = index;
-                  if ((role == UserRole.employeeSelfService || role == UserRole.staff) && index == 1) {
-                    StaffChatRx.instance.markAllAsRead();
+                  if (labels[index] == "Messages") {
+                    if (role == UserRole.employeeSelfService || role == UserRole.staff) {
+                      StaffChatRx.instance.markAllAsRead();
+                    }
                   }
                 },
                 borderRadius: BorderRadius.circular(12.r),
@@ -353,57 +412,18 @@ class _CustomNavigationState extends State<CustomNavigation> {
                             );
                           }
 
-                          // Staff Chat Messages unread count badge on tab 1
-                          if ((role == UserRole.employeeSelfService || role == UserRole.staff) && index == 1) {
+                          // Messages tab unread count badge for Staff, Customer, and Wholesale
+                          if (labels[index] == "Messages") {
                             return Obx(() {
-                              final unreadCount = StaffChatRx.instance.unreadCountRx.value;
-                              return Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  iconWidget,
-                                  if (unreadCount > 0)
-                                    Positioned(
-                                      right: -8,
-                                      top: -4,
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.accentOrange,
-                                          borderRadius: BorderRadius.circular(10.r),
-                                          border: Border.all(color: Colors.white, width: 1.5),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.accentOrange.withValues(alpha: 0.4),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ],
-                                        ),
-                                        constraints: BoxConstraints(minWidth: 16.r, minHeight: 16.r),
-                                        child: Center(
-                                          child: Text(
-                                            unreadCount > 99 ? '99+' : '$unreadCount',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 9.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              );
-                            });
-                          }
+                              int unreadCount = 0;
+                              if (role == UserRole.employeeSelfService || role == UserRole.staff) {
+                                unreadCount = StaffChatRx.instance.unreadCountRx.value;
+                              } else if (role == UserRole.wholesale) {
+                                unreadCount = SupportTicketUnreadManager.instance.wholesaleUnreadCountRx.value;
+                              } else if (role == UserRole.customer) {
+                                unreadCount = SupportTicketUnreadManager.instance.customerUnreadCountRx.value;
+                              }
 
-                          // Support Ticket unread replies badge on Profile tab for Customer & Wholesale
-                          if ((role == UserRole.customer || role == UserRole.wholesale) &&
-                              index == labels.length - 1) {
-                            return Obx(() {
-                              final unreadCount = role == UserRole.wholesale
-                                  ? SupportTicketUnreadManager.instance.wholesaleUnreadCountRx.value
-                                  : SupportTicketUnreadManager.instance.customerUnreadCountRx.value;
                               return Stack(
                                 clipBehavior: Clip.none,
                                 children: [

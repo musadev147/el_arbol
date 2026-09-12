@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../helpers/di.dart';
 import '../common_wigdets/custom_navigation.dart';
 import '../featuers/auth/login/presentation/login_screen.dart';
 import '../featuers/customers/home/presentation/home_screen.dart';
@@ -23,6 +24,7 @@ import '../featuers/wholesale_b2b/presentation/wholesale_support_tickets_screen.
 import '../featuers/wholesale_b2b/presentation/wholesale_add_product_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_cart_screen.dart';
 import '../featuers/wholesale_b2b/presentation/wholesale_checkout_screen.dart';
+import '../featuers/wholesale_b2b/presentation/wholesale_order_details_screen.dart';
 
 part 'app_routes.dart';
 
@@ -56,7 +58,8 @@ class AppPages {
       page: () => CustomNavigation(
         role: Get.arguments is String
             ? UserRole.fromString(Get.arguments as String)
-            : Get.arguments as UserRole?,
+            : (Get.arguments as UserRole? ??
+                UserRole.fromString(appData.read('user_role')?.toString())),
       ),
     ),
 
@@ -133,6 +136,26 @@ class AppPages {
     GetPage(
       name: Routes.WHOLESALE_CHECKOUT,
       page: () => const WholesaleCheckoutScreen(),
+    ),
+    GetPage(
+      name: Routes.WHOLESALE_ORDER_DETAILS,
+      page: () {
+        final args = Get.arguments;
+        String orderId = '';
+        Map<String, dynamic>? orderData;
+        if (args is Map) {
+          orderId = args['orderId']?.toString() ?? args['id']?.toString() ?? '';
+          orderData = args['orderData'] is Map<String, dynamic>
+              ? args['orderData']
+              : (args['orderData'] is Map ? Map<String, dynamic>.from(args['orderData']) : null);
+        } else if (args != null) {
+          orderId = args.toString();
+        }
+        return WholesaleOrderDetailsScreen(
+          orderId: orderId,
+          orderData: orderData,
+        );
+      },
     ),
   ];
 }

@@ -51,7 +51,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
 
     _notificationsRx = WholesaleNotificationsRx(
       empty: {},
-      dataFetcher: BehaviorSubject<Map<String, dynamic>>(),
+      dataFetcher: BehaviorSubject<dynamic>(),
     );
     _notificationsRx.fetchNotifications();
 

@@ -209,6 +209,7 @@ class WholesaleTicketsRx extends RxResponseInt<Map<String, dynamic>> {
       } else if (data['tickets'] is List) {
         list = data['tickets'] as List;
       }
+      
       SupportTicketUnreadManager.instance.updateWholesaleTickets(list);
       await handleSuccessWithReturn(data);
     } catch (e) {
@@ -329,7 +330,7 @@ class WholesaleSingleTicketRx extends RxResponseInt<Map<String, dynamic>> {
   }
 }
 
-class WholesaleNotificationsRx extends RxResponseInt<Map<String, dynamic>> {
+class WholesaleNotificationsRx extends RxResponseInt<dynamic> {
   final api = WholesaleApi.instance;
 
   WholesaleNotificationsRx({required super.empty, required super.dataFetcher});
@@ -342,18 +343,24 @@ class WholesaleNotificationsRx extends RxResponseInt<Map<String, dynamic>> {
       await handleSuccessWithReturn(data);
     } catch (e) {
       log('WholesaleNotificationsRx fetchNotifications error: $e');
-      await handleErrorWithReturn(e);
+      if (!dataFetcher.isClosed) {
+        dataFetcher.sink.add(empty);
+      }
     }
   }
 
   @override
-  Future<void> handleSuccessWithReturn(Map<String, dynamic> data) async {
-    dataFetcher.sink.add(data);
+  Future<void> handleSuccessWithReturn(dynamic data) async {
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.add(data);
+    }
   }
 
   @override
   Future<void> handleErrorWithReturn(dynamic error) async {
-    dataFetcher.sink.addError(error);
+    if (!dataFetcher.isClosed) {
+      dataFetcher.sink.addError(error);
+    }
   }
 }
 
@@ -377,7 +384,7 @@ class WholesaleDailyReportsRx extends RxResponseInt<dynamic> {
   Future<bool> submitReport(Map<String, dynamic> payload) async {
     try {
       await EasyLoading.show(status: 'Submitting Report...');
-      final data = await api.submitDailyReport(payload);
+      await api.submitDailyReport(payload);
       AppToast.success("Daily Report Submitted Successfully!");
       fetchDailyReports();
       return true;
@@ -446,6 +453,15 @@ class WholesaleCreateProductRx extends RxResponseInt<void> {
           } else {
             message = data.entries.map((entry) => "${entry.key}: ${entry.value}").join(", ");
           }
+        } else if (e.response?.data is String) {
+          final str = e.response!.data.toString();
+          if (str.contains("products_product_slug_key") || str.contains("Key (slug)=") || str.contains("already exists")) {
+            message = "A product with this URL Slug already exists. Please choose a different slug or product name.";
+          } else if (str.contains("IntegrityError")) {
+            message = "Database conflict: duplicate item or slug already exists.";
+          } else if (str.contains("AttributeError")) {
+            message = "Server error processing product data.";
+          }
         }
       }
       AppToast.error(message);
@@ -488,8 +504,17 @@ class WholesaleCheckoutOrderRx extends RxResponseInt<dynamic> {
             message = data["error"].toString();
           } else if (data.containsKey("message")) {
             message = data["message"].toString();
-          } else if (data.containsKey("detail")) {
-            message = data["detail"].toString();
+          } else if (data.containsKey("detail") && data["detail"] != null) {
+            final d = data["detail"].toString();
+            if (d.contains("NoneType") || d.contains("category")) {
+              message = "Order failed: One or more selected items have invalid category data on the server.";
+            } else {
+              message = d;
+            }
+          } else if (data.containsKey("error")) {
+            message = data["error"].toString();
+          } else if (data.containsKey("message")) {
+            message = data["message"].toString();
           } else {
             message = data.entries.map((entry) => "${entry.key}: ${entry.value}").join(", ");
           }

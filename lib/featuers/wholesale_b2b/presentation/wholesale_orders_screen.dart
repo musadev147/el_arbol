@@ -3,10 +3,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:get/get.dart';
 import '../../../../common_wigdets/app_toast.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
 import '../../../../common_wigdets/no_internet_or_data_widget.dart';
 import '../../customers/orders/data/customer_orders_rx.dart';
+import 'wholesale_order_details_screen.dart';
 import 'package:el_arbol/helpers/di.dart';
 
 class WholesaleOrdersScreen extends StatefulWidget {
@@ -23,42 +25,8 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
   @override
   void initState() {
     super.initState();
-    _seedRecentOrderIfEmpty();
     _rx = CustomerOrdersRx(empty: [], dataFetcher: BehaviorSubject<List<dynamic>>());
     _rx.fetchOrders();
-  }
-
-  void _seedRecentOrderIfEmpty() {
-    try {
-      final existing = appData.read('wholesale_placed_orders');
-      if (existing == null || (existing is List && existing.isEmpty)) {
-        appData.write('wholesale_placed_orders', [
-          {
-            'id': '38',
-            'order_number': 'ORD002154195',
-            'status': 'Pending',
-            'created_at': DateTime.now().toIso8601String(),
-            'total': '144.00',
-            'items_count': 2,
-            'payment_method': 'card',
-            'items': [
-              {
-                'name': 'Organic Hass Avocados',
-                'quantity': 25,
-                'price': 3.20,
-                'unit': 'kg',
-              },
-              {
-                'name': 'Valencia Sweet Oranges (Box)',
-                'quantity': 16,
-                'price': 4.00,
-                'unit': 'kg',
-              }
-            ]
-          }
-        ]);
-      }
-    } catch (_) {}
   }
 
   @override
@@ -692,8 +660,11 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
                                 parsedDate = DateTime.now();
                               }
 
-                              final double total =
-                                  double.tryParse(order['total']?.toString() ?? '0.0') ?? 0.0;
+                              final double total = double.tryParse(
+                                      order['total_amount']?.toString() ??
+                                      order['total']?.toString() ??
+                                      order['cart_subtotal']?.toString() ??
+                                      '0.0') ?? 0.0;
                               final double adjustments =
                                   double.tryParse(order['adjustments']?.toString() ?? '0.0') ??
                                       0.0;
@@ -718,7 +689,6 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
 
                               return Container(
                                 margin: EdgeInsets.only(bottom: 12.h),
-                                padding: EdgeInsets.all(16.r),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(14.r),
@@ -731,246 +701,303 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
                                     )
                                   ],
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Order ID, Status, and Delete Action
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            displayOrderId.startsWith('#') || displayOrderId.startsWith('ORD') || displayOrderId.startsWith('WHS')
-                                                ? 'Order $displayOrderId'
-                                                : 'Order #$displayOrderId',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color: const Color(0xFF151E13),
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(14.r),
+                                    onTap: () => Get.to(() => WholesaleOrderDetailsScreen(
+                                          orderId: displayOrderId,
+                                          orderData: order,
+                                        )),
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.r),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Order ID, Status, and Delete Action
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  displayOrderId.startsWith('#') || displayOrderId.startsWith('ORD') || displayOrderId.startsWith('WHS')
+                                                      ? 'Order $displayOrderId'
+                                                      : 'Order #$displayOrderId',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 14.sp,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: const Color(0xFF151E13),
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 8.w, vertical: 3.h),
+                                                decoration: BoxDecoration(
+                                                  color: statusColor.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(8.r),
+                                                ),
+                                                child: Text(
+                                                  status,
+                                                  style: GoogleFonts.inter(
+                                                    color: statusColor,
+                                                    fontSize: 11.sp,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 6.w),
+                                              IconButton(
+                                                constraints: const BoxConstraints(),
+                                                padding: EdgeInsets.all(4.r),
+                                                icon: Icon(Icons.delete_outline_rounded,
+                                                    color: Colors.red.shade400, size: 20.r),
+                                                tooltip: 'Delete order',
+                                                onPressed: () => _deleteOrder(orderKey),
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 8.w, vertical: 3.h),
-                                          decoration: BoxDecoration(
-                                            color: statusColor.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(8.r),
-                                          ),
-                                          child: Text(
-                                            status,
+                                          SizedBox(height: 6.h),
+                                          Text(
+                                            'Placed: ${DateFormat('yyyy-MM-dd HH:mm').format(parsedDate)}  •  $itemsCount items',
                                             style: GoogleFonts.inter(
-                                              color: statusColor,
                                               fontSize: 11.sp,
-                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey.shade600,
                                             ),
                                           ),
-                                        ),
-                                        SizedBox(width: 6.w),
-                                        IconButton(
-                                          constraints: const BoxConstraints(),
-                                          padding: EdgeInsets.all(4.r),
-                                          icon: Icon(Icons.delete_outline_rounded,
-                                              color: Colors.red.shade400, size: 20.r),
-                                          tooltip: 'Delete order',
-                                          onPressed: () => _deleteOrder(orderKey),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 6.h),
-                                    Text(
-                                      'Placed: ${DateFormat('yyyy-MM-dd HH:mm').format(parsedDate)}  •  $itemsCount items',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11.sp,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
 
-                                    // Render products included in this order with details
-                                    if (items.isNotEmpty) ...[
-                                      SizedBox(height: 10.h),
-                                      Container(
-                                        padding: EdgeInsets.all(10.r),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF9FBF9),
-                                          borderRadius: BorderRadius.circular(10.r),
-                                          border: Border.all(color: Colors.grey.shade200),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Order Items (${items.length}):',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 11.sp,
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFF374151),
+                                          // Render products included in this order with details
+                                          if (items.isNotEmpty) ...[
+                                            SizedBox(height: 10.h),
+                                            Container(
+                                              padding: EdgeInsets.all(10.r),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFF9FBF9),
+                                                borderRadius: BorderRadius.circular(10.r),
+                                                border: Border.all(color: Colors.grey.shade200),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Order Items (${items.length}):',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 11.sp,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: const Color(0xFF374151),
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 6.h),
+                                                  ...items.map((it) {
+                                                    final name = it['product_name'] ??
+                                                        it['name'] ??
+                                                        it['title'] ??
+                                                        (it['product'] is Map
+                                                            ? (it['product']['name'] ?? it['product']['title'])
+                                                            : null) ??
+                                                        'Product';
+                                                    final qty = it['quantity'] ?? it['qty'] ?? 1;
+                                                    final unit = it['size_name'] ?? it['unit'] ?? 'kg';
+                                                    final rawP = it['unit_price'] ??
+                                                        it['price'] ??
+                                                        it['wholesale_price'] ??
+                                                        (it['product'] is Map ? it['product']['price'] : null);
+                                                    final parsedPrice = rawP != null
+                                                        ? double.tryParse(rawP
+                                                            .toString()
+                                                            .replaceAll('€', '')
+                                                            .replaceAll('\$', '')
+                                                            .trim())
+                                                        : null;
+                                                    final priceVal = parsedPrice != null
+                                                        ? '€ ${parsedPrice.toStringAsFixed(2)}'
+                                                        : '';
+
+                                                    return Padding(
+                                                      padding: EdgeInsets.symmetric(vertical: 2.h),
+                                                      child: Row(
+                                                        children: [
+                                                          Container(
+                                                            width: 5.r,
+                                                            height: 5.r,
+                                                            decoration: const BoxDecoration(
+                                                              color: primaryColor,
+                                                              shape: BoxShape.circle,
+                                                            ),
+                                                          ),
+                                                          SizedBox(width: 8.w),
+                                                          Expanded(
+                                                            child: Text(
+                                                              '$name',
+                                                              style: GoogleFonts.inter(
+                                                                fontSize: 12.sp,
+                                                                color: const Color(0xFF1F2937),
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow: TextOverflow.ellipsis,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            '$qty $unit',
+                                                            style: GoogleFonts.inter(
+                                                              fontSize: 11.sp,
+                                                              fontWeight: FontWeight.w600,
+                                                              color: Colors.grey.shade700,
+                                                            ),
+                                                          ),
+                                                          if (priceVal.isNotEmpty) ...[
+                                                            SizedBox(width: 8.w),
+                                                            Text(
+                                                              priceVal,
+                                                              style: GoogleFonts.inter(
+                                                                fontSize: 11.sp,
+                                                                fontWeight: FontWeight.bold,
+                                                                color: primaryColor,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ],
+                                                      ),
+                                                    );
+                                                  }),
+                                                ],
                                               ),
                                             ),
-                                            SizedBox(height: 6.h),
-                                            ...items.map((it) {
-                                              final name = it['name'] ??
-                                                  it['product_name'] ??
-                                                  it['title'] ??
-                                                  'Product';
-                                              final qty = it['quantity'] ?? it['qty'] ?? 1;
-                                              final unit = it['unit'] ?? 'kg';
-                                              final priceVal = it['price'] != null
-                                                  ? '€ ${(double.tryParse(it['price'].toString()) ?? 0.0).toStringAsFixed(2)}'
-                                                  : '';
-
-                                              return Padding(
-                                                padding: EdgeInsets.symmetric(vertical: 2.h),
-                                                child: Row(
-                                                  children: [
-                                                    Container(
-                                                      width: 5.r,
-                                                      height: 5.r,
-                                                      decoration: const BoxDecoration(
-                                                        color: primaryColor,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
-                                                    SizedBox(width: 8.w),
-                                                    Expanded(
-                                                      child: Text(
-                                                        '$name',
-                                                        style: GoogleFonts.inter(
-                                                          fontSize: 12.sp,
-                                                          color: const Color(0xFF1F2937),
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      '$qty $unit',
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 11.sp,
-                                                        fontWeight: FontWeight.w600,
-                                                        color: Colors.grey.shade700,
-                                                      ),
-                                                    ),
-                                                    if (priceVal.isNotEmpty) ...[
-                                                      SizedBox(width: 8.w),
-                                                      Text(
-                                                        priceVal,
-                                                        style: GoogleFonts.inter(
-                                                          fontSize: 11.sp,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: primaryColor,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              );
-                                            }),
                                           ],
-                                        ),
-                                      ),
-                                    ],
 
-                                    const Divider(height: 20),
+                                          const Divider(height: 20),
 
-                                    // Admin Adjustments Details if any
-                                    if (adjustments != 0.0) ...[
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Admin Payment Adjustment',
-                                            style: GoogleFonts.inter(
-                                                fontSize: 12.sp,
-                                                color: Colors.amber.shade800,
-                                                fontWeight: FontWeight.w600),
+                                          // Admin Adjustments Details if any
+                                          if (adjustments != 0.0) ...[
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  'Admin Payment Adjustment',
+                                                  style: GoogleFonts.inter(
+                                                      fontSize: 12.sp,
+                                                      color: Colors.amber.shade800,
+                                                      fontWeight: FontWeight.w600),
+                                                ),
+                                                Text(
+                                                  '${adjustments >= 0 ? '+' : ''}€ ${adjustments.toStringAsFixed(2)}',
+                                                  style: GoogleFonts.inter(
+                                                      fontSize: 12.sp,
+                                                      color: Colors.amber.shade800,
+                                                      fontWeight: FontWeight.bold),
+                                                )
+                                              ],
+                                            ),
+                                            SizedBox(height: 4.h),
+                                          ],
+
+                                          if (refunds != 0.0) ...[
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  'Admin Refunds Applied',
+                                                  style: GoogleFonts.inter(
+                                                      fontSize: 12.sp,
+                                                      color: Colors.redAccent,
+                                                      fontWeight: FontWeight.w600),
+                                                ),
+                                                Text(
+                                                  '-€ ${refunds.toStringAsFixed(2)}',
+                                                  style: GoogleFonts.inter(
+                                                      fontSize: 12.sp,
+                                                      color: Colors.redAccent,
+                                                      fontWeight: FontWeight.bold),
+                                                )
+                                              ],
+                                            ),
+                                            SizedBox(height: 4.h),
+                                          ],
+
+                                          // Total and Buttons
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'Total Net Invoice',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 12.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.grey.shade800,
+                                                ),
+                                              ),
+                                              Text(
+                                                '€ ${(total + adjustments - refunds).toStringAsFixed(2)}',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 15.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: primaryColor,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          Text(
-                                            '${adjustments >= 0 ? '+' : ''}€ ${adjustments.toStringAsFixed(2)}',
-                                            style: GoogleFonts.inter(
-                                                fontSize: 12.sp,
-                                                color: Colors.amber.shade800,
-                                                fontWeight: FontWeight.bold),
+                                          SizedBox(height: 12.h),
+
+                                          // Action Buttons: Track Status & View Details
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: OutlinedButton.icon(
+                                                  onPressed: () => _showOrderTimeline(
+                                                      context, status, displayOrderId),
+                                                  icon: const Icon(Icons.timeline_rounded,
+                                                      color: primaryColor, size: 16),
+                                                  label: Text(
+                                                    'Track Status',
+                                                    style: GoogleFonts.inter(
+                                                      color: primaryColor,
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 12.sp,
+                                                    ),
+                                                  ),
+                                                  style: OutlinedButton.styleFrom(
+                                                    side: const BorderSide(color: primaryColor),
+                                                    padding: EdgeInsets.symmetric(vertical: 9.h),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(9.r),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 8.w),
+                                              Expanded(
+                                                child: ElevatedButton.icon(
+                                                  onPressed: () => Get.to(() => WholesaleOrderDetailsScreen(
+                                                        orderId: displayOrderId,
+                                                        orderData: order,
+                                                      )),
+                                                  icon: const Icon(Icons.arrow_forward_rounded,
+                                                      color: Colors.white, size: 16),
+                                                  label: Text(
+                                                    'Order Details',
+                                                    style: GoogleFonts.inter(
+                                                      color: Colors.white,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 12.sp,
+                                                    ),
+                                                  ),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: primaryColor,
+                                                    elevation: 0,
+                                                    padding: EdgeInsets.symmetric(vertical: 9.h),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(9.r),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           )
                                         ],
                                       ),
-                                      SizedBox(height: 4.h),
-                                    ],
-
-                                    if (refunds != 0.0) ...[
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Admin Refunds Applied',
-                                            style: GoogleFonts.inter(
-                                                fontSize: 12.sp,
-                                                color: Colors.redAccent,
-                                                fontWeight: FontWeight.w600),
-                                          ),
-                                          Text(
-                                            '-€ ${refunds.toStringAsFixed(2)}',
-                                            style: GoogleFonts.inter(
-                                                fontSize: 12.sp,
-                                                color: Colors.redAccent,
-                                                fontWeight: FontWeight.bold),
-                                          )
-                                        ],
-                                      ),
-                                      SizedBox(height: 4.h),
-                                    ],
-
-                                    // Total and Track Status Button
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Total Net Invoice',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12.sp,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.grey.shade800,
-                                          ),
-                                        ),
-                                        Text(
-                                          '€ ${(total + adjustments - refunds).toStringAsFixed(2)}',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 15.sp,
-                                            fontWeight: FontWeight.bold,
-                                            color: primaryColor,
-                                          ),
-                                        ),
-                                      ],
                                     ),
-                                    SizedBox(height: 12.h),
-
-                                    // Track Status Button
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: OutlinedButton.icon(
-                                        onPressed: () => _showOrderTimeline(
-                                            context, status, displayOrderId),
-                                        icon: const Icon(Icons.timeline_rounded,
-                                            color: primaryColor, size: 16),
-                                        label: Text(
-                                          'Track Status',
-                                          style: GoogleFonts.inter(
-                                            color: primaryColor,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13.sp,
-                                          ),
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(color: primaryColor),
-                                          padding: EdgeInsets.symmetric(vertical: 9.h),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(9.r),
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                  ],
+                                  ),
                                 ),
                               );
                             },

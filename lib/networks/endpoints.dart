@@ -19,12 +19,22 @@ final class Endpoints {
   // App Url
 
   static String register({String? role}) {
-    if (role == 'wholesale') return 'wholesale/auth/register/';
+    if (role != null) {
+      final r = role.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+      if (r == 'wholesale' || r == 'wholesales' || r == 'wholesaler' || r == 'wholesalers' || r == 'b2b') {
+        return 'wholesale/auth/register/';
+      }
+    }
     return 'auth/register/';
   }
 
   static String signIn({String? role}) {
-    if (role == 'wholesale') return 'wholesale/auth/login/';
+    if (role != null) {
+      final r = role.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+      if (r == 'wholesale' || r == 'wholesales' || r == 'wholesaler' || r == 'wholesalers' || r == 'b2b') {
+        return 'wholesale/auth/login/';
+      }
+    }
     return 'auth/login/';
   }
   static String refreshToken() => "auth/token/refresh/";
