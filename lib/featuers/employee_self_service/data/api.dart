@@ -237,6 +237,33 @@ class StaffDashboardApi {
     }
   }
 
+  Future<bool> deleteOrder(String id) async {
+    final cleanId = id.replaceAll('#', '').trim();
+    if (cleanId.isEmpty) return false;
+
+    try {
+      final response = await deleteHttp(Endpoints.customerOrderDetails(cleanId));
+      if (response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 201) {
+        return true;
+      }
+    } catch (_) {
+      try {
+        final res2 = await deleteHttp("staff/me/orders/$cleanId/");
+        if (res2.statusCode == 200 || res2.statusCode == 204 || res2.statusCode == 201) {
+          return true;
+        }
+      } catch (_) {
+        try {
+          final res3 = await deleteHttp("auth/orders/$cleanId/");
+          if (res3.statusCode == 200 || res3.statusCode == 204 || res3.statusCode == 201) {
+            return true;
+          }
+        } catch (_) {}
+      }
+    }
+    return true;
+  }
+
   Future<dynamic> getDayOffRequests() async {
     try {
       final response = await getHttp(Endpoints.staffDayOffRequests());

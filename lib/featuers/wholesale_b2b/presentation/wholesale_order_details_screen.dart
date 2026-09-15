@@ -1210,7 +1210,9 @@ class _WholesaleOrderDetailsScreenState
                           separatorBuilder: (context, index) =>
                               const Divider(height: 16),
                           itemBuilder: (context, index) {
-                            final item = items[index] as Map<String, dynamic>;
+                            final item = items[index] is Map
+                                ? Map<String, dynamic>.from(items[index] as Map)
+                                : <String, dynamic>{};
                             final name = item['product_name'] ??
                                 item['name'] ??
                                 item['title'] ??

@@ -40,42 +40,82 @@ class SupportTicketUnreadManager {
     final currentUserId = appData.read(kKeyUserID)?.toString().trim() ?? '';
     final currentUserEmail = appData.read(kKeyEmail)?.toString().trim().toLowerCase() ?? '';
 
-    final role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '')
-        .toString()
-        .toLowerCase();
-    final senderStr = (r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
-        .toString()
-        .toLowerCase();
+    String senderId = '';
+    String senderEmail = '';
+    String senderName = '';
+    String role = '';
+    bool isStaffOrAdminFlag = false;
 
-    final bool isExplicitAdminOrStaff = role.contains('admin') ||
+    if (r['user'] is Map) {
+      final u = r['user'] as Map;
+      senderId = (u['id'] ?? u['user_id'] ?? u['pk'])?.toString().trim() ?? '';
+      senderEmail = (u['email'] ?? u['user_email'])?.toString().trim().toLowerCase() ?? '';
+      senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '')?.toString().trim().toLowerCase() ?? '';
+      role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '')?.toString().trim().toLowerCase() ?? '';
+      if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+        isStaffOrAdminFlag = true;
+      }
+    } else if (r['sender'] is Map) {
+      final u = r['sender'] as Map;
+      senderId = (u['id'] ?? u['user_id'] ?? u['pk'])?.toString().trim() ?? '';
+      senderEmail = (u['email'] ?? u['user_email'])?.toString().trim().toLowerCase() ?? '';
+      senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '')?.toString().trim().toLowerCase() ?? '';
+      role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '')?.toString().trim().toLowerCase() ?? '';
+      if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+        isStaffOrAdminFlag = true;
+      }
+    } else if (r['author'] is Map) {
+      final u = r['author'] as Map;
+      senderId = (u['id'] ?? u['user_id'] ?? u['pk'])?.toString().trim() ?? '';
+      senderEmail = (u['email'] ?? u['user_email'])?.toString().trim().toLowerCase() ?? '';
+      senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '')?.toString().trim().toLowerCase() ?? '';
+      role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '')?.toString().trim().toLowerCase() ?? '';
+      if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+        isStaffOrAdminFlag = true;
+      }
+    }
+
+    if (senderId.isEmpty) {
+      senderId = (r['user_id'] ?? r['sender_id'] ?? r['author_id'] ?? (r['user'] is! Map ? r['user'] : null) ?? (r['sender'] is! Map ? r['sender'] : null))?.toString().trim() ?? '';
+    }
+    if (senderEmail.isEmpty) {
+      senderEmail = (r['senderEmail'] ?? r['sender_email'] ?? r['email'] ?? r['user_email'])?.toString().trim().toLowerCase() ?? '';
+    }
+    if (senderName.isEmpty) {
+      senderName = (r['senderName'] ?? r['sender_name'] ?? (r['sender'] is! Map ? r['sender'] : null) ?? r['user_name'] ?? (r['author'] is! Map ? r['author'] : null) ?? r['name'])?.toString().trim().toLowerCase() ?? '';
+    }
+    if (role.isEmpty) {
+      role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'])?.toString().trim().toLowerCase() ?? '';
+    }
+
+    if (r['is_admin'] == true || r['isAdmin'] == true || r['is_staff'] == true || r['is_support'] == true || r['is_superuser'] == true) {
+      isStaffOrAdminFlag = true;
+    }
+
+    final bool isExplicitAdminOrStaff = isStaffOrAdminFlag ||
+        role.contains('admin') ||
         role.contains('support') ||
         role.contains('staff') ||
         role.contains('agent') ||
         role.contains('helpdesk') ||
-        senderStr.contains('admin') ||
-        senderStr.contains('support') ||
-        senderStr.contains('staff') ||
-        senderStr.contains('agent') ||
-        senderStr.contains('helpdesk') ||
-        r['is_admin'] == true ||
-        r['isAdmin'] == true ||
-        r['is_support'] == true;
-
-    final senderId = (r['user_id'] ?? r['user'] ?? r['sender_id'] ?? r['author_id'])?.toString().trim() ?? '';
-    final senderEmail = (r['senderEmail'] ?? r['sender_email'] ?? r['email'] ?? r['user_email'])?.toString().trim().toLowerCase() ?? '';
+        role.contains('superuser') ||
+        senderName.contains('admin') ||
+        senderName.contains('support') ||
+        senderName.contains('staff') ||
+        senderName.contains('agent') ||
+        senderName.contains('helpdesk') ||
+        senderName.contains('elarbol') ||
+        senderName.contains('el árbol');
 
     final bool isMe = r['isMe'] == true ||
         r['is_me'] == true ||
         r['sender'] == 'You' ||
         (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId == currentUserId) ||
-        (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail) ||
-        (r['isAdmin'] == false && r['is_admin'] == false && (role == 'customer' || role == 'wholesale'));
+        (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail);
 
-    if (isMe) return false;
     if (isExplicitAdminOrStaff) return true;
-
-    // If not authored by me and sender is not customer/wholesale user, treat as admin reply
-    if (role != 'customer' && role != 'wholesale') return true;
+    if (isMe) return false;
+    if (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId != currentUserId) return true;
 
     return false;
   }

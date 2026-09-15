@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../../../../../networks/dio/dio.dart';
 import '../../../../../networks/endpoints.dart';
 import '../../../../../networks/exception_handler/data_source.dart';
@@ -28,14 +27,22 @@ class CustomerOrdersApi {
   }
 
   Future<dynamic> getOrderDetails(String id) async {
+    final cleanId = id.trim();
+    if (cleanId.isEmpty ||
+        cleanId.toLowerCase() == 'placed' ||
+        cleanId.toLowerCase() == 'null' ||
+        cleanId.toLowerCase() == 'undefined' ||
+        cleanId.toLowerCase() == 'pending') {
+      throw DataSource.DEFAULT.getFailure();
+    }
     try {
-      final response = await getHttp(Endpoints.customerOrderDetails(id));
+      final response = await getHttp(Endpoints.customerOrderDetails(cleanId));
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       }
     } catch (_) {
       try {
-        final fallback = await getHttp("auth/orders/$id/");
+        final fallback = await getHttp("auth/orders/$cleanId/");
         if (fallback.statusCode == 200 || fallback.statusCode == 201) {
           return fallback.data;
         }

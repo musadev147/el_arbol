@@ -637,7 +637,9 @@ class _WholesaleOrdersScreenState extends State<WholesaleOrdersScreen> {
                             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
                             itemCount: displayedOrders.length,
                             itemBuilder: (context, index) {
-                              final order = displayedOrders[index] as Map<String, dynamic>;
+                              final order = displayedOrders[index] is Map
+                                  ? Map<String, dynamic>.from(displayedOrders[index] as Map)
+                                  : <String, dynamic>{};
                               final orderKey = order['order_number']?.toString() ??
                                   order['id']?.toString() ??
                                   '';

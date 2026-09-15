@@ -206,6 +206,16 @@ class StaffOrderHistoryRx extends RxResponseInt<dynamic> {
       handleErrorWithReturn(error);
     }
   }
+
+  Future<bool> deleteOrder(String orderId) async {
+    try {
+      final success = await api.deleteOrder(orderId);
+      return success;
+    } catch (e) {
+      log("Delete order error: $e");
+      return false;
+    }
+  }
 }
 
 class StaffDayOffRequestsRx extends RxResponseInt<dynamic> {

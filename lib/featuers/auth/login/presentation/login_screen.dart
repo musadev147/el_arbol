@@ -68,13 +68,13 @@ class _SignInScreenState extends State<SignInScreen> {
     final String identifierLabel = isWholesale
         ? 'Business Email'
         : isStaff
-            ? 'Staff Email / Username'
+            ? "Staff I'd"
             : 'Email Address';
 
     final String identifierHint = isWholesale
         ? 'e.g. orders@restaurant.com'
         : isStaff
-            ? 'e.g. staff@elarbol.com or username'
+            ? "e.g. staff I'd"
             : 'e.g. jane@example.com';
 
     return Scaffold(
@@ -167,7 +167,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return isStaff
-                          ? 'Please enter your Member ID'
+                          ? "Please enter your Staff I'd"
                           : 'Please enter your $identifierLabel';
                     }
                     if (!isStaff && !GetUtils.isEmail(value.trim())) {

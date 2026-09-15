@@ -178,6 +178,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
               name: product.name ?? '',
               origin: product.origin ?? 'Unknown',
               price: '€${finalPrice.toStringAsFixed(2)}',
+              originalPrice: onSale ? '€${originalPrice.toStringAsFixed(2)}' : null,
               imageUrl: product.thumbnailUrl ?? 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop',
               images: extractedImages,
               description: product.description ?? '',

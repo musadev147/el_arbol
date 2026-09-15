@@ -323,7 +323,9 @@ class StoreDetailsScreen extends StatelessWidget {
                   ),
                   itemCount: products.length,
                   itemBuilder: (context, index) {
-                    final p = products[index] as Map<String, dynamic>;
+                    final p = products[index] is Map
+                        ? Map<String, dynamic>.from(products[index] as Map)
+                        : <String, dynamic>{};
                     final name = p['name'] ?? 'Organic Product';
                     final price = p['price'] ?? '€0.00';
                     final origin = p['origin'] ?? 'Spain';

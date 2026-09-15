@@ -102,10 +102,13 @@ class _CustomerWishlistScreenState extends State<CustomerWishlistScreen> {
               final item = items[index];
               final id = item['id']?.toString() ?? '';
               final productId = item['product_id']?.toString() ?? '';
-              final product = item['product'] ?? {};
+              final product = item['product'] is Map ? item['product'] : {};
               final name = product['name'] ?? item['name'] ?? item['product_name'] ?? 'Product';
               final image = product['thumbnail_url'] ?? item['image'] ?? item['product_image'];
-              final price = product['price']?.toString() ?? item['price']?.toString() ?? '0.0';
+              final double origPrice = double.tryParse(product['price']?.toString() ?? item['price']?.toString() ?? '') ?? 0.0;
+              final double discPrice = double.tryParse(product['discount_price']?.toString() ?? product['discountPrice']?.toString() ?? item['discount_price']?.toString() ?? '') ?? 0.0;
+              final double finalPrice = discPrice > 0 ? discPrice : origPrice;
+              final bool onSale = discPrice > 0 && origPrice > discPrice;
               
               return Container(
                 padding: EdgeInsets.all(12.r),
@@ -137,7 +140,15 @@ class _CustomerWishlistScreenState extends State<CustomerWishlistScreen> {
                         children: [
                           Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
                           SizedBox(height: 8.h),
-                          Text('\$$price', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: primaryColor)),
+                          Row(
+                            children: [
+                              Text('€${finalPrice.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: primaryColor)),
+                              if (onSale) ...[
+                                SizedBox(width: 6.w),
+                                Text('€${origPrice.toStringAsFixed(2)}', style: TextStyle(fontSize: 11.sp, color: Colors.grey, decoration: TextDecoration.lineThrough)),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                     ),

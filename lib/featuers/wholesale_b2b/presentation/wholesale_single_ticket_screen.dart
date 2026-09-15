@@ -5,7 +5,6 @@ import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:intl/intl.dart';
 import 'package:el_arbol/helpers/di.dart';
-import 'package:el_arbol/constants/app_constants.dart';
 import 'package:el_arbol/common_wigdets/custom_app_loading.dart';
 import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
 
@@ -51,7 +50,7 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
     });
 
     // Poll periodically for new responses from Admin
-    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (mounted) {
         _rx.fetchSingleTicket(widget.ticketId, silent: true);
       }
@@ -81,7 +80,7 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
       }
@@ -109,6 +108,7 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
         'message': message,
         'sender': 'You',
         'created_at': DateTime.now().toIso8601String(),
+        'isAdmin': false,
         'isMe': true,
         'isOptimistic': true,
       });
@@ -127,34 +127,57 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
     }
   }
 
-  String _formatDateTime(dynamic raw) {
-    if (raw == null || raw.toString().isEmpty) return '';
+  String _formatTime(dynamic raw) {
+    if (raw == null || raw.toString().isEmpty) {
+      return DateFormat('hh:mm a').format(DateTime.now());
+    }
     try {
       final dt = DateTime.parse(raw.toString()).toLocal();
-      return DateFormat('MMM d, h:mm a').format(dt);
+      return DateFormat('hh:mm a').format(dt);
     } catch (_) {
-      return raw.toString();
+      return DateFormat('hh:mm a').format(DateTime.now());
+    }
+  }
+
+  String _formatDateSeparator(dynamic raw) {
+    if (raw == null || raw.toString().isEmpty) return 'Today';
+    try {
+      final dateTime = DateTime.parse(raw.toString()).toLocal();
+      final now = DateTime.now();
+      if (dateTime.year == now.year && dateTime.month == now.month && dateTime.day == now.day) {
+        return 'Today';
+      }
+      final yesterday = now.subtract(const Duration(days: 1));
+      if (dateTime.year == yesterday.year && dateTime.month == yesterday.month && dateTime.day == yesterday.day) {
+        return 'Yesterday';
+      }
+      return DateFormat('MMMM d, yyyy').format(dateTime);
+    } catch (_) {
+      return 'Today';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF00694C);
+    const Color backgroundColor = Color(0xFFFAFAF8);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F8F7),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        titleSpacing: 0,
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF151E13)),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               widget.ticketSubject,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: Colors.white,
+                fontSize: 15.sp,
+                color: const Color(0xFF151E13),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -165,24 +188,26 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
                   width: 7.r,
                   height: 7.r,
                   decoration: const BoxDecoration(
-                    color: Colors.greenAccent,
+                    color: primaryColor,
                     shape: BoxShape.circle,
                   ),
                 ),
                 SizedBox(width: 5.w),
                 Text(
                   'Admin Support Online',
-                  style: TextStyle(fontSize: 11.sp, color: Colors.white70),
+                  style: TextStyle(
+                    color: const Color(0xFF6D7A73),
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ],
             ),
           ],
         ),
-        backgroundColor: primaryColor,
-        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF6D7A73)),
             tooltip: 'Refresh Chat',
             onPressed: () => _rx.fetchSingleTicket(widget.ticketId),
           ),
@@ -227,8 +252,6 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
 
           // Build unified message list
           final List<Map<String, dynamic>> allMessages = [];
-          final String currentUserId = appData.read(kKeyUserID)?.toString().trim() ?? '';
-          final String currentUserEmail = appData.read(kKeyEmail)?.toString().trim().toLowerCase() ?? '';
 
           // 1. Initial Ticket Problem Message (sent by user -> RIGHT side)
           if (originalMsg.toString().trim().isNotEmpty) {
@@ -236,6 +259,7 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
               'message': originalMsg.toString(),
               'sender': 'You',
               'created_at': originalDate,
+              'isAdmin': false,
               'isMe': true,
               'isOriginal': true,
             });
@@ -247,58 +271,86 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
             final text = (r['message'] ?? r['text'] ?? r['content'] ?? '').toString().trim();
             if (text.isEmpty) continue;
 
-            final senderId = (r['user'] ?? r['user_id'] ?? r['sender_id'] ?? r['author_id'])?.toString().trim() ?? '';
-            final senderEmail = (r['senderEmail'] ?? r['sender_email'] ?? r['email'] ?? r['user_email'])?.toString().trim().toLowerCase() ?? '';
-            final role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '')
-                .toString()
-                .toLowerCase();
-            final senderName = (r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
-                .toString()
-                .toLowerCase();
+            String senderName = '';
+            String role = '';
+            bool isStaffOrAdminFlag = false;
 
-            // Explicit Admin / Staff check
-            final bool isExplicitAdminOrStaff = role.contains('admin') ||
-                role.contains('staff') ||
-                role.contains('support') ||
-                role.contains('agent') ||
-                role.contains('helpdesk') ||
-                role.contains('superuser') ||
-                senderName.contains('admin') ||
-                senderName.contains('support') ||
-                senderName.contains('agent') ||
-                senderName.contains('helpdesk') ||
-                r['is_staff'] == true ||
+            if (r['senderName'] != null) {
+              senderName = r['senderName'].toString();
+            } else if (r['sender_name'] != null) {
+              senderName = r['sender_name'].toString();
+            } else if (r['user_name'] != null) {
+              senderName = r['user_name'].toString();
+            } else if (r['sender'] is String) {
+              senderName = r['sender'].toString();
+            } else if (r['user'] is String) {
+              senderName = r['user'].toString();
+            } else if (r['author'] is String) {
+              senderName = r['author'].toString();
+            } else if (r['name'] != null) {
+              senderName = r['name'].toString();
+            } else if (r['user'] is Map) {
+              final u = r['user'] as Map;
+              senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '').toString();
+              role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '').toString();
+              if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+                isStaffOrAdminFlag = true;
+              }
+            } else if (r['sender'] is Map) {
+              final u = r['sender'] as Map;
+              senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '').toString();
+              role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '').toString();
+              if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+                isStaffOrAdminFlag = true;
+              }
+            } else if (r['author'] is Map) {
+              final u = r['author'] as Map;
+              senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '').toString();
+              role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '').toString();
+              if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+                isStaffOrAdminFlag = true;
+              }
+            }
+
+            if (role.isEmpty) {
+              role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '').toString();
+            }
+
+            final nameLower = senderName.trim().toLowerCase();
+            final roleLower = role.trim().toLowerCase();
+
+            final bool isStaffOrAdmin = isStaffOrAdminFlag ||
                 r['is_admin'] == true ||
                 r['isAdmin'] == true ||
+                r['is_staff'] == true ||
                 r['is_support'] == true ||
-                r['is_superuser'] == true;
+                r['is_superuser'] == true ||
+                nameLower.contains('admin') ||
+                nameLower.contains('support') ||
+                nameLower.contains('agent') ||
+                nameLower.contains('staff') ||
+                nameLower.contains('helpdesk') ||
+                roleLower.contains('admin') ||
+                roleLower.contains('support') ||
+                roleLower.contains('agent') ||
+                roleLower.contains('staff') ||
+                roleLower.contains('helpdesk') ||
+                roleLower.contains('superuser');
 
-            // Explicit Me check
-            final bool isExplicitMe = r['isMe'] == true ||
-                r['is_me'] == true ||
-                r['sender'] == 'You' ||
-                (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId == currentUserId) ||
-                (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail) ||
-                _mySentMessageTexts.contains(text) ||
-                (r['isAdmin'] == false && r['is_admin'] == false && (role == 'customer' || role == 'wholesale'));
+            // Admin messages -> isAdmin = true (LEFT side)
+            // User messages (e.g. 'mousa') -> isAdmin = false (RIGHT side)
+            final bool isAdmin = isStaffOrAdmin;
 
-            // Any message sent by ME is on the RIGHT side; any reply from someone else / Admin is on the LEFT side
-            bool isMe = false;
-            if (isExplicitMe) {
-              isMe = true;
-            } else if (isExplicitAdminOrStaff) {
-              isMe = false;
-            } else if (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId != currentUserId) {
-              isMe = false;
-            } else {
-              isMe = false;
-            }
+            final String displaySender = isAdmin
+                ? (senderName.isNotEmpty && !nameLower.contains('you') ? senderName : 'Admin Support')
+                : 'You';
 
             allMessages.add({
               'message': text,
-              'sender': isMe ? 'You' : (senderName.isNotEmpty && !senderName.contains('you') ? (r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? 'Admin Support') : 'Admin Support'),
+              'sender': displaySender,
               'created_at': r['created_at'] ?? r['timestamp'] ?? '',
-              'isMe': isMe,
+              'isAdmin': isAdmin,
+              'isMe': !isAdmin,
             });
           }
 
@@ -311,227 +363,264 @@ class _WholesaleSingleTicketScreenState extends State<WholesaleSingleTicketScree
             }
           }
 
-          return Column(
-            children: [
-              // Ticket Header info banner
-              if (ticketData['category'] != null || ticketData['status'] != null)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                  color: Colors.white,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Category: ${ticketData['category'] ?? 'GENERAL'}',
-                        style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
-                      ),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10.r),
+          return SafeArea(
+            child: Column(
+              children: [
+                // Ticket Category/Status Pill
+                if (ticketData['category'] != null || ticketData['status'] != null)
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    color: const Color(0xFFF0F4F2),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Category: ${ticketData['category'] ?? 'GENERAL'}',
+                          style: TextStyle(fontSize: 11.sp, color: const Color(0xFF4A554E), fontWeight: FontWeight.w600),
                         ),
-                        child: Text(
-                          (ticketData['status'] ?? 'OPEN').toString().toUpperCase(),
-                          style: TextStyle(fontSize: 10.sp, color: primaryColor, fontWeight: FontWeight.bold),
-                        ),
-                      )
-                    ],
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Text(
+                            (ticketData['status'] ?? 'OPEN').toString().toUpperCase(),
+                            style: TextStyle(fontSize: 10.sp, color: primaryColor, fontWeight: FontWeight.bold),
+                          ),
+                        )
+                      ],
+                    ),
                   ),
+
+                // Chat Messages List
+                Expanded(
+                  child: allMessages.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.r),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.chat_bubble_outline_rounded, size: 48.r, color: Colors.grey.shade400),
+                                SizedBox(height: 12.h),
+                                Text(
+                                  'Wholesale Ticket Conversation',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15.sp,
+                                    color: const Color(0xFF151E13),
+                                    fontFamily: 'Poppins',
+                                  ),
+                                ),
+                                SizedBox(height: 6.h),
+                                Text(
+                                  'Send a message below to chat with Admin Support.',
+                                  style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6D7A73)),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                          itemCount: allMessages.length,
+                          itemBuilder: (context, index) {
+                            final msg = allMessages[index];
+                            // Admin on LEFT (isAdmin = true), User on RIGHT (isAdmin = false)
+                            final bool isAdmin = msg['isAdmin'] == true;
+                            final String sender = msg['sender'] ?? (isAdmin ? 'Admin Support' : 'You');
+                            final String dateStr = msg['created_at']?.toString() ?? '';
+                            final timeStr = _formatTime(dateStr);
+                            final String content = msg['message'] ?? '';
+
+                            // Date separator logic
+                            bool showDateHeader = false;
+                            String dateHeader = '';
+                            if (index == 0) {
+                              showDateHeader = true;
+                              dateHeader = _formatDateSeparator(dateStr);
+                            } else {
+                              final prevMsg = allMessages[index - 1];
+                              final currDate = _formatDateSeparator(dateStr);
+                              final prevDate = _formatDateSeparator(prevMsg['created_at']?.toString());
+                              if (currDate != prevDate) {
+                                showDateHeader = true;
+                                dateHeader = currDate;
+                              }
+                            }
+
+                            return Column(
+                              children: [
+                                if (showDateHeader)
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE8ECE9),
+                                        borderRadius: BorderRadius.circular(8.r),
+                                      ),
+                                      child: Text(
+                                        dateHeader,
+                                        style: TextStyle(
+                                          color: const Color(0xFF4A554E),
+                                          fontSize: 11.sp,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                Align(
+                                  alignment: isAdmin ? Alignment.centerLeft : Alignment.centerRight,
+                                  child: Container(
+                                    margin: EdgeInsets.only(
+                                      bottom: 8.h,
+                                      left: isAdmin ? 0 : 50.w,
+                                      right: isAdmin ? 50.w : 0,
+                                    ),
+                                    padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
+                                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+                                    decoration: BoxDecoration(
+                                      color: isAdmin ? Colors.white : primaryColor,
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(12.r),
+                                        topRight: Radius.circular(12.r),
+                                        bottomLeft: isAdmin ? Radius.circular(2.r) : Radius.circular(12.r),
+                                        bottomRight: isAdmin ? Radius.circular(12.r) : Radius.circular(2.r),
+                                      ),
+                                      border: isAdmin ? Border.all(color: Colors.grey.shade200) : null,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.04),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: isAdmin ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (isAdmin) ...[
+                                              const Icon(Icons.support_agent_rounded, size: 14, color: primaryColor),
+                                              SizedBox(width: 4.w),
+                                              Text(
+                                                sender.isNotEmpty && !sender.toLowerCase().contains('you') ? sender : 'Admin Support',
+                                                style: TextStyle(
+                                                  fontSize: 10.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: primaryColor,
+                                                ),
+                                              ),
+                                            ] else ...[
+                                              Text(
+                                                'You',
+                                                style: TextStyle(
+                                                  fontSize: 10.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white70,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        SizedBox(height: 3.h),
+                                        Text(
+                                          content,
+                                          style: TextStyle(
+                                            fontSize: 13.sp,
+                                            color: isAdmin ? const Color(0xFF151E13) : Colors.white,
+                                            fontFamily: 'Poppins',
+                                            height: 1.3,
+                                          ),
+                                        ),
+                                        SizedBox(height: 3.h),
+                                        Text(
+                                          timeStr,
+                                          style: TextStyle(
+                                            fontSize: 9.sp,
+                                            color: isAdmin ? Colors.grey.shade600 : Colors.white70,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                 ),
 
-              // Chat Messages List
-              Expanded(
-                child: allMessages.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24.r),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.chat_bubble_outline_rounded, size: 54.r, color: Colors.grey.shade300),
-                              SizedBox(height: 12.h),
-                              Text(
-                                'Connecting to Admin Support...',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: Colors.grey.shade700),
-                              ),
-                              SizedBox(height: 6.h),
-                              Text(
-                                'Send a message below to chat with Admin.',
-                                style: TextStyle(fontSize: 12.sp, color: Colors.grey),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-                        itemCount: allMessages.length,
-                        itemBuilder: (context, index) {
-                          final msg = allMessages[index];
-                          final bool isMe = msg['isMe'] == true;
-                          final bool isOriginal = msg['isOriginal'] == true;
-                          final String sender = msg['sender'] ?? (isMe ? 'You' : 'Admin Support');
-                          final String date = _formatDateTime(msg['created_at']);
-                          final String content = msg['message'] ?? '';
-
-                          return _buildMessageBubble(
-                            message: content,
-                            sender: sender,
-                            date: date,
-                            isMe: isMe,
-                            isOriginal: isOriginal,
-                            primaryColor: primaryColor,
-                          );
-                        },
-                      ),
-              ),
-
-              // Reply Input Field
-              _buildReplyInput(primaryColor),
-            ],
+                // Reply Input Field (Text Only, No emojis/images)
+                _buildReplyInput(primaryColor),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildMessageBubble({
-    required String message,
-    required String sender,
-    required String date,
-    required bool isMe,
-    required bool isOriginal,
-    required Color primaryColor,
-  }) {
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.only(
-          bottom: 12.h,
-          left: isMe ? 48.w : 0,
-          right: isMe ? 0 : 48.w,
-        ),
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
-          color: isMe ? primaryColor : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(12.r),
-            topRight: Radius.circular(12.r),
-            bottomLeft: isMe ? Radius.circular(12.r) : Radius.circular(3.r),
-            bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(12.r),
-          ),
-          border: isMe ? null : Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            if (!isMe) ...[
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.support_agent_rounded, size: 14.r, color: primaryColor),
-                  SizedBox(width: 4.w),
-                  Text(
-                    sender.isNotEmpty && !sender.toLowerCase().contains('you') ? sender : 'admin',
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 4.h),
-            ],
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: isMe ? Colors.white : const Color(0xFF151E13),
-                fontFamily: 'Poppins',
-              ),
-            ),
-            if (date.isNotEmpty) ...[
-              SizedBox(height: 4.h),
-              Text(
-                date,
-                style: TextStyle(
-                  fontSize: 9.sp,
-                  color: isMe ? Colors.white70 : Colors.grey,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildReplyInput(Color primaryColor) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
             offset: const Offset(0, -2),
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F6F5),
+                borderRadius: BorderRadius.circular(24.r),
+              ),
               child: TextField(
                 controller: _replyController,
-                decoration: InputDecoration(
-                  hintText: 'Type your message to Admin...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13.sp),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24.r),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
-                ),
-                maxLines: 3,
+                style: TextStyle(fontSize: 14.sp, color: const Color(0xFF151E13)),
                 minLines: 1,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Type your message...',
+                  hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13.sp),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                ),
                 onSubmitted: (_) => _submitReply(),
               ),
             ),
-            SizedBox(width: 10.w),
-            GestureDetector(
-              onTap: _isSending ? null : _submitReply,
-              child: CircleAvatar(
-                backgroundColor: primaryColor,
-                radius: 22.r,
-                child: _isSending
-                    ? SizedBox(
-                        width: 18.r,
-                        height: 18.r,
-                        child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send_rounded, color: Colors.white, size: 19),
-              ),
+          ),
+          SizedBox(width: 8.w),
+          GestureDetector(
+            onTap: _isSending ? null : _submitReply,
+            child: CircleAvatar(
+              radius: 21.r,
+              backgroundColor: primaryColor,
+              child: _isSending
+                  ? SizedBox(
+                      width: 18.r,
+                      height: 18.r,
+                      child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

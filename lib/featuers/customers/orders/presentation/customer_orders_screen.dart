@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import '../../../../common_wigdets/app_toast.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
 import '../../../../common_wigdets/no_internet_or_data_widget.dart';
 import '../data/customer_orders_rx.dart';
@@ -147,7 +147,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       }
     } catch (_) {}
 
-    Fluttertoast.showToast(msg: "Order #$orderKey removed.");
+    AppToast.success("Order #$orderKey deleted successfully");
   }
 
   Color _getStatusColor(String status) {
@@ -203,10 +203,105 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     }
   }
 
+  double _extractItemUnitPrice(Map<dynamic, dynamic> it) {
+    dynamic pDetails = it['product_details'] ?? (it['product'] is Map ? it['product'] : null);
+
+    double getSalePriceFromMap(Map m) {
+      final keys = [
+        'discount_price', 'discountPrice', 'discount', 'sale_price', 'salePrice', 'saleprice',
+        'selling_price', 'sellingPrice', 'offer_price', 'offerPrice', 'final_price', 'finalPrice',
+        'special_price', 'specialPrice', 'deal_price', 'dealPrice', 'promo_price', 'promoPrice',
+        'sell_price', 'sellPrice', 'price_discounted', 'discounted_price'
+      ];
+      for (final k in keys) {
+        if (m.containsKey(k) && m[k] != null) {
+          final d = double.tryParse(m[k].toString().replaceAll('€', '').replaceAll('\$', '').replaceAll(',', '').trim());
+          if (d != null && d > 0) return d;
+        }
+      }
+      return 0.0;
+    }
+
+    double getRegularPriceFromMap(Map m) {
+      final keys = ['price', 'regular_price', 'regularPrice', 'unit_price', 'unitPrice', 'product_price', 'total_price', 'amount'];
+      for (final k in keys) {
+        if (m.containsKey(k) && m[k] != null) {
+          final d = double.tryParse(m[k].toString().replaceAll('€', '').replaceAll('\$', '').replaceAll(',', '').trim());
+          if (d != null && d > 0) return d;
+        }
+      }
+      return 0.0;
+    }
+
+    double salePrice = 0.0;
+    double regularPrice = 0.0;
+
+    if (pDetails is Map) {
+      salePrice = getSalePriceFromMap(pDetails);
+      regularPrice = getRegularPriceFromMap(pDetails);
+    }
+    if (salePrice == 0.0) {
+      salePrice = getSalePriceFromMap(it);
+    }
+    if (regularPrice == 0.0) {
+      regularPrice = getRegularPriceFromMap(it);
+    }
+
+    if (salePrice > 0) {
+      return salePrice;
+    }
+    return regularPrice;
+  }
+
   double _parseOrderTotal(Map<String, dynamic> order) {
-    final raw = order['total'] ?? order['total_amount'] ?? order['grand_total'] ?? '0.00';
-    final clean = raw.toString().replaceAll('€', '').replaceAll('\$', '').replaceAll(',', '').trim();
-    return double.tryParse(clean) ?? 0.0;
+    List<dynamic> items = [];
+    if (order['items'] is List) {
+      items = order['items'];
+    } else if (order['order_items'] is List) {
+      items = order['order_items'];
+    } else if (order['products'] is List) {
+      items = order['products'];
+    } else if (order['lines'] is List) {
+      items = order['lines'];
+    } else if (order['cart_items'] is List) {
+      items = order['cart_items'];
+    }
+
+    final double shipping = double.tryParse((order['shipping'] ?? order['shipping_charge'] ?? order['shipping_cost'] ?? order['delivery_fee'] ?? '0.00').toString().replaceAll('€', '').replaceAll('\$', '').replaceAll(',', '').trim()) ?? 0.0;
+    final double discount = double.tryParse((order['discount'] ?? order['discount_amount'] ?? order['coupon_discount'] ?? '0.00').toString().replaceAll('€', '').replaceAll('\$', '').replaceAll(',', '').trim()) ?? 0.0;
+    final double tax = double.tryParse((order['tax'] ?? order['tax_amount'] ?? order['vat'] ?? '0.00').toString().replaceAll('€', '').replaceAll('\$', '').replaceAll(',', '').trim()) ?? 0.0;
+
+    if (items.isNotEmpty) {
+      double itemsSubtotal = 0.0;
+      for (var it in items) {
+        if (it is Map) {
+          final double p = _extractItemUnitPrice(it);
+          final int q = int.tryParse(it['quantity']?.toString() ?? it['qty']?.toString() ?? it['count']?.toString() ?? '1') ?? 1;
+          itemsSubtotal += (p * q);
+        }
+      }
+      final double finalCalc = (itemsSubtotal + shipping + tax - discount);
+      if (finalCalc > 0) {
+        return finalCalc;
+      }
+    }
+
+    final sub = double.tryParse((order['subtotal'] ?? order['sub_total'] ?? order['items_total'] ?? '').toString().replaceAll('€', '').replaceAll('\$', '').replaceAll(',', '').trim()) ?? 0.0;
+    final total = double.tryParse((order['total'] ?? order['total_amount'] ?? order['grand_total'] ?? order['final_amount'] ?? '0.00').toString().replaceAll('€', '').replaceAll('\$', '').replaceAll(',', '').trim()) ?? 0.0;
+
+    if (sub > 0 && total == 0) {
+      final calcWithSub = sub + shipping + tax - discount;
+      if (calcWithSub > 0) return calcWithSub;
+      return sub;
+    }
+    if (total > 0 && sub > 0 && sub < total) {
+      final calcWithSub = sub + shipping + tax - discount;
+      if (calcWithSub > 0 && calcWithSub < total) {
+        return calcWithSub;
+      }
+    }
+
+    return total;
   }
 
   List<Map<String, dynamic>> _filterAndSortOrders(List<Map<String, dynamic>> allOrders) {
@@ -530,6 +625,18 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                     ...List<dynamic>.from(appData.read('wholesale_placed_orders')),
                 ];
 
+                final Map<String, Map<String, dynamic>> localOrdersByKey = {};
+                for (final o in localOrders) {
+                  if (o is Map) {
+                    final map = Map<String, dynamic>.from(o);
+                    for (final k in [map['order_number'], map['id'], map['order_id'], map['order_code']]) {
+                      if (k != null && k.toString().trim().isNotEmpty) {
+                        localOrdersByKey[k.toString().trim().toLowerCase().replaceAll('#', '')] = map;
+                      }
+                    }
+                  }
+                }
+
                 final Map<String, dynamic> mergedMap = {};
                 for (final o in localOrders) {
                   if (o is Map) {
@@ -537,13 +644,54 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                     if (key.isNotEmpty) mergedMap[key] = Map<String, dynamic>.from(o);
                   }
                 }
+
                 for (final o in serverOrders) {
                   if (o is Map) {
                     final key = o['order_number']?.toString() ?? o['id']?.toString() ?? o['order_id']?.toString() ?? '';
                     if (key.isNotEmpty) {
                       final serverOrderMap = Map<String, dynamic>.from(o);
-                      if (mergedMap.containsKey(key)) {
-                        mergedMap[key]!.addAll(serverOrderMap);
+                      final cleanK = key.toLowerCase().replaceAll('#', '').trim();
+                      final localOrderMatch = localOrdersByKey[cleanK] ?? (mergedMap.containsKey(key) ? mergedMap[key] : null);
+
+                      if (localOrderMatch != null) {
+                        final merged = Map<String, dynamic>.from(localOrderMatch);
+                        final serverItems = serverOrderMap['items'] ?? serverOrderMap['order_items'] ?? serverOrderMap['products'] ?? serverOrderMap['lines'];
+                        final localItems = localOrderMatch['items'] ?? localOrderMatch['order_items'] ?? localOrderMatch['products'] ?? localOrderMatch['lines'];
+
+                        merged.addAll(serverOrderMap);
+
+                        if ((serverItems == null || (serverItems is List && serverItems.isEmpty)) && localItems is List && localItems.isNotEmpty) {
+                          merged['items'] = localItems;
+                        } else if (serverItems is List && localItems is List && serverItems.length == localItems.length) {
+                          final mergedItems = [];
+                          for (int i = 0; i < serverItems.length; i++) {
+                            final sIt = serverItems[i] is Map ? Map<String, dynamic>.from(serverItems[i]) : {};
+                            final lIt = localItems[i] is Map ? Map<String, dynamic>.from(localItems[i]) : {};
+                            final mIt = {...lIt, ...sIt};
+                            if ((sIt['product_details'] == null || (sIt['product_details'] is Map && (sIt['product_details'] as Map).isEmpty)) && lIt['product_details'] != null) {
+                              mIt['product_details'] = lIt['product_details'];
+                            }
+                            if (sIt['discount_price'] == null && lIt['discount_price'] != null) {
+                              mIt['discount_price'] = lIt['discount_price'];
+                            }
+                            if (sIt['sale_price'] == null && lIt['sale_price'] != null) {
+                              mIt['sale_price'] = lIt['sale_price'];
+                            }
+                            mergedItems.add(mIt);
+                          }
+                          merged['items'] = mergedItems;
+                        }
+
+                        for (final f in [
+                          'shipping_address', 'delivery_address', 'fulfillment_type', 'delivery_type',
+                          'delivery_date', 'delivery_slot', 'payment_method', 'customer_name',
+                          'customer_phone', 'customer_email', 'order_notes', 'subtotal', 'total', 'total_amount'
+                        ]) {
+                          if ((merged[f] == null || merged[f].toString().trim().isEmpty) && localOrderMatch[f] != null) {
+                            merged[f] = localOrderMatch[f];
+                          }
+                        }
+                        mergedMap[key] = merged;
                       } else {
                         mergedMap[key] = serverOrderMap;
                       }

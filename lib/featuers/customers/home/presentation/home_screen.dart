@@ -17,6 +17,9 @@ import '../../../../route/app_pages.dart';
 import '../../orders/data/customer_orders_rx.dart';
 import '../../orders/data/customer_orders_api.dart';
 import '../../orders/presentation/customer_cart_screen.dart';
+import '../../notifications/presentation/customer_notifications_screen.dart';
+import '../../notifications/data/customer_notifications_rx.dart';
+import '../../../../helpers/notification_unread_manager.dart';
 import '../../../../common_wigdets/app_shimmer.dart';
 import '../../../../constants/app_assets/assets_icons.dart';
 
@@ -107,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final CustomerCreateOrderRx _createOrderRx;
   late final CustomerPaymentConfirmationRx _paymentConfirmationRx;
   late final CustomerAddressesRx _addressesRx;
+  late final CustomerNotificationsRx _notificationsRx;
   List<Results> _apiProducts = [];
   List<Category> _apiCategories = [];
   StreamSubscription? _productSubscription;
@@ -116,6 +120,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _notificationsRx = CustomerNotificationsRx(
+      empty: [],
+      dataFetcher: BehaviorSubject<List<dynamic>>(),
+    );
+    _notificationsRx.fetchNotifications();
+
     _getProductRx = GetProductRx(
       empty: GetProductModel(),
       dataFetcher: BehaviorSubject<GetProductModel>(),
@@ -201,6 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _createOrderRx.dispose();
     _paymentConfirmationRx.dispose();
     _addressesRx.dispose();
+    _notificationsRx.dispose();
     super.dispose();
   }
 
@@ -1221,6 +1232,36 @@ class _HomeScreenState extends State<HomeScreen> {
             alignment: Alignment.center,
             children: [
               IconButton(
+                icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF151E13)),
+                onPressed: () async {
+                  await Get.to(() => const CustomerNotificationsScreen());
+                  _notificationsRx.fetchNotifications();
+                  if (mounted) setState(() {});
+                },
+                tooltip: 'Notifications',
+              ),
+              Obx(() {
+                final unread = NotificationUnreadManager.instance.customerUnreadCountRx.value;
+                if (unread <= 0) return const SizedBox.shrink();
+                return Positioned(
+                  right: 4,
+                  top: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                    child: Text(
+                      unread > 99 ? '99+' : '$unread',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
                 icon: const Icon(Icons.favorite_border_rounded, color: Color(0xFF151E13)),
                 onPressed: () => Get.toNamed(Routes.WISHLIST),
               ),
@@ -1468,6 +1509,9 @@ class _HomeScreenState extends State<HomeScreen> {
               name: prod['name'],
               origin: prod['origin'],
               price: '€${(prod['price'] as double).toStringAsFixed(2)}',
+              originalPrice: (onSale && prod['originalPrice'] != null)
+                  ? '€${(prod['originalPrice'] as double).toStringAsFixed(2)}'
+                  : null,
               imageUrl: prod['imageUrl'],
               images: prod['images'] as List<String>?,
               description: prod['description'],
@@ -1811,11 +1855,17 @@ class _PromoSliderState extends State<PromoSlider> {
                 onTap: () {
                   if (banner['product'] != null && banner['product'] is Map) {
                     final p = banner['product'] as Map;
+                    final double origP = double.tryParse(p['price']?.toString() ?? '') ?? 0.0;
+                    final double discP = double.tryParse(p['discount_price']?.toString() ?? p['discountPrice']?.toString() ?? '') ?? 0.0;
+                    final double finalP = discP > 0 ? discP : origP;
+                    final bool onSaleP = discP > 0 && origP > discP;
+
                     Get.to(() => ProductDetailsScreen(
                           id: p['id']?.toString(),
                           name: p['name'] ?? 'Product Details',
                           origin: p['origin'] ?? 'Spain',
-                          price: p['price']?.toString() ?? '0.00',
+                          price: '€${finalP.toStringAsFixed(2)}',
+                          originalPrice: onSaleP ? '€${origP.toStringAsFixed(2)}' : null,
                           imageUrl: p['image'] ?? p['imageUrl'] ?? imgUrl,
                           description: p['description'] ?? '',
                           category: p['category'] ?? 'Produce',

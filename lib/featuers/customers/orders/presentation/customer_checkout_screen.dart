@@ -4,12 +4,16 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../data/customer_orders_api.dart';
 import '../data/customer_orders_rx.dart';
 import '../../addresses/data/customer_addresses_rx.dart';
 import '../../profile/data/api.dart';
 import 'customer_orders_screen.dart';
 import 'package:el_arbol/helpers/di.dart';
+import 'package:el_arbol/helpers/notification_unread_manager.dart';
+
+import 'customer_single_order_screen.dart';
 
 class CustomerCheckoutScreen extends StatefulWidget {
   const CustomerCheckoutScreen({super.key});
@@ -200,12 +204,60 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
     super.dispose();
   }
 
+  double _extractFinalPrice(dynamic item) {
+    if (item == null) return 0.0;
+    final details = (item is Map && item['product_details'] is Map)
+        ? Map<String, dynamic>.from(item['product_details'])
+        : (item is Map && item['product'] is Map)
+            ? Map<String, dynamic>.from(item['product'])
+            : (item is Map) ? Map<String, dynamic>.from(item) : <String, dynamic>{};
+
+    final double discountPrice = double.tryParse(
+      details['discount_price']?.toString() ??
+      details['discountPrice']?.toString() ??
+      details['sale_price']?.toString() ??
+      details['sell_price']?.toString() ??
+      (item is Map ? (item['discount_price']?.toString() ?? item['discountPrice']?.toString()) : null) ??
+      ''
+    ) ?? 0.0;
+
+    if (discountPrice > 0) return discountPrice;
+
+    final double regularPrice = double.tryParse(
+      details['price']?.toString() ??
+      details['regular_price']?.toString() ??
+      (item is Map ? (item['price']?.toString() ?? item['unit_price']?.toString() ?? item['product_price']?.toString()) : null) ??
+      '0.0'
+    ) ?? 0.0;
+
+    return regularPrice;
+  }
+
+  double _extractOriginalPrice(dynamic item) {
+    if (item == null) return 0.0;
+    final details = (item is Map && item['product_details'] is Map)
+        ? Map<String, dynamic>.from(item['product_details'])
+        : (item is Map && item['product'] is Map)
+            ? Map<String, dynamic>.from(item['product'])
+            : (item is Map) ? Map<String, dynamic>.from(item) : <String, dynamic>{};
+
+    return double.tryParse(
+      details['price']?.toString() ??
+      details['regular_price']?.toString() ??
+      details['original_price']?.toString() ??
+      details['originalPrice']?.toString() ??
+      (item is Map ? (item['original_price']?.toString() ?? item['price']?.toString()) : null) ??
+      '0.0'
+    ) ?? 0.0;
+  }
+
   double getSubtotal(List<dynamic> items) {
     double sum = 0.0;
     for (var item in items) {
-      final details = item['product_details'] ?? {};
-      final price = double.tryParse(details['price']?.toString() ?? '0.0') ?? 0.0;
-      final quantity = item['quantity'] as int? ?? 1;
+      final price = _extractFinalPrice(item);
+      final quantity = (item is Map && item['quantity'] is int)
+          ? (item['quantity'] as int)
+          : (int.tryParse(item is Map ? (item['quantity']?.toString() ?? '1') : '1') ?? 1);
       sum += price * quantity;
     }
     return sum;
@@ -266,6 +318,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
     required String fulfillmentMethod,
     required String paymentType,
     required int itemCount,
+    Map<String, dynamic>? placedOrder,
   }) {
     showDialog(
       context: context,
@@ -287,7 +340,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                   height: 80.r,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: primaryColor.withOpacity(0.12),
+                    color: primaryColor.withValues(alpha: 0.12),
                   ),
                   child: Center(
                     child: Container(
@@ -365,7 +418,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Total Paid', style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold, color: const Color(0xFF151E13))),
-                          Text('€$totalAmount', style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold, color: Colors.amber.shade800)),
+                          Text('€$totalAmount', style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.bold, color: primaryColor)),
                         ],
                       ),
                     ],
@@ -379,10 +432,15 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(ctx);
-                      Get.off(() => const CustomerOrdersScreen());
+                      Get.to(() => CustomerSingleOrderScreen(
+                            orderId: orderNumber,
+                            orderData: placedOrder,
+                          ));
                     },
-                    icon: const Icon(Icons.receipt_long_outlined, color: Colors.white, size: 18),
-                    label: const Text('View My Orders', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+
+
+                    icon: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 18),
+                    label: const Text('View Order Details', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
@@ -391,20 +449,42 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                   ),
                 ),
                 SizedBox(height: 8.h),
-                SizedBox(
-                  width: double.infinity,
-                  height: 42.h,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      Get.back();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 42.h,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            Get.off(() => const CustomerOrdersScreen());
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                          ),
+                          child: Text('My Orders', style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600, fontSize: 12.sp)),
+                        ),
+                      ),
                     ),
-                    child: Text('Continue Shopping', style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600)),
-                  ),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: SizedBox(
+                        height: 42.h,
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            Get.back();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                          ),
+                          child: Text('Shopping', style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600, fontSize: 12.sp)),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -510,32 +590,62 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
 
     double currentSub = 0.0;
     for (var it in items) {
-      final price = double.tryParse(it['product_details']?['price']?.toString() ?? '0') ?? 0.0;
+      final price = _extractFinalPrice(it);
       final qty = (it['quantity'] is int) ? (it['quantity'] as int) : (int.tryParse(it['quantity']?.toString() ?? '1') ?? 1);
       currentSub += (price * qty);
     }
     final finalOrderTotal = getTotal(currentSub).toStringAsFixed(2);
 
+    Map<String, dynamic> placedOrder = {
+      'id': orderId,
+      'order_id': orderId,
+      'order_number': orderNumber,
+      'status': 'Processing',
+      'created_at': DateTime.now().toIso8601String(),
+      'subtotal': currentSub.toStringAsFixed(2),
+      'delivery_fee': (checkoutType == 'Delivery' ? deliveryFee : 0.0).toStringAsFixed(2),
+      'discount': discountAmount.toStringAsFixed(2),
+      'tax': '0.00',
+      'total': finalOrderTotal,
+      'total_amount': finalOrderTotal,
+      'items_count': items.length,
+      'payment_method': paymentMethod == 'cash' ? 'Cash on Delivery' : 'Credit / Debit Card',
+      'transaction_id': currentTxId,
+      'customer_name': nameController.text.trim().isNotEmpty ? nameController.text.trim() : (appData.read('user_name') ?? 'Valued Customer'),
+      'customer_phone': phoneController.text.trim().isNotEmpty ? phoneController.text.trim() : (appData.read('user_phone') ?? ''),
+      'customer_email': emailController.text.trim().isNotEmpty ? emailController.text.trim() : (appData.read('user_email') ?? ''),
+      'shipping_address': checkoutType == 'Delivery' ? (addr != null ? (addr['street'] ?? addr['address'] ?? '') : streetController.text) : selectedStore,
+      'fulfillment_type': checkoutType,
+      'delivery_date': deliveryDate.toIso8601String().split('T').first,
+      'delivery_slot': selectedDeliverySlot,
+      'items': items,
+    };
+
     try {
-      final placedOrder = {
-        'id': orderId,
-        'order_id': orderId,
-        'order_number': orderNumber,
-        'status': 'Processing',
-        'created_at': DateTime.now().toIso8601String(),
-        'total': finalOrderTotal,
-        'total_amount': finalOrderTotal,
-        'items_count': items.length,
-        'payment_method': paymentMethod,
-        'items': items,
-        'shipping_address': checkoutType == 'Delivery' ? (addr != null ? (addr['street'] ?? addr['address'] ?? '') : streetController.text) : selectedStore,
-        'fulfillment_type': checkoutType,
-      };
       final existing = (appData.read('customer_placed_orders') is List)
           ? List<dynamic>.from(appData.read('customer_placed_orders'))
           : <dynamic>[];
       existing.insert(0, placedOrder);
       appData.write('customer_placed_orders', existing);
+
+      // Create local customer notification for the new order
+      final notif = {
+        'id': 'notif_${DateTime.now().millisecondsSinceEpoch}',
+        'title': 'Order #$orderNumber Placed',
+        'message': 'Your order #$orderNumber for €$finalOrderTotal has been placed and is currently being processed.',
+        'created_at': DateFormat('dd MMM, HH:mm').format(DateTime.now()),
+        'type': 'order',
+        'order_id': orderNumber,
+        'order_number': orderNumber,
+        'order': placedOrder,
+        'is_read': false,
+      };
+      final localNotifs = (appData.read('customer_local_notifications') is List)
+          ? List<dynamic>.from(appData.read('customer_local_notifications'))
+          : <dynamic>[];
+      localNotifs.insert(0, notif);
+      appData.write('customer_local_notifications', localNotifs);
+      NotificationUnreadManager.instance.updateCustomerNotifications(localNotifs);
     } catch (_) {}
 
     if (createSuccess && paymentMethod == 'card') {
@@ -581,6 +691,7 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
       fulfillmentMethod: checkoutType == 'Delivery' ? 'Home Delivery' : 'Click & Collect ($selectedStore)',
       paymentType: paymentMethod == 'cash' ? 'Cash on Delivery' : 'Credit / Debit Card',
       itemCount: items.length,
+      placedOrder: placedOrder,
     );
   }
 
@@ -669,7 +780,9 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                                     final item = items[index];
                                     final details = item['product_details'] ?? {};
                                     final name = details['name'] ?? 'Product';
-                                    final price = double.tryParse(details['price']?.toString() ?? '0.0') ?? 0.0;
+                                    final price = _extractFinalPrice(item);
+                                    final originalPrice = _extractOriginalPrice(item);
+                                    final bool onSale = originalPrice > price && price > 0;
                                     final imageUrl = details['thumbnail_url'] ?? details['image_url'] ?? details['image'] ?? 'https://via.placeholder.com/150';
                                     final qty = item['quantity'] ?? 1;
 
@@ -691,7 +804,15 @@ class _CustomerCheckoutScreenState extends State<CustomerCheckoutScreen> {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(name, style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold)),
-                                              Text('€${price.toStringAsFixed(2)} x $qty', style: TextStyle(fontSize: 11.sp, color: Colors.grey)),
+                                              Row(
+                                                children: [
+                                                  Text('€${price.toStringAsFixed(2)} x $qty', style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade700, fontWeight: FontWeight.w600)),
+                                                  if (onSale) ...[
+                                                    SizedBox(width: 6.w),
+                                                    Text('€${originalPrice.toStringAsFixed(2)}', style: TextStyle(fontSize: 10.sp, color: Colors.grey, decoration: TextDecoration.lineThrough)),
+                                                  ],
+                                                ],
+                                              ),
                                             ],
                                           ),
                                         ),

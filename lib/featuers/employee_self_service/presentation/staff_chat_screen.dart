@@ -20,6 +20,7 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
   late final StaffChatRx _chatRx;
   StreamSubscription? _chatSubscription;
   Timer? _pollingTimer;
+  bool _isSending = false;
 
   int _lastMessageCount = 0;
 
@@ -84,11 +85,11 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
 
   void _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isSending) return;
 
     _messageController.clear();
 
-    // Optimistic local UI update so staff sees message right away
+    // Optimistic local UI update (Staff / User on RIGHT side)
     final optimisticMsg = StaffChatMessage(
       message: text,
       sender: 'STAFF',
@@ -98,22 +99,44 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
     _chatRx.dataFetcher.sink.add(List<StaffChatMessage>.from(currentList)..add(optimisticMsg));
     _scrollToBottom(immediate: true, force: true);
 
+    setState(() => _isSending = true);
     final success = await _chatRx.sendMessage(text);
-    if (success) {
-      _scrollToBottom(force: true);
-      _chatRx.fetchChatMessages(silent: true);
-    } else {
-      AppToast.error('Failed to send message. Please try again.');
+    if (mounted) {
+      setState(() => _isSending = false);
+      if (success) {
+        _scrollToBottom(force: true);
+        _chatRx.fetchChatMessages(silent: true);
+      } else {
+        AppToast.error('Failed to send message. Please try again.');
+      }
     }
   }
 
   String _formatTime(String? dateStr) {
-    if (dateStr == null) return '';
+    if (dateStr == null || dateStr.isEmpty) return '';
     try {
       final dateTime = DateTime.parse(dateStr).toLocal();
       return DateFormat('hh:mm a').format(dateTime);
     } catch (_) {
       return '';
+    }
+  }
+
+  String _formatDateSeparator(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return 'Today';
+    try {
+      final dateTime = DateTime.parse(dateStr).toLocal();
+      final now = DateTime.now();
+      if (dateTime.year == now.year && dateTime.month == now.month && dateTime.day == now.day) {
+        return 'Today';
+      }
+      final yesterday = now.subtract(const Duration(days: 1));
+      if (dateTime.year == yesterday.year && dateTime.month == yesterday.month && dateTime.day == yesterday.day) {
+        return 'Yesterday';
+      }
+      return DateFormat('MMMM d, yyyy').format(dateTime);
+    } catch (_) {
+      return 'Today';
     }
   }
 
@@ -125,30 +148,51 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF151E13)),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Support Chat',
+              'Staff Support',
               style: TextStyle(
                 color: const Color(0xFF151E13),
                 fontFamily: 'Poppins',
-                fontSize: 16.sp,
+                fontSize: 15.sp,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              'Chatting with Administrator',
-              style: TextStyle(
-                color: const Color(0xFF6D7A73),
-                fontSize: 11.sp,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 7.r,
+                  height: 7.r,
+                  decoration: const BoxDecoration(
+                    color: primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: 5.w),
+                Text(
+                  'Admin Support Online',
+                  style: TextStyle(
+                    color: const Color(0xFF6D7A73),
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF6D7A73)),
+            tooltip: 'Refresh',
+            onPressed: () => _chatRx.fetchChatMessages(),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -167,9 +211,9 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.error_outline, size: 40.r, color: Colors.grey),
+                          Icon(Icons.error_outline, size: 40.r, color: Colors.grey.shade400),
                           SizedBox(height: 8.h),
-                          const Text('Failed to load chat messages'),
+                          Text('Failed to load chat messages', style: TextStyle(color: Colors.grey.shade600)),
                           SizedBox(height: 12.h),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
@@ -184,17 +228,30 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                   final messages = snapshot.data ?? (_chatRx.dataFetcher.hasValue ? _chatRx.dataFetcher.value : []);
                   if (messages.isEmpty) {
                     return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.chat_bubble_outline, size: 48.r, color: Colors.grey.shade400),
-                          SizedBox(height: 12.h),
-                          Text(
-                            'No messages yet.\nSend a message to start chatting with Admin.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey, fontSize: 13.sp),
-                          ),
-                        ],
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 32.w),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.chat_bubble_outline_rounded, size: 52.r, color: Colors.grey.shade400),
+                            SizedBox(height: 14.h),
+                            Text(
+                              'Staff Support Chat',
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF151E13),
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                            SizedBox(height: 6.h),
+                            Text(
+                              'Send a message below to chat with the Admin.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: const Color(0xFF6D7A73), fontSize: 13.sp),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }
@@ -205,88 +262,132 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                     child: ListView.builder(
                       controller: _scrollController,
                       reverse: true,
-                      padding: EdgeInsets.all(16.r),
+                      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
                         final msg = messages[messages.length - 1 - index];
-                        // Message is from staff (me) if sender is STAFF or adminUser is null and sender is not ADMIN
-                        final isMe = (msg.sender?.toUpperCase() == 'STAFF') ||
-                            (msg.adminUser == null && msg.sender?.toUpperCase() != 'ADMIN');
+                        // Admin on LEFT (isAdmin = true), Staff / User on RIGHT (isAdmin = false)
+                        final bool isAdmin = (msg.sender?.toUpperCase() == 'ADMIN') ||
+                            (msg.adminUser != null && msg.sender?.toUpperCase() != 'STAFF');
+                        final timeStr = _formatTime(msg.createdAt);
+                        final dateStr = msg.createdAt;
 
-                        return Align(
-                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Container(
-                            margin: EdgeInsets.only(
-                              bottom: 12.h,
-                              left: isMe ? 48.w : 0,
-                              right: isMe ? 0 : 48.w,
-                            ),
-                            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                            decoration: BoxDecoration(
-                              color: isMe ? primaryColor : Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(12.r),
-                                topRight: Radius.circular(12.r),
-                                bottomLeft: isMe ? Radius.circular(12.r) : Radius.circular(3.r),
-                                bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(12.r),
+                        // Check if we should show date separator
+                        bool showDateHeader = false;
+                        String dateHeader = '';
+                        if (index == messages.length - 1) {
+                          showDateHeader = true;
+                          dateHeader = _formatDateSeparator(dateStr);
+                        } else {
+                          final nextMsg = messages[messages.length - 2 - index];
+                          final currDate = _formatDateSeparator(dateStr);
+                          final nextDate = _formatDateSeparator(nextMsg.createdAt);
+                          if (currDate != nextDate) {
+                            showDateHeader = true;
+                            dateHeader = currDate;
+                          }
+                        }
+
+                        return Column(
+                          children: [
+                            if (showDateHeader)
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.h),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE8ECE9),
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  child: Text(
+                                    dateHeader,
+                                    style: TextStyle(
+                                      color: const Color(0xFF4A554E),
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              border: isMe ? null : Border.all(color: Colors.grey.shade200),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.03),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                            Align(
+                              alignment: isAdmin ? Alignment.centerLeft : Alignment.centerRight,
+                              child: Container(
+                                margin: EdgeInsets.only(
+                                  bottom: 8.h,
+                                  left: isAdmin ? 0 : 50.w,
+                                  right: isAdmin ? 50.w : 0,
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                              children: [
-                                if (!isMe) ...[
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.support_agent_rounded, size: 14.r, color: primaryColor),
-                                      SizedBox(width: 4.w),
-                                      Text(
-                                        msg.adminName?.isNotEmpty == true ? msg.adminName! : 'Admin Support',
-                                        style: TextStyle(
-                                          fontSize: 10.sp,
-                                          fontWeight: FontWeight.bold,
-                                          color: primaryColor,
-                                        ),
-                                      ),
-                                    ],
+                                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
+                                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+                                decoration: BoxDecoration(
+                                  color: isAdmin ? Colors.white : primaryColor,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(12.r),
+                                    topRight: Radius.circular(12.r),
+                                    bottomLeft: isAdmin ? Radius.circular(2.r) : Radius.circular(12.r),
+                                    bottomRight: isAdmin ? Radius.circular(12.r) : Radius.circular(2.r),
                                   ),
-                                  SizedBox(height: 4.h),
-                                ],
-                                Text(
-                                  msg.message ?? '',
-                                  style: TextStyle(
-                                    fontSize: 13.sp,
-                                    color: isMe ? Colors.white : const Color(0xFF151E13),
-                                    fontFamily: 'Poppins',
-                                  ),
+                                  border: isAdmin ? Border.all(color: Colors.grey.shade200) : null,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.04),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: 4.h),
-                                Row(
+                                child: Column(
                                   mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  crossAxisAlignment: isAdmin ? CrossAxisAlignment.start : CrossAxisAlignment.end,
                                   children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isAdmin) ...[
+                                          const Icon(Icons.support_agent_rounded, size: 14, color: primaryColor),
+                                          SizedBox(width: 4.w),
+                                          Text(
+                                            msg.adminName?.isNotEmpty == true ? msg.adminName! : 'Admin Support',
+                                            style: TextStyle(
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.bold,
+                                              color: primaryColor,
+                                            ),
+                                          ),
+                                        ] else ...[
+                                          Text(
+                                            'You',
+                                            style: TextStyle(
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    SizedBox(height: 3.h),
                                     Text(
-                                      _formatTime(msg.createdAt),
+                                      msg.message ?? '',
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        color: isAdmin ? const Color(0xFF151E13) : Colors.white,
+                                        fontFamily: 'Poppins',
+                                      ),
+                                    ),
+                                    SizedBox(height: 3.h),
+                                    Text(
+                                      timeStr,
                                       style: TextStyle(
                                         fontSize: 9.sp,
-                                        color: isMe ? Colors.white70 : Colors.grey,
+                                        color: isAdmin ? Colors.grey.shade600 : Colors.white70,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         );
                       },
                     ),
@@ -294,10 +395,10 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                 },
               ),
             ),
-            
-            // Bottom Message Input Row
+
+            // Only Clean Text Input Bar (No emoji, No image/attachment icons)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -313,28 +414,37 @@ class _StaffChatScreenState extends State<StaffChatScreen> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: backgroundColor,
+                        color: const Color(0xFFF4F6F5),
                         borderRadius: BorderRadius.circular(24.r),
                       ),
                       child: TextField(
                         controller: _messageController,
-                        style: TextStyle(fontSize: 14.sp),
+                        style: TextStyle(fontSize: 14.sp, color: const Color(0xFF151E13)),
+                        minLines: 1,
+                        maxLines: 4,
                         decoration: InputDecoration(
                           hintText: 'Type your message...',
-                          hintStyle: TextStyle(color: Colors.grey, fontSize: 13.sp),
+                          hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13.sp),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                         ),
+                        onSubmitted: (_) => _sendMessage(),
                       ),
                     ),
                   ),
                   SizedBox(width: 8.w),
                   GestureDetector(
-                    onTap: _sendMessage,
+                    onTap: _isSending ? null : _sendMessage,
                     child: CircleAvatar(
-                      radius: 20.r,
+                      radius: 21.r,
                       backgroundColor: primaryColor,
-                      child: const Icon(Icons.send, color: Colors.white, size: 18),
+                      child: _isSending
+                          ? SizedBox(
+                              width: 18.r,
+                              height: 18.r,
+                              child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                     ),
                   ),
                 ],

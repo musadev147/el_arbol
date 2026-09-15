@@ -19,6 +19,7 @@ import 'staff_order_history_screen.dart';
 import 'staff_tasks_screen.dart';
 import 'update_staff_profile_screen.dart';
 import 'weekly_shift_screen.dart';
+import '../../customers/orders/presentation/customer_single_order_screen.dart';
 
 class NotificationsInboxScreen extends StatefulWidget {
   const NotificationsInboxScreen({super.key});
@@ -220,7 +221,67 @@ class _NotificationsInboxScreenState extends State<NotificationsInboxScreen> {
         Get.to(() => const PriceListScreen());
         break;
       case 'order':
-        Get.to(() => const StaffOrderHistoryScreen());
+        bool isValidOrderId(String? id) {
+          if (id == null) return false;
+          final clean = id.replaceAll('#', '').trim().toLowerCase();
+          if (clean.isEmpty) return false;
+          const invalidWords = {
+            'placed', 'pending', 'confirmed', 'confirmation', 'shipped', 'delivered',
+            'cancelled', 'canceled', 'received', 'details', 'notification', 'history',
+            'status', 'success', 'failed', 'update', 'created', 'new', 'order', 'orders',
+            'pedido', 'pedidos', 'null', 'undefined', 'view', 'item', 'items', 'processing'
+          };
+          return !invalidWords.contains(clean);
+        }
+
+        String? orderId;
+        final candidates = [
+          notif['order_id'],
+          notif['order_number'],
+          notif['target_id'],
+          notif['orderId'],
+          notif['data']?['order_id'],
+          notif['data']?['order_number'],
+          notif['order'] is Map ? notif['order']['order_number'] : null,
+          notif['order'] is Map ? notif['order']['order_id'] : null,
+          notif['order'] is Map ? notif['order']['id'] : null,
+        ];
+
+        for (final c in candidates) {
+          if (c != null && isValidOrderId(c.toString())) {
+            orderId = c.toString().trim();
+            break;
+          }
+        }
+
+        final titleStr = (notif['title'] ?? '').toString();
+        final bodyStr = (notif['body'] ?? notif['message'] ?? '').toString();
+        final combinedText = '$titleStr $bodyStr';
+
+        if (orderId == null || orderId.isEmpty) {
+          final hashRegex = RegExp(r'#(ORD-[A-Za-z0-9_\-]+|[A-Za-z0-9_\-]+)', caseSensitive: false);
+          final match = hashRegex.firstMatch(combinedText);
+          if (match != null && isValidOrderId(match.group(1))) {
+            orderId = match.group(1)!.trim();
+          }
+        }
+
+        if (orderId == null || orderId.isEmpty) {
+          final ordCodeRegex = RegExp(r'\b(ORD-[0-9a-zA-Z]+)\b', caseSensitive: false);
+          final match = ordCodeRegex.firstMatch(combinedText);
+          if (match != null && isValidOrderId(match.group(1))) {
+            orderId = match.group(1)!.trim();
+          }
+        }
+
+        if (orderId != null && orderId.isNotEmpty && isValidOrderId(orderId)) {
+          Get.to(() => CustomerSingleOrderScreen(
+            orderId: orderId!,
+            orderData: notif['order'] is Map ? Map<String, dynamic>.from(notif['order']) : null,
+          ));
+        } else {
+          Get.to(() => const StaffOrderHistoryScreen());
+        }
         break;
       case 'colleagues':
         Get.to(() => const StaffColleaguesScreen());

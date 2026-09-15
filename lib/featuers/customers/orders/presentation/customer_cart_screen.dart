@@ -44,12 +44,60 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
     }
   }
 
+  double _extractFinalPrice(dynamic item) {
+    if (item == null) return 0.0;
+    final details = (item is Map && item['product_details'] is Map)
+        ? Map<String, dynamic>.from(item['product_details'])
+        : (item is Map && item['product'] is Map)
+            ? Map<String, dynamic>.from(item['product'])
+            : (item is Map) ? Map<String, dynamic>.from(item) : <String, dynamic>{};
+
+    final double discountPrice = double.tryParse(
+      details['discount_price']?.toString() ??
+      details['discountPrice']?.toString() ??
+      details['sale_price']?.toString() ??
+      details['sell_price']?.toString() ??
+      (item is Map ? (item['discount_price']?.toString() ?? item['discountPrice']?.toString()) : null) ??
+      ''
+    ) ?? 0.0;
+
+    if (discountPrice > 0) return discountPrice;
+
+    final double regularPrice = double.tryParse(
+      details['price']?.toString() ??
+      details['regular_price']?.toString() ??
+      (item is Map ? (item['price']?.toString() ?? item['unit_price']?.toString() ?? item['product_price']?.toString()) : null) ??
+      '0.0'
+    ) ?? 0.0;
+
+    return regularPrice;
+  }
+
+  double _extractOriginalPrice(dynamic item) {
+    if (item == null) return 0.0;
+    final details = (item is Map && item['product_details'] is Map)
+        ? Map<String, dynamic>.from(item['product_details'])
+        : (item is Map && item['product'] is Map)
+            ? Map<String, dynamic>.from(item['product'])
+            : (item is Map) ? Map<String, dynamic>.from(item) : <String, dynamic>{};
+
+    return double.tryParse(
+      details['price']?.toString() ??
+      details['regular_price']?.toString() ??
+      details['original_price']?.toString() ??
+      details['originalPrice']?.toString() ??
+      (item is Map ? (item['original_price']?.toString() ?? item['price']?.toString()) : null) ??
+      '0.0'
+    ) ?? 0.0;
+  }
+
   double getSubtotal(List<dynamic> items) {
     double sum = 0.0;
     for (var item in items) {
-      final details = item['product_details'] ?? {};
-      final price = double.tryParse(details['price']?.toString() ?? '0.0') ?? 0.0;
-      final quantity = item['quantity'] as int? ?? 1;
+      final price = _extractFinalPrice(item);
+      final quantity = (item is Map && item['quantity'] is int)
+          ? (item['quantity'] as int)
+          : (int.tryParse(item is Map ? (item['quantity']?.toString() ?? '1') : '1') ?? 1);
       sum += price * quantity;
     }
     return sum;
@@ -150,9 +198,10 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
                     final item = items[index];
                     final itemId = item['id']?.toString() ?? '';
                     final details = item['product_details'] ?? {};
-                    final productId = details['id'] ?? item['product'] ?? '';
                     final name = details['name'] ?? 'Product';
-                    final price = double.tryParse(details['price']?.toString() ?? '0.0') ?? 0.0;
+                    final price = _extractFinalPrice(item);
+                    final originalPrice = _extractOriginalPrice(item);
+                    final bool onSale = originalPrice > price && price > 0;
                     final imageUrl = details['thumbnail_url'] ?? details['image_url'] ?? details['image'] ?? 'https://via.placeholder.com/150';
                     final quantity = item['quantity'] as int? ?? 1;
 
@@ -165,7 +214,7 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
                         border: Border.all(color: Colors.grey.shade100),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.01),
+                            color: Colors.black.withValues(alpha: 0.01),
                             blurRadius: 10,
                           )
                         ],
@@ -210,13 +259,29 @@ class _CustomerCartScreenState extends State<CustomerCartScreen> {
                                   ),
                                 ),
                                 SizedBox(height: 4.h),
-                                Text(
-                                  '€${price.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.amber.shade800,
-                                  ),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '€${price.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.amber.shade800,
+                                      ),
+                                    ),
+                                    if (onSale) ...[
+                                      SizedBox(width: 6.w),
+                                      Text(
+                                        '€${originalPrice.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color: Colors.grey,
+                                          decoration: TextDecoration.lineThrough,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 SizedBox(height: 8.h),
                                 Row(

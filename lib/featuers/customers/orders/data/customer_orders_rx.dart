@@ -4,6 +4,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../../../../networks/rx_base.dart';
 import '../../../../../common_wigdets/app_toast.dart';
 import '../../../../../networks/exception_handler/data_source.dart';
+import '../../../../helpers/di.dart';
 import 'customer_orders_api.dart';
 import 'dart:developer';
 
@@ -59,8 +60,16 @@ class CustomerSingleOrderRx extends RxResponseInt<Map<String, dynamic>> {
   ValueStream get valueStreamData => dataFetcher.stream;
 
   Future<void> fetchSingleOrder(String orderId) async {
+    final clean = orderId.trim();
+    if (clean.isEmpty ||
+        clean.toLowerCase() == 'placed' ||
+        clean.toLowerCase() == 'null' ||
+        clean.toLowerCase() == 'undefined' ||
+        clean.toLowerCase() == 'pending') {
+      return;
+    }
     try {
-      final data = await api.getOrderDetails(orderId);
+      final data = await api.getOrderDetails(clean);
       Map<String, dynamic> map = {};
       if (data is Map<String, dynamic>) {
         map = data;
@@ -72,6 +81,68 @@ class CustomerSingleOrderRx extends RxResponseInt<Map<String, dynamic>> {
       } else if (map.containsKey('order') && map['order'] is Map) {
         map = Map<String, dynamic>.from(map['order']);
       }
+
+      // Merge with local order if present to preserve item sale prices
+      try {
+        final searchKeys = [
+          clean,
+          clean.replaceAll('#', ''),
+          map['id']?.toString(),
+          map['order_id']?.toString(),
+          map['order_number']?.toString(),
+        ].where((k) => k != null && k.isNotEmpty).map((k) => k!.replaceAll('#', '').trim().toLowerCase()).toSet();
+
+        Map<String, dynamic>? localMatch;
+        for (final storeKey in ['customer_placed_orders', 'wholesale_placed_orders']) {
+          final list = appData.read(storeKey);
+          if (list is List) {
+            for (final ord in list) {
+              if (ord is Map) {
+                final k1 = (ord['order_number'] ?? '').toString().replaceAll('#', '').trim().toLowerCase();
+                final k2 = (ord['id'] ?? '').toString().replaceAll('#', '').trim().toLowerCase();
+                final k3 = (ord['order_id'] ?? '').toString().replaceAll('#', '').trim().toLowerCase();
+                if (searchKeys.contains(k1) || searchKeys.contains(k2) || searchKeys.contains(k3)) {
+                  localMatch = Map<String, dynamic>.from(ord);
+                  break;
+                }
+              }
+            }
+          }
+          if (localMatch != null) break;
+        }
+
+        if (localMatch != null) {
+          final serverItems = map['items'] ?? map['order_items'] ?? map['products'] ?? map['lines'];
+          final localItems = localMatch['items'] ?? localMatch['order_items'] ?? localMatch['products'] ?? localMatch['lines'];
+          if ((serverItems == null || (serverItems is List && serverItems.isEmpty)) && localItems is List && localItems.isNotEmpty) {
+            map['items'] = localItems;
+          } else if (serverItems is List && localItems is List && serverItems.length == localItems.length) {
+            final mergedItems = [];
+            for (int i = 0; i < serverItems.length; i++) {
+              final sIt = serverItems[i] is Map ? Map<String, dynamic>.from(serverItems[i]) : {};
+              final lIt = localItems[i] is Map ? Map<String, dynamic>.from(localItems[i]) : {};
+              final mIt = {...lIt, ...sIt};
+              if ((sIt['product_details'] == null || (sIt['product_details'] is Map && (sIt['product_details'] as Map).isEmpty)) && lIt['product_details'] != null) {
+                mIt['product_details'] = lIt['product_details'];
+              }
+              if (sIt['discount_price'] == null && lIt['discount_price'] != null) {
+                mIt['discount_price'] = lIt['discount_price'];
+              }
+              if (sIt['sale_price'] == null && lIt['sale_price'] != null) {
+                mIt['sale_price'] = lIt['sale_price'];
+              }
+              mergedItems.add(mIt);
+            }
+            map['items'] = mergedItems;
+          }
+          for (final f in ['shipping_address', 'delivery_address', 'fulfillment_type', 'delivery_type', 'delivery_date', 'delivery_slot', 'payment_method', 'customer_name', 'customer_phone', 'customer_email', 'order_notes', 'subtotal']) {
+            if ((map[f] == null || map[f].toString().trim().isEmpty) && localMatch[f] != null) {
+              map[f] = localMatch[f];
+            }
+          }
+        }
+      } catch (_) {}
+
       await handleSuccessWithReturn(map);
     } catch (e) {
       log('CustomerSingleOrderRx fetchSingleOrder note: $e');

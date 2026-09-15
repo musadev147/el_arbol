@@ -428,8 +428,13 @@ class _PriceListScreenState extends State<PriceListScreen> {
                                   itemCount: filteredProducts.length,
                                   itemBuilder: (context, index) {
                                     final product = filteredProducts[index];
-                                    final displayPrice = product.price != null 
-                                        ? '€${product.price} / ${product.unit ?? 'unit'}' 
+                                    final double origP = double.tryParse(product.price ?? '') ?? 0.0;
+                                    final double discP = double.tryParse(product.discountPrice ?? '') ?? 0.0;
+                                    final double finalP = discP > 0 ? discP : origP;
+                                    final bool onSaleP = discP > 0 && origP > discP;
+
+                                    final displayPrice = (finalP > 0)
+                                        ? '€${finalP.toStringAsFixed(2)} / ${product.unit ?? 'unit'}'
                                         : (product.wholesalePrice != null ? '€${product.wholesalePrice} / ${product.wholesaleUnit ?? 'unit'}' : 'N/A');
 
                                     final imageUrl = product.thumbnailUrl ?? '';
@@ -466,6 +471,7 @@ class _PriceListScreenState extends State<PriceListScreen> {
                                               name: product.name ?? '',
                                               origin: product.origin ?? 'Spain Sourced',
                                               price: displayPrice,
+                                              originalPrice: onSaleP ? '€${origP.toStringAsFixed(2)} / ${product.unit ?? 'unit'}' : null,
                                               imageUrl: imageUrl,
                                               images: extractedImages,
                                               category: product.category?.name ?? 'Fresh Produce',
@@ -559,14 +565,29 @@ class _PriceListScreenState extends State<PriceListScreen> {
                                                         ],
                                                       ),
                                                       SizedBox(height: 4.h),
-                                                      Text(
-                                                        displayPrice,
-                                                        style: TextStyle(
-                                                          fontFamily: 'Poppins',
-                                                          fontSize: 13.sp,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: primaryColor,
-                                                        ),
+                                                      Row(
+                                                        children: [
+                                                          Text(
+                                                            displayPrice,
+                                                            style: TextStyle(
+                                                              fontFamily: 'Poppins',
+                                                              fontSize: 13.sp,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: primaryColor,
+                                                            ),
+                                                          ),
+                                                          if (onSaleP) ...[
+                                                            SizedBox(width: 6.w),
+                                                            Text(
+                                                              '€${origP.toStringAsFixed(2)}',
+                                                              style: TextStyle(
+                                                                fontSize: 11.sp,
+                                                                color: Colors.grey,
+                                                                decoration: TextDecoration.lineThrough,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ],
                                                       ),
                                                     ],
                                                   ),

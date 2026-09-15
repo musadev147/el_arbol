@@ -8,6 +8,7 @@ import 'package:el_arbol/helpers/notification_unread_manager.dart';
 import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
 import 'package:el_arbol/helpers/di.dart';
 import 'wholesale_orders_screen.dart';
+import 'wholesale_order_details_screen.dart';
 import 'wholesale_support_tickets_screen.dart';
 
 class WholesaleNotificationsScreen extends StatefulWidget {
@@ -201,10 +202,102 @@ class _WholesaleNotificationsScreenState extends State<WholesaleNotificationsScr
     final id = notif['id']?.toString() ?? '';
     _markAsRead(id);
 
-    final type = notif['type']?.toString().toLowerCase() ?? '';
-    if (type == 'order') {
-      Get.to(() => const WholesaleOrdersScreen());
-    } else if (type == 'ticket') {
+    final type = (notif['type'] ?? notif['category'] ?? '').toString().toLowerCase();
+    final title = (notif['title'] ?? '').toString().toLowerCase();
+    final message = (notif['message'] ?? notif['body'] ?? '').toString().toLowerCase();
+
+    // 1. Order related notification
+    final bool isOrder = type.contains('order') ||
+        title.contains('order') ||
+        title.contains('pedido') ||
+        message.contains('order') ||
+        message.contains('dispatched') ||
+        notif['order_id'] != null ||
+        notif['order_number'] != null ||
+        notif['target_id'] != null;
+
+    if (isOrder) {
+      bool isValidOrderId(String? id) {
+        if (id == null) return false;
+        final clean = id.replaceAll('#', '').trim().toLowerCase();
+        if (clean.isEmpty) return false;
+        const invalidWords = {
+          'placed', 'pending', 'confirmed', 'confirmation', 'shipped', 'delivered',
+          'cancelled', 'canceled', 'received', 'details', 'notification', 'history',
+          'status', 'success', 'failed', 'update', 'created', 'new', 'order', 'orders',
+          'pedido', 'pedidos', 'null', 'undefined', 'view', 'item', 'items', 'processing'
+        };
+        return !invalidWords.contains(clean);
+      }
+
+      String? orderId;
+      final candidates = [
+        notif['order_id'],
+        notif['order_number'],
+        notif['target_id'],
+        notif['orderId'],
+        notif['data']?['order_id'],
+        notif['data']?['order_number'],
+        notif['order'] is Map ? notif['order']['order_number'] : null,
+        notif['order'] is Map ? notif['order']['order_id'] : null,
+        notif['order'] is Map ? notif['order']['id'] : null,
+      ];
+
+      for (final c in candidates) {
+        if (c != null && isValidOrderId(c.toString())) {
+          orderId = c.toString().trim();
+          break;
+        }
+      }
+
+      if (orderId == null || orderId.isEmpty) {
+        final combinedText = '$title $message';
+        final hashRegex = RegExp(r'#(ORD-[A-Za-z0-9_\-]+|[A-Za-z0-9_\-]+)', caseSensitive: false);
+        final match = hashRegex.firstMatch(combinedText);
+        if (match != null && isValidOrderId(match.group(1))) {
+          orderId = match.group(1)!.trim();
+        }
+      }
+
+      if (orderId == null || orderId.isEmpty) {
+        final combinedText = '$title $message';
+        final ordCodeRegex = RegExp(r'\b(ORD-[0-9a-zA-Z]+)\b', caseSensitive: false);
+        final match = ordCodeRegex.firstMatch(combinedText);
+        if (match != null && isValidOrderId(match.group(1))) {
+          orderId = match.group(1)!.trim();
+        }
+      }
+
+      if (orderId != null && orderId.isNotEmpty && isValidOrderId(orderId)) {
+        Map<String, dynamic>? matchingOrder = notif['order'] is Map ? Map<String, dynamic>.from(notif['order']) : null;
+        if (matchingOrder == null) {
+          try {
+            final cleanSearch = orderId.replaceAll('#', '').trim().toLowerCase();
+            final localOrders = appData.read('wholesale_placed_orders');
+            if (localOrders is List) {
+              for (final ord in localOrders) {
+                if (ord is Map) {
+                  final k = (ord['order_number'] ?? ord['id'] ?? ord['order_id'] ?? '').toString().replaceAll('#', '').trim().toLowerCase();
+                  if (k == cleanSearch) {
+                    matchingOrder = Map<String, dynamic>.from(ord);
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        }
+
+        Get.to(() => WholesaleOrderDetailsScreen(
+          orderId: orderId!,
+          orderData: matchingOrder,
+        ));
+        return;
+      } else {
+        Get.to(() => const WholesaleOrdersScreen());
+        return;
+      }
+    } else if (type.contains('ticket') || title.contains('ticket') || message.contains('ticket')) {
       Get.to(() => const WholesaleSupportTicketsScreen());
     }
   }

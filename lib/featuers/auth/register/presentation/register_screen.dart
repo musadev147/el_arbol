@@ -5,9 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../common_wigdets/custom_textfiled.dart';
 import '../../../../common_wigdets/common_button.dart';
-import '../../../../common_wigdets/social_login_button.dart';
 import '../../../../constants/text_font_style.dart';
-import '../../../../constants/app_assets/assets_icons.dart';
 import '../../../../provider/singnup_provider.dart';
 import '../../../../route/app_pages.dart';
 import 'package:rxdart/rxdart.dart';
@@ -33,8 +31,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _contactNameController = TextEditingController();
   final _tradeLicenseController = TextEditingController();
   final _postcodeController = TextEditingController();
-  final _monthlyVolumeController = TextEditingController(text: '1000_3000');
   String _selectedBusinessType = 'restaurant';
+  String _selectedMonthlyVolume = '1000_3000';
 
   final List<Map<String, String>> _businessTypeOptions = const [
     {'value': 'restaurant', 'label': 'Restaurant'},
@@ -42,6 +40,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     {'value': 'hotel', 'label': 'Hotel / Lodging'},
     {'value': 'catering', 'label': 'Catering'},
     {'value': 'other', 'label': 'Other Business'},
+  ];
+
+  final List<Map<String, String>> _monthlyVolumeOptions = const [
+    {'value': 'under_1000', 'label': 'Under €1,000 / month'},
+    {'value': '1000_3000', 'label': '€1,000 - €3,000 / month'},
+    {'value': '3000_7000', 'label': '€3,000 - €7,000 / month'},
+    {'value': '7000_10000', 'label': '€7,000 - €10,000 / month'},
+    {'value': '10000_plus', 'label': 'Over €10,000 / month'},
   ];
 
   late final PostRegisterRx _postRegisterRx;
@@ -66,7 +72,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _contactNameController.dispose();
     _tradeLicenseController.dispose();
     _postcodeController.dispose();
-    _monthlyVolumeController.dispose();
     _postRegisterRx.dispose();
     super.dispose();
   }
@@ -75,8 +80,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     const Color primaryBrandColor = Color(0xFF00694C);
 
-    final isEmployee = widget.role == 'employeeSelfService' || widget.role == 'employee Self-service' || widget.role == 'employee';
-    final isSpecialPortal = isEmployee;
     final isWholesale = widget.role == 'wholesale' || widget.role == 'wholesales';
 
     return Scaffold(
@@ -231,7 +234,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   SizedBox(height: 16.h),
 
-                  // Monthly Volume
+                  // Monthly Volume Dropdown
                   Text(
                     'Monthly Volume',
                     style: TextStyle(
@@ -241,15 +244,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   SizedBox(height: 6.h),
-                  CustomTextFormField(
-                    controller: _monthlyVolumeController,
-                    hintText: 'e.g. 1000_3000',
-                    borderRadius: 8.r,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter monthly volume';
+                  DropdownButtonFormField<String>(
+                    value: _selectedMonthlyVolume,
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: const BorderSide(color: Color(0xFF00694C)),
+                      ),
+                    ),
+                    items: _monthlyVolumeOptions.map((opt) {
+                      return DropdownMenuItem(
+                        value: opt['value'],
+                        child: Text(
+                          opt['label']!,
+                          style: TextStyle(fontSize: 14.sp, color: const Color(0xFF151E13)),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _selectedMonthlyVolume = val);
                       }
-                      return null;
                     },
                   ),
                   SizedBox(height: 16.h),
@@ -411,7 +437,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         tradeLicenseNumber: isWholesale ? _tradeLicenseController.text : null,
                         postcode: isWholesale ? _postcodeController.text : null,
                         businessType: isWholesale ? _selectedBusinessType : null,
-                        monthlyVolume: isWholesale ? _monthlyVolumeController.text.trim() : null,
+                        monthlyVolume: isWholesale ? _selectedMonthlyVolume : null,
                       );
                     }
                   },

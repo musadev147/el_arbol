@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:el_arbol/helpers/di.dart';
-import 'package:el_arbol/constants/app_constants.dart';
+import 'package:el_arbol/common_wigdets/app_toast.dart';
 import '../data/customer_tickets_rx.dart';
 import '../../../../helpers/support_ticket_unread_manager.dart';
 
@@ -29,6 +28,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
   Timer? _typingTimer;
   Timer? _pollingTimer;
   bool _isTyping = false;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -41,8 +41,8 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
       }
     });
 
-    // Poll every 4 seconds for new incoming responses from Admin
-    _pollingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    // Poll every 3 seconds for new incoming responses from Admin
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       _pollTicketUpdates();
     });
   }
@@ -78,8 +78,6 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
 
   void _loadMessages(Map<String, dynamic> ticketData) {
     _messages = [];
-    final currentUserId = appData.read(kKeyUserID)?.toString().trim() ?? '';
-    final currentUserEmail = appData.read(kKeyEmail)?.toString().trim().toLowerCase() ?? '';
 
     // The main ticket object has a 'message' or 'description' (sent by user -> RIGHT side)
     final origMsg = ticketData['description'] ?? ticketData['message'] ?? '';
@@ -90,64 +88,99 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
         'message': origMsg.toString(),
         'sender': 'You',
         'created_at': ticketData['created_at'] ?? '',
+        'isAdmin': false,
         'isMe': true,
       });
     }
-    
+
     final replies = ticketData['messages'] ?? ticketData['replies'] ?? [];
     for (var r in replies) {
       if (r is! Map) continue;
       final text = (r['message'] ?? r['text'] ?? r['content'] ?? '').toString().trim();
       if (text.isEmpty) continue;
 
-      final role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '')
-          .toString()
-          .toLowerCase();
-      final senderStr = (r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? r['user_name'] ?? r['author'] ?? r['name'] ?? '')
-          .toString()
-          .toLowerCase();
+      String senderName = '';
+      String role = '';
+      bool isStaffOrAdminFlag = false;
 
-      final bool isExplicitAdminOrStaff = role.contains('admin') ||
-          role.contains('support') ||
-          role.contains('agent') ||
-          role.contains('helpdesk') ||
-          senderStr.contains('admin') ||
-          senderStr.contains('support') ||
-          senderStr.contains('agent') ||
-          senderStr.contains('helpdesk') ||
+      if (r['senderName'] != null) {
+        senderName = r['senderName'].toString();
+      } else if (r['sender_name'] != null) {
+        senderName = r['sender_name'].toString();
+      } else if (r['user_name'] != null) {
+        senderName = r['user_name'].toString();
+      } else if (r['sender'] is String) {
+        senderName = r['sender'].toString();
+      } else if (r['user'] is String) {
+        senderName = r['user'].toString();
+      } else if (r['author'] is String) {
+        senderName = r['author'].toString();
+      } else if (r['name'] != null) {
+        senderName = r['name'].toString();
+      } else if (r['user'] is Map) {
+        final u = r['user'] as Map;
+        senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '').toString();
+        role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '').toString();
+        if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+          isStaffOrAdminFlag = true;
+        }
+      } else if (r['sender'] is Map) {
+        final u = r['sender'] as Map;
+        senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '').toString();
+        role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '').toString();
+        if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+          isStaffOrAdminFlag = true;
+        }
+      } else if (r['author'] is Map) {
+        final u = r['author'] as Map;
+        senderName = (u['name'] ?? u['username'] ?? u['first_name'] ?? '').toString();
+        role = (u['user_type'] ?? u['role'] ?? u['user_role'] ?? '').toString();
+        if (u['is_staff'] == true || u['is_admin'] == true || u['is_superuser'] == true) {
+          isStaffOrAdminFlag = true;
+        }
+      }
+
+      if (role.isEmpty) {
+        role = (r['sender_role'] ?? r['user_role'] ?? r['role'] ?? r['user_type'] ?? r['sender_type'] ?? '').toString();
+      }
+
+      final nameLower = senderName.trim().toLowerCase();
+      final roleLower = role.trim().toLowerCase();
+
+      final bool isStaffOrAdmin = isStaffOrAdminFlag ||
           r['is_admin'] == true ||
           r['isAdmin'] == true ||
-          r['is_support'] == true;
+          r['is_staff'] == true ||
+          r['is_support'] == true ||
+          r['is_superuser'] == true ||
+          nameLower.contains('admin') ||
+          nameLower.contains('support') ||
+          nameLower.contains('agent') ||
+          nameLower.contains('staff') ||
+          nameLower.contains('helpdesk') ||
+          roleLower.contains('admin') ||
+          roleLower.contains('support') ||
+          roleLower.contains('agent') ||
+          roleLower.contains('staff') ||
+          roleLower.contains('helpdesk') ||
+          roleLower.contains('superuser');
 
-      final senderId = (r['user_id'] ?? r['user'] ?? r['sender_id'] ?? r['author_id'])?.toString().trim() ?? '';
-      final senderEmail = (r['senderEmail'] ?? r['sender_email'] ?? r['email'] ?? r['user_email'])?.toString().trim().toLowerCase() ?? '';
+      // Admin messages -> isAdmin = true (LEFT side)
+      // User messages -> isAdmin = false (RIGHT side)
+      final bool isAdmin = isStaffOrAdmin;
 
-      final bool isExplicitMe = r['isMe'] == true ||
-          r['is_me'] == true ||
-          r['sender'] == 'You' ||
-          (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId == currentUserId) ||
-          (currentUserEmail.isNotEmpty && senderEmail.isNotEmpty && senderEmail == currentUserEmail) ||
-          _mySentMessages.contains(text) ||
-          (r['isAdmin'] == false && r['is_admin'] == false && (role == 'customer' || role == 'wholesale'));
-
-      bool isMe = false;
-      if (isExplicitMe) {
-        isMe = true;
-      } else if (isExplicitAdminOrStaff) {
-        isMe = false;
-      } else if (currentUserId.isNotEmpty && senderId.isNotEmpty && senderId != currentUserId) {
-        isMe = false;
-      } else {
-        isMe = false;
-      }
+      final String displaySender = isAdmin
+          ? (senderName.isNotEmpty && !nameLower.contains('you') ? senderName : 'Support')
+          : 'You';
 
       _messages.add({
         'id': r['id']?.toString(),
         'isOriginal': false,
         'message': text,
-        'sender': isMe ? 'You' : (senderStr.isNotEmpty && !senderStr.contains('you') ? r['senderName'] ?? r['sender_name'] ?? r['sender'] ?? 'Support' : 'Support'),
+        'sender': displaySender,
         'created_at': r['created_at'] ?? '',
-        'isMe': isMe,
+        'isAdmin': isAdmin,
+        'isMe': !isAdmin,
       });
     }
   }
@@ -196,23 +229,24 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
               onPressed: () async {
                 final newText = controller.text.trim();
                 if (newText.isEmpty) return;
+                Navigator.pop(dialogCtx);
+                setState(() {
+                  _messages[index]['message'] = newText;
+                });
                 final ticketId = widget.ticket['id']?.toString() ?? '';
-                final success = await _rx.updateMessage(ticketId, messageId, newText);
-                if (success && mounted) {
-                  setState(() {
-                    _messages[index]['message'] = newText;
-                  });
-                  if (dialogCtx.mounted) {
-                    Navigator.pop(dialogCtx);
-                  }
-                  Fluttertoast.showToast(msg: 'Message updated');
+                final ok = await _rx.updateMessage(ticketId, messageId, newText);
+                if (ok) {
+                  AppToast.success('Message updated successfully');
+                  _pollTicketUpdates();
+                } else {
+                  AppToast.error('Failed to update message');
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00694C)),
-              child: const Text('Save'),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -220,218 +254,376 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     );
   }
 
-  void _deleteMessage(int index, String messageId) {
-    showDialog(
+  void _deleteMessage(int index, String messageId) async {
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-          title: const Text('Delete Message'),
-          content: const Text('Are you sure you want to delete this message?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final ticketId = widget.ticket['id']?.toString() ?? '';
-                final success = await _rx.deleteMessage(ticketId, messageId);
-                if (success && mounted) {
-                  setState(() {
-                    _messages.removeAt(index);
-                  });
-                  if (dialogCtx.mounted) {
-                    Navigator.pop(dialogCtx);
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        title: const Text('Delete Message'),
+        content: const Text('Are you sure you want to delete this message?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogCtx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
+    if (confirm == true) {
+      setState(() {
+        _messages.removeAt(index);
+      });
+      final ticketId = widget.ticket['id']?.toString() ?? '';
+      final ok = await _rx.deleteMessage(ticketId, messageId);
+      if (ok) {
+        AppToast.success('Message deleted successfully');
+        _pollTicketUpdates();
+      } else {
+        AppToast.error('Failed to delete message');
+      }
+    }
   }
 
   void _submitReply() async {
-    final message = _replyController.text.trim();
-    if (message.isEmpty) {
-      Fluttertoast.showToast(msg: 'Reply cannot be empty');
-      return;
-    }
+    final text = _replyController.text.trim();
+    if (text.isEmpty || _isSending) return;
+
+    _replyController.clear();
+    _mySentMessages.add(text);
+
+    // Optimistic local UI update (User on RIGHT side)
+    setState(() {
+      _isSending = true;
+      _messages.add({
+        'id': null,
+        'isOriginal': false,
+        'message': text,
+        'sender': 'You',
+        'created_at': DateTime.now().toIso8601String(),
+        'isAdmin': false,
+        'isMe': true,
+      });
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
 
     final ticketId = widget.ticket['id']?.toString() ?? '';
-    _mySentMessages.add(message);
-    final newMsgData = await _rx.replyTicket(ticketId, message);
-    if (newMsgData != null && mounted) {
-      setState(() {
-        _messages.add({
-          'id': newMsgData['id']?.toString(),
-          'isOriginal': false,
-          'message': newMsgData['message'] ?? message,
-          'sender': 'You',
-          'created_at': 'Just now',
-          'isMe': true,
-        });
-      });
-      _replyController.clear();
-      FocusScope.of(context).unfocus();
-      _pollTicketUpdates();
+    final ok = await _rx.replyTicket(ticketId, text);
+    if (mounted) {
+      setState(() => _isSending = false);
+      if (ok != null) {
+        _pollTicketUpdates();
+      } else {
+        AppToast.error('Failed to send message');
+      }
+    }
+  }
+
+  String _formatTime(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) {
+      return DateFormat('hh:mm a').format(DateTime.now());
+    }
+    try {
+      final dateTime = DateTime.parse(dateStr).toLocal();
+      return DateFormat('hh:mm a').format(dateTime);
+    } catch (_) {
+      return DateFormat('hh:mm a').format(DateTime.now());
+    }
+  }
+
+  String _formatDateSeparator(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return 'Today';
+    try {
+      final dateTime = DateTime.parse(dateStr).toLocal();
+      final now = DateTime.now();
+      if (dateTime.year == now.year && dateTime.month == now.month && dateTime.day == now.day) {
+        return 'Today';
+      }
+      final yesterday = now.subtract(const Duration(days: 1));
+      if (dateTime.year == yesterday.year && dateTime.month == yesterday.month && dateTime.day == yesterday.day) {
+        return 'Yesterday';
+      }
+      return DateFormat('MMMM d, yyyy').format(dateTime);
+    } catch (_) {
+      return 'Today';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     const Color primaryColor = Color(0xFF00694C);
-    final subject = widget.ticket['subject'] ?? 'Support Ticket';
+    const Color backgroundColor = Color(0xFFFAFAF8);
+
+    final subject = widget.ticket['subject'] ?? widget.ticket['title'] ?? 'Ticket Details';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text(subject, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-        backgroundColor: primaryColor,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              reverse: true,
-              padding: EdgeInsets.all(16.r),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[_messages.length - 1 - index];
-                final isEditable = msg['isMe'] == true && msg['id'] != null;
-                
-                final bubble = _buildMessageBubble(
-                  message: msg['message'],
-                  sender: msg['sender'],
-                  date: msg['created_at'],
-                  isMe: msg['isMe'],
-                  primaryColor: primaryColor,
-                );
-
-                if (isEditable) {
-                  return GestureDetector(
-                    onLongPress: () {
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (ctx) {
-                          return SafeArea(
-                            child: Wrap(
-                              children: [
-                                ListTile(
-                                  leading: const Icon(Icons.edit, color: primaryColor),
-                                  title: const Text('Edit Message'),
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    _editMessage(index, msg['id']);
-                                  },
-                                ),
-                                ListTile(
-                                  leading: const Icon(Icons.delete, color: Colors.red),
-                                  title: const Text('Delete Message'),
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    _deleteMessage(index, msg['id']);
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
-                    child: bubble,
-                  );
-                }
-                return bubble;
-              },
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Color(0xFF151E13)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              subject,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.bold,
+                fontSize: 15.sp,
+                color: const Color(0xFF151E13),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          _buildReplyInput(primaryColor),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageBubble({
-    required String message,
-    required String sender,
-    required String date,
-    required bool isMe,
-    required Color primaryColor,
-  }) {
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.only(
-          bottom: 12.h,
-          left: isMe ? 48.w : 0,
-          right: isMe ? 0 : 48.w,
-        ),
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
-          color: isMe ? primaryColor : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(12.r),
-            topRight: Radius.circular(12.r),
-            bottomLeft: isMe ? Radius.circular(12.r) : Radius.circular(3.r),
-            bottomRight: isMe ? Radius.circular(3.r) : Radius.circular(12.r),
-          ),
-          border: isMe ? null : Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+            Row(
+              children: [
+                Container(
+                  width: 7.r,
+                  height: 7.r,
+                  decoration: const BoxDecoration(
+                    color: primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: 5.w),
+                Text(
+                  'Support Online',
+                  style: TextStyle(
+                    color: const Color(0xFF6D7A73),
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF6D7A73)),
+            tooltip: 'Refresh',
+            onPressed: _pollTicketUpdates,
+          ),
+        ],
+      ),
+      body: SafeArea(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (!isMe) ...[
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.support_agent_rounded, size: 14.r, color: primaryColor),
-                  SizedBox(width: 4.w),
-                  Text(
-                    sender.isNotEmpty && !sender.toLowerCase().contains('you') ? sender : 'admin',
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
+            Expanded(
+              child: _messages.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.chat_bubble_outline_rounded, size: 48.r, color: Colors.grey.shade400),
+                          SizedBox(height: 12.h),
+                          Text(
+                            'Support Conversation',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15.sp,
+                              color: const Color(0xFF151E13),
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          SizedBox(height: 6.h),
+                          Text(
+                            'Send a message below to chat with Support.',
+                            style: TextStyle(fontSize: 12.sp, color: const Color(0xFF6D7A73)),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      reverse: true,
+                      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[_messages.length - 1 - index];
+                        // Admin on LEFT (isAdmin = true), User on RIGHT (isAdmin = false)
+                        final bool isAdmin = msg['isAdmin'] == true;
+                        final bool isUserMe = !isAdmin;
+                        final bool isEditable = isUserMe && msg['id'] != null;
+                        final senderName = (msg['sender'] ?? '').toString();
+                        final dateStr = msg['created_at']?.toString() ?? '';
+                        final timeStr = _formatTime(dateStr);
+
+                        // Check if we should show date separator
+                        bool showDateHeader = false;
+                        String dateHeader = '';
+                        if (index == _messages.length - 1) {
+                          showDateHeader = true;
+                          dateHeader = _formatDateSeparator(dateStr);
+                        } else {
+                          final nextMsg = _messages[_messages.length - 2 - index];
+                          final currDate = _formatDateSeparator(dateStr);
+                          final nextDate = _formatDateSeparator(nextMsg['created_at']?.toString());
+                          if (currDate != nextDate) {
+                            showDateHeader = true;
+                            dateHeader = currDate;
+                          }
+                        }
+
+                        final bubble = Align(
+                          alignment: isAdmin ? Alignment.centerLeft : Alignment.centerRight,
+                          child: Container(
+                            margin: EdgeInsets.only(
+                              bottom: 8.h,
+                              left: isAdmin ? 0 : 50.w,
+                              right: isAdmin ? 50.w : 0,
+                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+                            decoration: BoxDecoration(
+                              color: isAdmin ? Colors.white : primaryColor,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(12.r),
+                                topRight: Radius.circular(12.r),
+                                bottomLeft: isAdmin ? Radius.circular(2.r) : Radius.circular(12.r),
+                                bottomRight: isAdmin ? Radius.circular(12.r) : Radius.circular(2.r),
+                              ),
+                              border: isAdmin ? Border.all(color: Colors.grey.shade200) : null,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: isAdmin ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isAdmin) ...[
+                                      const Icon(Icons.support_agent_rounded, size: 14, color: primaryColor),
+                                      SizedBox(width: 4.w),
+                                      Text(
+                                        senderName.isNotEmpty && !senderName.toLowerCase().contains('you') ? senderName : 'Support',
+                                        style: TextStyle(
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: primaryColor,
+                                        ),
+                                      ),
+                                    ] else ...[
+                                      Text(
+                                        'You',
+                                        style: TextStyle(
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                SizedBox(height: 3.h),
+                                Text(
+                                  msg['message'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: isAdmin ? const Color(0xFF151E13) : Colors.white,
+                                    fontFamily: 'Poppins',
+                                    height: 1.3,
+                                  ),
+                                ),
+                                SizedBox(height: 3.h),
+                                Text(
+                                  timeStr,
+                                  style: TextStyle(
+                                    fontSize: 9.sp,
+                                    color: isAdmin ? Colors.grey.shade600 : Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+
+                        return Column(
+                          children: [
+                            if (showDateHeader)
+                              Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.h),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE8ECE9),
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  child: Text(
+                                    dateHeader,
+                                    style: TextStyle(
+                                      color: const Color(0xFF4A554E),
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (isEditable)
+                              GestureDetector(
+                                onLongPress: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    backgroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+                                    ),
+                                    builder: (ctx) {
+                                      return SafeArea(
+                                        child: Wrap(
+                                          children: [
+                                            ListTile(
+                                              leading: const Icon(Icons.edit, color: primaryColor),
+                                              title: const Text('Edit Message', style: TextStyle(color: Color(0xFF151E13))),
+                                              onTap: () {
+                                                Navigator.pop(ctx);
+                                                _editMessage(_messages.length - 1 - index, msg['id']);
+                                              },
+                                            ),
+                                            ListTile(
+                                              leading: const Icon(Icons.delete, color: Colors.redAccent),
+                                              title: const Text('Delete Message', style: TextStyle(color: Colors.redAccent)),
+                                              onTap: () {
+                                                Navigator.pop(ctx);
+                                                _deleteMessage(_messages.length - 1 - index, msg['id']);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                                child: bubble,
+                              )
+                            else
+                              bubble,
+                          ],
+                        );
+                      },
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 4.h),
-            ],
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: isMe ? Colors.white : const Color(0xFF151E13),
-                fontFamily: 'Poppins',
-              ),
             ),
-            if (date.isNotEmpty) ...[
-              SizedBox(height: 4.h),
-              Text(
-                date,
-                style: TextStyle(
-                  fontSize: 9.sp,
-                  color: isMe ? Colors.white70 : Colors.grey,
-                ),
-              ),
-            ],
+
+            // Text-only Input Bar
+            _buildReplyInput(primaryColor),
           ],
         ),
       ),
@@ -440,50 +632,57 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
 
   Widget _buildReplyInput(Color primaryColor) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
+            blurRadius: 10,
             offset: const Offset(0, -2),
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F6F5),
+                borderRadius: BorderRadius.circular(24.r),
+              ),
               child: TextField(
                 controller: _replyController,
+                style: TextStyle(fontSize: 14.sp, color: const Color(0xFF151E13)),
+                minLines: 1,
+                maxLines: 4,
                 decoration: InputDecoration(
-                  hintText: 'Type a reply...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24.r),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                  hintText: 'Type your message...',
+                  hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13.sp),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                 ),
                 onChanged: _onTyping,
-                maxLines: 3,
-                minLines: 1,
+                onSubmitted: (_) => _submitReply(),
               ),
             ),
-            SizedBox(width: 12.w),
-            GestureDetector(
-              onTap: _submitReply,
-              child: CircleAvatar(
-                backgroundColor: primaryColor,
-                radius: 22.r,
-                child: const Icon(Icons.send, color: Colors.white, size: 20),
-              ),
+          ),
+          SizedBox(width: 8.w),
+          GestureDetector(
+            onTap: _isSending ? null : _submitReply,
+            child: CircleAvatar(
+              radius: 21.r,
+              backgroundColor: primaryColor,
+              child: _isSending
+                  ? SizedBox(
+                      width: 18.r,
+                      height: 18.r,
+                      child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

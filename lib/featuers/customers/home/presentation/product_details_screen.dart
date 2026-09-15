@@ -21,6 +21,7 @@ class ProductDetailsScreen extends StatefulWidget {
   final String name;
   final String origin;
   final String price;
+  final String? originalPrice;
   final String imageUrl;
   final List<String>? images;
   final String description;
@@ -37,6 +38,7 @@ class ProductDetailsScreen extends StatefulWidget {
     required this.name,
     required this.origin,
     required this.price,
+    this.originalPrice,
     required this.imageUrl,
     this.images,
     this.description = 'This artisan product is sourced directly from local farms. Produced with organic and sustainable methods, ensuring the highest quality, flavor, and freshness.',
@@ -341,14 +343,33 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           ],
                         ),
                       ),
-                      Text(
-                        widget.price,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.accentOrange,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (widget.originalPrice != null &&
+                              widget.originalPrice!.isNotEmpty &&
+                              widget.originalPrice != widget.price)
+                            Text(
+                              widget.originalPrice!.startsWith('€')
+                                  ? widget.originalPrice!
+                                  : '€${widget.originalPrice}',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13.sp,
+                                color: Colors.grey,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          Text(
+                            widget.price,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.accentOrange,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
