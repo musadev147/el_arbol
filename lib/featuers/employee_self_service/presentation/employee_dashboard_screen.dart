@@ -17,6 +17,7 @@ import 'package:el_arbol/route/app_pages.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
 import 'package:el_arbol/helpers/di.dart';
+import 'package:el_arbol/helpers/notification_unread_manager.dart';
 import '../../wholesale_b2b/presentation/wholesale_add_product_screen.dart';
 
 class EmployeeDashboardScreen extends StatefulWidget {
@@ -378,13 +379,19 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
           StreamBuilder<StaffDashboardModel>(
             stream: _dashboardRx.valueStreamData,
             builder: (context, snapshot) {
-              final unreadCount = snapshot.data?.notifications?.where((n) => n.isRead != true).length ?? 0;
+              final unreadCount = snapshot.data?.notifications?.where((n) {
+                return !NotificationUnreadManager.instance.isStaffNotificationRead(n);
+              }).length ?? 0;
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.notifications_none_outlined, color: Color(0xFF151E13)),
-                    onPressed: () => Get.to(() => const NotificationsInboxScreen())?.then((_) => _dashboardRx.fetchDashboardData()),
+                    onPressed: () async {
+                      await Get.to(() => const NotificationsInboxScreen());
+                      _dashboardRx.fetchDashboardData();
+                      if (mounted) setState(() {});
+                    },
                   ),
                   if (unreadCount > 0)
                     Positioned(
@@ -773,7 +780,11 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> {
                 icon: Icons.all_inbox_rounded,
                 iconBg: const Color(0xFFEEF2F6),
                 iconColor: const Color(0xFF64748B),
-                onTap: () => Get.to(() => const NotificationsInboxScreen()),
+                onTap: () async {
+                  await Get.to(() => const NotificationsInboxScreen());
+                  _dashboardRx.fetchDashboardData();
+                  if (mounted) setState(() {});
+                },
               ),
               SizedBox(height: 12.h),
               _buildListActionCard(

@@ -20,6 +20,7 @@ import 'package:el_arbol/featuers/customers/notifications/presentation/customer_
 import 'leftover_pack_screen.dart';
 import 'package:el_arbol/featuers/customers/notifications/data/customer_notifications_rx.dart';
 import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
+import 'package:el_arbol/helpers/notification_unread_manager.dart';
 
 class CustomerProfileScreen extends StatefulWidget {
   const CustomerProfileScreen({super.key});
@@ -881,7 +882,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                           stream: _notificationsRx.valueStreamData,
                           builder: (context, snapshot) {
                             final notifs = snapshot.data ?? [];
-                            final unreadCount = notifs.where((n) => n is Map && !(n['is_read'] == true || n['read'] == true || n['isRead'] == true)).length;
+                            final unreadCount = NotificationUnreadManager.instance.calculateCustomerUnread(notifs);
                             if (unreadCount <= 0) return const SizedBox.shrink();
                             return Container(
                               margin: EdgeInsets.only(right: 8.w),
@@ -907,6 +908,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                     onTap: () async {
                       await Get.to(() => const el_arbol_notif.CustomerNotificationsScreen());
                       _notificationsRx.fetchNotifications();
+                      if (mounted) setState(() {});
                     },
                   ),
                 ],

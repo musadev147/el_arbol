@@ -23,6 +23,7 @@ class CustomerTicketChatScreen extends StatefulWidget {
 class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
   late CustomerTicketsRx _rx;
   final TextEditingController _replyController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final Set<String> _mySentMessages = {};
   List<dynamic> _messages = [];
   Timer? _typingTimer;
@@ -156,6 +157,7 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
     _pollingTimer?.cancel();
     _rx.dispose();
     _replyController.dispose();
+    _scrollController.dispose();
     _typingTimer?.cancel();
     super.dispose();
   }
@@ -296,10 +298,12 @@ class _CustomerTicketChatScreenState extends State<CustomerTicketChatScreen> {
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
+              reverse: true,
               padding: EdgeInsets.all(16.r),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
-                final msg = _messages[index];
+                final msg = _messages[_messages.length - 1 - index];
                 final isEditable = msg['isMe'] == true && msg['id'] != null;
                 
                 final bubble = _buildMessageBubble(

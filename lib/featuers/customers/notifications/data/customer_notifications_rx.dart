@@ -2,6 +2,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../../networks/rx_base.dart';
 import '../../../../../common_wigdets/app_toast.dart';
+import '../../../../../helpers/notification_unread_manager.dart';
 import 'customer_notifications_api.dart';
 import 'dart:developer';
 
@@ -28,6 +29,7 @@ class CustomerNotificationsRx extends RxResponseInt<List<dynamic>> {
           list = data['data'] as List? ?? [];
         }
       }
+      NotificationUnreadManager.instance.updateCustomerNotifications(list);
       await handleSuccessWithReturn(list);
     } catch (e) {
       log('CustomerNotificationsRx fetch error: $e');

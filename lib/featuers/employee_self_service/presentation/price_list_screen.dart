@@ -71,21 +71,25 @@ class _PriceListScreenState extends State<PriceListScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF151E13)),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
         title: Text(
           'Product Price List',
           style: TextStyle(
             color: const Color(0xFF151E13),
             fontFamily: 'Poppins',
-            fontSize: 18.sp,
+            fontSize: 17.sp,
             fontWeight: FontWeight.bold,
           ),
         ),
+        titleSpacing: Navigator.canPop(context) ? 0 : 20.w,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF151E13)),
-          onPressed: () => Get.back(),
-        ),
         actions: [
           // Add Product button
           IconButton(
@@ -99,7 +103,7 @@ class _PriceListScreenState extends State<PriceListScreen> {
             builder: (context, snapshot) {
               final cartCount = CustomerCartRx.instance.itemCount;
               return Stack(
-                clipBehavior: Clip.none,
+                alignment: Alignment.center,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF151E13)),
@@ -134,6 +138,7 @@ class _PriceListScreenState extends State<PriceListScreen> {
             tooltip: 'Order History',
             onPressed: () => Get.to(() => const StaffOrderHistoryScreen()),
           ),
+          // Refresh
           IconButton(
             icon: const Icon(Icons.refresh, color: Color(0xFF151E13)),
             tooltip: 'Refresh',
@@ -142,6 +147,7 @@ class _PriceListScreenState extends State<PriceListScreen> {
               CustomerCartRx.instance.fetchBasket();
             },
           ),
+          SizedBox(width: 8.w),
         ],
       ),
       body: SafeArea(
@@ -153,54 +159,134 @@ class _PriceListScreenState extends State<PriceListScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search products, origin, or category...',
-                        hintStyle: TextStyle(fontSize: 13.sp, color: Colors.grey),
-                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                        fillColor: Colors.white,
-                        filled: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10.h),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                          borderSide: BorderSide(color: Colors.grey.shade200),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                          borderSide: BorderSide(color: Colors.grey.shade100),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                          borderSide: const BorderSide(color: primaryColor),
+                    child: Container(
+                      height: 46.h,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        textAlignVertical: TextAlignVertical.center,
+                        style: TextStyle(fontSize: 13.sp, color: Colors.black87),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: 'Search products, origin, or category...',
+                          hintStyle: TextStyle(fontSize: 13.sp, color: Colors.grey.shade400),
+                          prefixIcon: Icon(Icons.search, color: Colors.grey.shade500, size: 20.r),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.close, size: 18.r, color: Colors.grey.shade500),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(width: 8.w),
-                  PopupMenuButton<String>(
-                    tooltip: 'Sort Products',
-                    icon: Container(
-                      padding: EdgeInsets.all(11.r),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10.r),
-                        border: Border.all(color: Colors.grey.shade200),
+                  SizedBox(width: 10.w),
+                  Container(
+                    height: 46.h,
+                    width: 46.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: _sortOrder != 'name_asc' ? primaryColor : Colors.grey.shade200,
+                        width: _sortOrder != 'name_asc' ? 1.5 : 1.0,
                       ),
-                      child: Icon(Icons.sort_rounded, color: primaryColor, size: 20.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    onSelected: (val) {
-                      setState(() {
-                        _sortOrder = val;
-                      });
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'name_asc', child: Text('Name (A-Z)')),
-                      const PopupMenuItem(value: 'name_desc', child: Text('Name (Z-A)')),
-                      const PopupMenuItem(value: 'price_asc', child: Text('Price: Low to High')),
-                      const PopupMenuItem(value: 'price_desc', child: Text('Price: High to Low')),
-                      const PopupMenuItem(value: 'category', child: Text('Category')),
-                    ],
+                    child: PopupMenuButton<String>(
+                      tooltip: 'Sort & Filter Products',
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      child: Center(
+                        child: Icon(
+                          Icons.tune_rounded,
+                          color: primaryColor,
+                          size: 20.r,
+                        ),
+                      ),
+                      onSelected: (val) {
+                        setState(() {
+                          _sortOrder = val;
+                        });
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'name_asc',
+                          child: Row(
+                            children: [
+                              Icon(Icons.sort_by_alpha, size: 18.r, color: _sortOrder == 'name_asc' ? primaryColor : Colors.grey),
+                              SizedBox(width: 8.w),
+                              Text('Name (A-Z)', style: TextStyle(color: _sortOrder == 'name_asc' ? primaryColor : Colors.black87, fontWeight: _sortOrder == 'name_asc' ? FontWeight.bold : FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'name_desc',
+                          child: Row(
+                            children: [
+                              Icon(Icons.sort_by_alpha, size: 18.r, color: _sortOrder == 'name_desc' ? primaryColor : Colors.grey),
+                              SizedBox(width: 8.w),
+                              Text('Name (Z-A)', style: TextStyle(color: _sortOrder == 'name_desc' ? primaryColor : Colors.black87, fontWeight: _sortOrder == 'name_desc' ? FontWeight.bold : FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'price_asc',
+                          child: Row(
+                            children: [
+                              Icon(Icons.arrow_upward_rounded, size: 18.r, color: _sortOrder == 'price_asc' ? primaryColor : Colors.grey),
+                              SizedBox(width: 8.w),
+                              Text('Price: Low to High', style: TextStyle(color: _sortOrder == 'price_asc' ? primaryColor : Colors.black87, fontWeight: _sortOrder == 'price_asc' ? FontWeight.bold : FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'price_desc',
+                          child: Row(
+                            children: [
+                              Icon(Icons.arrow_downward_rounded, size: 18.r, color: _sortOrder == 'price_desc' ? primaryColor : Colors.grey),
+                              SizedBox(width: 8.w),
+                              Text('Price: High to Low', style: TextStyle(color: _sortOrder == 'price_desc' ? primaryColor : Colors.black87, fontWeight: _sortOrder == 'price_desc' ? FontWeight.bold : FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'category',
+                          child: Row(
+                            children: [
+                              Icon(Icons.category_outlined, size: 18.r, color: _sortOrder == 'category' ? primaryColor : Colors.grey),
+                              SizedBox(width: 8.w),
+                              Text('Category', style: TextStyle(color: _sortOrder == 'category' ? primaryColor : Colors.black87, fontWeight: _sortOrder == 'category' ? FontWeight.bold : FontWeight.normal)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -285,7 +371,7 @@ class _PriceListScreenState extends State<PriceListScreen> {
                               ChoiceChip(
                                 label: const Text('All Categories'),
                                 selected: _selectedCategory == null,
-                                selectedColor: primaryColor.withOpacity(0.15),
+                                selectedColor: primaryColor.withValues(alpha: 0.15),
                                 labelStyle: TextStyle(
                                   color: _selectedCategory == null ? primaryColor : Colors.grey.shade700,
                                   fontWeight: _selectedCategory == null ? FontWeight.bold : FontWeight.normal,
@@ -305,7 +391,7 @@ class _PriceListScreenState extends State<PriceListScreen> {
                                 child: ChoiceChip(
                                   label: Text(cat),
                                   selected: _selectedCategory == cat,
-                                  selectedColor: primaryColor.withOpacity(0.15),
+                                  selectedColor: primaryColor.withValues(alpha: 0.15),
                                   labelStyle: TextStyle(
                                     color: _selectedCategory == cat ? primaryColor : Colors.grey.shade700,
                                     fontWeight: _selectedCategory == cat ? FontWeight.bold : FontWeight.normal,
@@ -363,7 +449,7 @@ class _PriceListScreenState extends State<PriceListScreen> {
                                         border: Border.all(color: Colors.grey.shade100),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.02),
+                                            color: Colors.black.withValues(alpha: 0.02),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
@@ -492,7 +578,7 @@ class _PriceListScreenState extends State<PriceListScreen> {
                                                   icon: Container(
                                                     padding: EdgeInsets.all(6.r),
                                                     decoration: BoxDecoration(
-                                                      color: primaryColor.withOpacity(0.1),
+                                                      color: primaryColor.withValues(alpha: 0.1),
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: const Icon(Icons.add_shopping_cart_rounded, color: primaryColor, size: 20),

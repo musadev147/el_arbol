@@ -25,6 +25,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:el_arbol/common_wigdets/app_toast.dart';
 import 'package:el_arbol/common_wigdets/app_shimmer.dart';
 import 'package:el_arbol/helpers/support_ticket_unread_manager.dart';
+import 'package:el_arbol/helpers/notification_unread_manager.dart';
 import 'package:el_arbol/featuers/employee_self_service/presentation/staff_chat_screen.dart';
 import '../../wholesale_b2b/data/wholesale_api.dart';
 import 'data/rx.dart';
@@ -1146,7 +1147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               stream: _notificationsRx.valueStreamData,
                               builder: (context, snapshot) {
                                 final notifs = snapshot.data ?? [];
-                                final unreadCount = notifs.where((n) => n is Map && !(n['is_read'] == true || n['read'] == true || n['isRead'] == true)).length;
+                                final unreadCount = NotificationUnreadManager.instance.calculateCustomerUnread(notifs);
                                 if (unreadCount <= 0) return const SizedBox.shrink();
                                 return Container(
                                   margin: EdgeInsets.only(right: 8.w),
@@ -1172,6 +1173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: () async {
                           await Get.to(() => const el_arbol_notif.CustomerNotificationsScreen());
                           _notificationsRx.fetchNotifications();
+                          if (mounted) setState(() {});
                         },
                       ),
                       const Divider(height: 1),

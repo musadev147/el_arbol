@@ -350,6 +350,18 @@ class StaffDashboardApi {
     }
   }
 
+  Future<bool> bulkDeleteStaffNotifications(List<String> ids) async {
+    bool allSuccess = true;
+    for (final id in ids) {
+      try {
+        await deleteStaffNotification(id);
+      } catch (e) {
+        allSuccess = false;
+      }
+    }
+    return allSuccess;
+  }
+
   Future<dynamic> getStoreStaff(String storeId) async {
     try {
       final response = await getHttp(Endpoints.viewStoreStaff(storeId));

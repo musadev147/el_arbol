@@ -332,6 +332,17 @@ class StaffNotificationsRx extends RxResponseInt<dynamic> {
       return false;
     }
   }
+
+  Future<bool> bulkDeleteNotifications(List<String> ids) async {
+    try {
+      final success = await api.bulkDeleteStaffNotifications(ids);
+      return success;
+    } catch (error) {
+      log("Bulk delete staff notifications error: $error");
+      handleErrorWithReturn(error);
+      return false;
+    }
+  }
 }
 
 class StoreStaffRx extends RxResponseInt<dynamic> {

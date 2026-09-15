@@ -16,7 +16,7 @@ import '../../customers/home/presentation/data/rx.dart';
 import '../../customers/home/presentation/model/get_product_model.dart';
 import '../../customers/home/presentation/model/get_category_model.dart';
 import '../../../route/app_pages.dart';
-import 'package:el_arbol/helpers/di.dart';
+import 'package:el_arbol/helpers/notification_unread_manager.dart';
 
 class WholesaleCatalogScreen extends StatefulWidget {
   const WholesaleCatalogScreen({super.key});
@@ -93,21 +93,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
           StreamBuilder<dynamic>(
             stream: _notificationsRx.valueStreamData,
             builder: (context, notifSnapshot) {
-              int unreadCount = 0;
-              final data = notifSnapshot.data;
-              if (data is Map && data['unread_count'] is int) {
-                unreadCount = data['unread_count'];
-              } else if (data is Map && data['results'] is List) {
-                unreadCount = (data['results'] as List).where((n) => n['is_read'] != true && n['read'] != true).length;
-              } else if (data is List) {
-                unreadCount = data.where((n) => n['is_read'] != true && n['read'] != true).length;
-              }
-              try {
-                final localNotifs = appData.read('wholesale_local_notifications');
-                if (localNotifs is List) {
-                  unreadCount += localNotifs.where((n) => n['is_read'] != true).length;
-                }
-              } catch (_) {}
+              final unreadCount = NotificationUnreadManager.instance.calculateWholesaleUnread(notifSnapshot.data);
 
               return Stack(
                 alignment: Alignment.center,
@@ -120,6 +106,7 @@ class _WholesaleCatalogScreenState extends State<WholesaleCatalogScreen> {
                     onPressed: () async {
                       await Get.toNamed(Routes.WHOLESALE_NOTIFICATIONS_SCREEN);
                       _notificationsRx.fetchNotifications();
+                      if (mounted) setState(() {});
                     },
                   ),
                   if (unreadCount > 0)

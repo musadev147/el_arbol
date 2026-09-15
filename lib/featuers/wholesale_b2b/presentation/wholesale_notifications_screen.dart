@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../../common_wigdets/app_toast.dart';
+import 'package:el_arbol/helpers/notification_unread_manager.dart';
 import 'package:el_arbol/featuers/wholesale_b2b/data/wholesale_rx.dart';
 import 'package:el_arbol/helpers/di.dart';
 import 'wholesale_orders_screen.dart';
@@ -184,18 +185,16 @@ class _WholesaleNotificationsScreenState extends State<WholesaleNotificationsScr
   }
 
   void _markAsRead(String id) {
-    try {
-      final local = (appData.read('wholesale_local_notifications') is List)
-          ? List<dynamic>.from(appData.read('wholesale_local_notifications'))
-          : <dynamic>[];
-      for (final item in local) {
-        if (item is Map && item['id']?.toString() == id) {
-          item['is_read'] = true;
-        }
-      }
-      appData.write('wholesale_local_notifications', local);
-      setState(() {});
-    } catch (_) {}
+    if (id.isEmpty) return;
+    NotificationUnreadManager.instance.markWholesaleNotificationAsRead(id, callApi: true);
+    setState(() {});
+  }
+
+  void _markAllAsRead(List<Map<String, dynamic>> notifications) {
+    if (notifications.isEmpty) return;
+    NotificationUnreadManager.instance.markAllWholesaleNotificationsAsRead(notifications, callApi: true);
+    AppToast.success('All notifications marked as read');
+    setState(() {});
   }
 
   void _onNotificationTap(Map<String, dynamic> notif) {
@@ -218,6 +217,7 @@ class _WholesaleNotificationsScreenState extends State<WholesaleNotificationsScr
       stream: _rx.valueStreamData,
       builder: (context, snapshot) {
         final notifications = _getMergedNotifications(snapshot.data);
+        final hasUnread = notifications.any((n) => !NotificationUnreadManager.instance.isWholesaleNotificationRead(n));
 
         return Scaffold(
           backgroundColor: const Color(0xFFFAFAF8),
@@ -269,6 +269,12 @@ class _WholesaleNotificationsScreenState extends State<WholesaleNotificationsScr
                   onPressed: _selectedIds.isNotEmpty ? _deleteSelectedNotifications : null,
                 ),
               ] else ...[
+                if (hasUnread)
+                  IconButton(
+                    icon: const Icon(Icons.done_all, color: Color(0xFF151E13)),
+                    tooltip: 'Mark All as Read',
+                    onPressed: () => _markAllAsRead(notifications),
+                  ),
                 if (notifications.isNotEmpty)
                   TextButton.icon(
                     onPressed: () {
@@ -378,7 +384,7 @@ class _WholesaleNotificationsScreenState extends State<WholesaleNotificationsScr
                       final notif = notifications[index];
                       final id = notif['id']?.toString() ?? '';
                       final isSelected = _selectedIds.contains(id);
-                      final isRead = notif['is_read'] == true || notif['read'] == true;
+                      final isRead = NotificationUnreadManager.instance.isWholesaleNotificationRead(notif);
                       final type = notif['type']?.toString().toLowerCase() ?? '';
 
                       IconData iconData = Icons.notifications_outlined;

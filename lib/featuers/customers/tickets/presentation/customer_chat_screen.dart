@@ -199,14 +199,12 @@ class _CustomerChatScreenState extends State<CustomerChatScreen> {
   void _scrollToBottom({bool immediate = false, bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        final maxScroll = _scrollController.position.maxScrollExtent;
-        final currentScroll = _scrollController.position.pixels;
-        if (force || (maxScroll - currentScroll).abs() < 200) {
+        if (force || _scrollController.position.pixels < 250) {
           if (immediate) {
-            _scrollController.jumpTo(maxScroll);
+            _scrollController.jumpTo(0.0);
           } else {
             _scrollController.animateTo(
-              maxScroll,
+              0.0,
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOut,
             );
@@ -474,10 +472,11 @@ class _CustomerChatScreenState extends State<CustomerChatScreen> {
                           onRefresh: () => _ticketsRx.fetchTickets(),
                           child: ListView.builder(
                             controller: _scrollController,
+                            reverse: true,
                             padding: EdgeInsets.all(16.r),
                             itemCount: _messages.length,
                             itemBuilder: (context, index) {
-                              final msg = _messages[index];
+                              final msg = _messages[_messages.length - 1 - index];
                               final isMe = msg['isMe'] == true;
                               final senderName = (msg['sender'] ?? '').toString();
 

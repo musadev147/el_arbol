@@ -4,6 +4,8 @@ import 'package:rxdart/rxdart.dart';
 import 'package:get/get.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import '../../../../common_wigdets/custom_app_loading.dart';
+import '../../../../common_wigdets/app_toast.dart';
+import '../../../../helpers/notification_unread_manager.dart';
 import '../data/customer_notifications_rx.dart';
 import '../../tickets/data/customer_tickets_api.dart';
 import '../../tickets/presentation/customer_ticket_chat_screen.dart';
@@ -55,7 +57,20 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
     );
   }
 
+  void _markAllAsRead(List<dynamic> notifications) {
+    if (notifications.isEmpty) return;
+    NotificationUnreadManager.instance.markAllCustomerNotificationsAsRead(notifications);
+    AppToast.success('All notifications marked as read');
+    setState(() {});
+  }
+
   void _handleNotificationTap(Map<String, dynamic> notif) async {
+    final id = notif['id']?.toString() ?? '';
+    if (id.isNotEmpty) {
+      NotificationUnreadManager.instance.markCustomerNotificationAsRead(id);
+      setState(() {});
+    }
+
     final title = (notif['title'] ?? notif['subject'] ?? '').toString().toLowerCase();
     final body = (notif['body'] ?? notif['message'] ?? notif['description'] ?? '').toString().toLowerCase();
     final type = (notif['type'] ?? notif['action'] ?? notif['category'] ?? '').toString().toLowerCase();
@@ -137,9 +152,10 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
         title: StreamBuilder<List<dynamic>>(
           stream: _rx.valueStreamData,
           builder: (context, snapshot) {
-            final count = snapshot.data?.length ?? 0;
+            final notifs = snapshot.data ?? [];
+            final unreadCount = NotificationUnreadManager.instance.calculateCustomerUnread(notifs);
             return Text(
-              count > 0 ? 'Notifications ($count)' : 'Notifications',
+              unreadCount > 0 ? 'Notifications ($unreadCount)' : 'Notifications',
               style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.bold,
@@ -157,10 +173,22 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
             builder: (context, snapshot) {
               final notifications = snapshot.data ?? [];
               if (notifications.isEmpty) return const SizedBox.shrink();
-              return IconButton(
-                icon: const Icon(Icons.delete_sweep, color: Colors.white),
-                onPressed: () => _bulkDelete(notifications),
-                tooltip: 'Clear All',
+              final hasUnread = NotificationUnreadManager.instance.calculateCustomerUnread(notifications) > 0;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasUnread)
+                    IconButton(
+                      icon: const Icon(Icons.done_all, color: Colors.white),
+                      onPressed: () => _markAllAsRead(notifications),
+                      tooltip: 'Mark All as Read',
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_sweep, color: Colors.white),
+                    onPressed: () => _bulkDelete(notifications),
+                    tooltip: 'Clear All',
+                  ),
+                ],
               );
             },
           ),
@@ -194,9 +222,9 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
             separatorBuilder: (context, index) => SizedBox(height: 12.h),
             itemBuilder: (context, index) {
               final notif = notifications[index] as Map<String, dynamic>;
-              final bool isRead = notif['is_read'] == true || notif['read'] == true;
+              final bool isRead = NotificationUnreadManager.instance.isCustomerNotificationRead(notif);
               return Material(
-                color: isRead ? Colors.white : Colors.blue.withOpacity(0.05),
+                color: isRead ? Colors.white : const Color(0xFFE8F5E9),
                 borderRadius: BorderRadius.circular(16.r),
                 child: InkWell(
                   onTap: () => _handleNotificationTap(notif),
@@ -205,7 +233,9 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
                     padding: EdgeInsets.all(16.r),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: isRead ? Colors.grey.shade100 : Colors.blue.withOpacity(0.2)),
+                      border: Border.all(
+                        color: isRead ? Colors.grey.shade200 : primaryColor.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,21 +243,55 @@ class _CustomerNotificationsScreenState extends State<CustomerNotificationsScree
                         Container(
                           padding: EdgeInsets.all(12.r),
                           decoration: BoxDecoration(
-                            color: primaryColor.withOpacity(0.1),
+                            color: isRead
+                                ? primaryColor.withValues(alpha: 0.08)
+                                : primaryColor.withValues(alpha: 0.18),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.notifications, color: primaryColor),
+                          child: Icon(
+                            isRead ? Icons.notifications_none : Icons.notifications_active,
+                            color: primaryColor,
+                          ),
                         ),
                         SizedBox(width: 16.w),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(notif['title'] ?? notif['subject'] ?? 'Notification', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      notif['title'] ?? notif['subject'] ?? 'Notification',
+                                      style: TextStyle(
+                                        fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
+                                        fontSize: 14.sp,
+                                        color: const Color(0xFF151E13),
+                                      ),
+                                    ),
+                                  ),
+                                  if (!isRead)
+                                    Container(
+                                      width: 8.r,
+                                      height: 8.r,
+                                      margin: EdgeInsets.only(left: 6.w),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.redAccent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                ],
+                              ),
                               SizedBox(height: 4.h),
-                              Text(notif['body'] ?? notif['message'] ?? notif['description'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp)),
+                              Text(
+                                notif['body'] ?? notif['message'] ?? notif['description'] ?? '',
+                                style: TextStyle(color: Colors.grey.shade700, fontSize: 13.sp),
+                              ),
                               SizedBox(height: 8.h),
-                              Text(notif['created_at'] ?? notif['date'] ?? notif['timestamp'] ?? '', style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp)),
+                              Text(
+                                notif['created_at'] ?? notif['date'] ?? notif['timestamp'] ?? '',
+                                style: TextStyle(color: Colors.grey.shade500, fontSize: 11.sp),
+                              ),
                             ],
                           ),
                         ),
